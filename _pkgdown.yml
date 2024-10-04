@@ -1,0 +1,9 @@
+url: https://cmmr.github.io/jobqueue/
+
+template:
+  bootstrap: 5
+  bootswatch: darkly
+  theme: breeze-dark
+  bslib:
+    code-bg: "#2b2b2b"
+

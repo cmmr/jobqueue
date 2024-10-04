@@ -2,7 +2,7 @@ Package: jobqueue
 Type: Package
 Title: Queue and Run Asynchronous Interruptible R Tasks on Background Processes
 Version: 0.1.0.9000
-Date: 2024-08-29
+Date: 2024-10-04
 Authors@R: c(
     person(
       "Daniel P.", "Smith",
@@ -16,12 +16,15 @@ Description:
     Takes an R expression and returns a Job object with a '$stop' method which 
     can be called to terminate the background job. Also provides timeouts and 
     other mechanisms for terminating a background job before it is finished.
-URL: https://cmmr.github.io/qrun/index.html
-BugReports: https://github.com/cmmr/qrun/issues
-License: AGPL-3
+URL: https://cmmr.github.io/jobqueue/
+BugReports: https://github.com/cmmr/jobqueue/issues
+License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
-StagedInstall: no
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Config/Needs/website: rmarkdown
+Config/testthat/edition: 3
+Config/testthat/parallel: true
 Depends:
     R (>= 4.2.0)
 Imports:
@@ -36,5 +39,3 @@ Imports:
     rlang
 Suggests:
     testthat
-RoxygenNote: 7.2.3
-Config/Needs/website: rmarkdown

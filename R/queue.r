@@ -42,6 +42,18 @@
 #'        returning whatever result the earlier Job returns. `copy_id` can also 
 #'        be a `function (job)` that returns the `copy_id` to assign to a given 
 #'        Job. A `copy_id` of `NULL` disables this feature.
+#' 
+#' @param scan  Should additional variables be added to `vars` based on 
+#'        scanning `expr` for missing global variables? By default, 
+#'        `scan = is.null(vars)`, meaning if you set `vars = list()` then no 
+#'        scan is done. Set `scan = TRUE` to always scan, `scan = FALSE` to 
+#'        never scan, and `scan = <an environment-like object>` to look for 
+#'        globals there. When scanning, the worker's environment is taken into 
+#'        account, and globals on the worker are favored over globals locally. 
+#'        `vars` defined by the user are always left untouched.
+#' 
+#' @param ignore  A character vector of variable names that should NOT be added 
+#'        to `vars` by `scan`.
 #'
 #' @export
 #' 
