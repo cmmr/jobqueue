@@ -2,9 +2,6 @@
 #' Interruptible, Asynchronous Background Jobs.
 #'
 #' @name Queue
-#' 
-#' @inheritParams Job
-#' @inheritParams Worker
 #'
 #' @description
 #' Submit your jobs to a Queue and it will run them on a background R 
@@ -23,6 +20,49 @@
 #' session, that process is killed and a new process is started to take its 
 #' place.
 #' 
+#' @param globals  A list or similar set of values that are added to the 
+#'        `.GlobalEnv` of workers.
+#' 
+#' @param packages  Character vector of package names to load on workers.
+#' 
+#' @param init  A call or R expression wrapped in curly braces to evaluate on 
+#'        each worker just once, immediately after start-up. Will have access 
+#'        to any variables defined by `globals` and assets from `packages`. 
+#'        Returned value is ignored.
+#'
+#' @param expr  A call or R expression wrapped in curly braces to evaluate on a 
+#'        worker. Will have access to any variables defined by `vars`, as well 
+#'        as the Worker's `globals`, `packages`, and `init` configuration.
+#' 
+#' @param vars  A list of named variables to make available to `expr` during 
+#'        evaluation.
+#' 
+#' @param tmax  A named numeric vector indicating the maximum number of 
+#'        seconds allowed for each state the job passes through, or 'total' to
+#'        apply a single timeout from 'submitted' to 'done'. Example:
+#'        `tmax = c(total = 2.5, running = 1)` will force-stop a job 2.5 
+#'        seconds after it is submitted, and also limits its time in the 
+#'        running state to just 1 second.
+#'        
+#' @param hooks  A list of functions to run when the Job state changes, of the 
+#'        form `hooks = list(created = function (job) {...}, done = ~{...})`.
+#'        The names of these functions should be `created`, `submitted`, 
+#'        `queued`, `dispatched`, `starting`, `running`, `done`, or `'*'`. 
+#'        `'*'` will be run every time the state changes, whereas the others 
+#'        will only be run when the Job enters that state. Duplicate names are 
+#'        allowed.
+#'        
+#' @param reformat  The underlying call to `callr::r_session$call()` returns
+#'        information on stdout, stderr, etc. When `reformat=TRUE` (the 
+#'        default), only the result of the expression is returned. Set 
+#'        `reformat=FALSE` to return the entire callr output, or 
+#'        `reformat=function(job,output)` to use a function of your own to 
+#'        post-process the output from callr.
+#'        
+#' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
+#'        this number to limit the number of simultaneously running Jobs; it 
+#'        does not prevent a Job from using more CPUs than reserved.
+#' 
 #' @param max_cpus  Total number of CPU cores that can be reserved all running 
 #'        Jobs via their combined `cpus` arguments. Does not enforce limits on 
 #'        actual CPU utilization.
@@ -30,6 +70,13 @@
 #' @param workers  How many background [Worker] processes to start. Set to more 
 #'        than `max_cpus` to enable interrupted workers to be quickly swapped 
 #'        out with standby Workers while a replacement Worker boots up.
+#'        
+#' @param options  Passed to `callr::r_session$new()`
+#'        
+#' @param job  A [Job] object, as created by `Job$new()`.
+#'        
+#' @param start  Should a Job be submitted to the Queue (`start = TRUE`) or 
+#'        just created (`start = FALSE`)?
 #'        
 #' @param stop_id  If an existing [Job] in the Queue has the same `stop_id`,  
 #'        that Job will be stopped and return an 'interrupt' condition object 
@@ -54,6 +101,9 @@
 #' 
 #' @param ignore  A character vector of variable names that should NOT be added 
 #'        to `vars` by `scan`.
+#'        
+#' @param reason  Passed to `<Job>$stop(reason)` for any Jobs currently 
+#'        managed by this Queue.
 #'
 #' @export
 #' 
@@ -181,24 +231,24 @@ Queue <- R6Class(
   
   active = list(
     
-    #' @field
-    #' Get the list of [Job] objects currently managed by this Queue.
+    #' @field jobs
+    #' List of [Job]s currently managed by this Queue.
     jobs = function () private$.jobs,
     
-    #' @field
-    #' Get the list of [Worker] objects used to process Jobs.
+    #' @field workers
+    #' List of [Worker]s used to process Jobs.
     workers = function () private$.workers,
     
-    #' @field
-    #' A unique identifier for this Queue object, e.g. 'Q1'.
+    #' @field uid
+    #' Unique identifier, e.g. 'Q1'.
     uid = function () private$.uid,
     
-    #' @field
-    #' A list of global variables and attached functions on the workers.
+    #' @field loaded
+    #' List of global variables and attached functions on the Workers.
     loaded = function () private$.loaded,
     
-    #' @field
-    #' The current state of this Queue: starting, active, stopped, or error.
+    #' @field state
+    #' Current state: starting, active, stopped, or error.
     state = function () private$.state
   )
 )

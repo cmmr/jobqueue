@@ -133,31 +133,31 @@ Worker <- R6Class(
   
   active = list(
     
-    #' @field
+    #' @field hooks
     #' A named list of currently registered callback hooks.
     hooks = function () private$.hooks,
     
-    #' @field
+    #' @field backlog
     #' A list of Jobs waiting to run on this Worker.
     backlog = function () private$.backlog,
     
-    #' @field
+    #' @field job
     #' The currently running Job.
     job = function () private$.job,
     
-    #' @field
+    #' @field r_session
     #' The `callr::r_session` background process interface.
     r_session = function () private$.r_session,
     
-    #' @field
+    #' @field state
     #' The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.
     state = function () private$.state,
     
-    #' @field
+    #' @field loaded
     #' A list of global variables and attached functions on this Worker.
     loaded = function () private$.loaded,
     
-    #' @field
+    #' @field uid
     #' A short string, e.g. 'W11', that uniquely identifies this Worker.
     uid = function () private$.uid
   )

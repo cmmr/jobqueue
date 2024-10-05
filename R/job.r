@@ -109,54 +109,54 @@ Job <- R6Class(
   
   active = list(
     
-    #' @field
+    #' @field expr
     #' Get the expression that will be run by this Job.
     expr = function () private$.expr,
     
-    #' @field
+    #' @field vars
     #' Get or set the variables that will be placed into the expression's 
     #' environment before evaluation.
     vars = function (value) j_vars(private, value),
     
-    #' @field
+    #' @field reformat
     #' Get or set the `function (job, output)` for transforming raw `callr` 
     #' output to the Job's result.
     reformat = function (value) j_reformat(private, value),
     
-    #' @field
+    #' @field cpus
     #' Get or set the number of CPUs to reserve for evaluating `expr`.
     cpus = function (value) j_cpus(private, value),
     
-    #' @field
+    #' @field tmax
     #' Get or set the time limits to apply to this Job.
     tmax = function (value) j_tmax(self, private, value),
     
-    #' @field
+    #' @field proxy
     #' Get or set the Job to proxy in place of running `expr`.
     proxy = function (value) j_proxy(self, private, value),
     
-    #' @field
+    #' @field state
     #' Get or set the Job's state (setting will trigger callbacks).
     state = function (value) j_state(self, private, value),
     
-    #' @field
+    #' @field output
     #' Get or set the Job's raw `callr` output (setting will change the Job's 
     #' state to 'done').
     output = function (value) j_output(self, private, value),
     
-    #' @field
+    #' @field result
     #' Get the result of `expr`. Will block until Job is finished.
     result = function () j_result(self, private),
     
-    #' @field
+    #' @field hooks
     #' Get all currently registered callback hooks - a named list of functions.
     hooks = function () private$.hooks,
     
-    #' @field
+    #' @field is_done
     #' Returns TRUE or FALSE depending on if the Job's result is ready.
     is_done = function () private$.is_done,
     
-    #' @field
+    #' @field uid
     #' Returns a short string, e.g. 'J16', that uniquely identifies this Job.
     uid = function () private$.uid
   )
