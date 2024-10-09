@@ -1,5 +1,7 @@
 
-#' Define a Job to Run on a Background Worker Process.
+#' Define a Job in Isolation from Queues/Workers.
+#' 
+#' 
 #'
 #' @name Job
 #'
@@ -10,10 +12,19 @@
 #' @param vars  A list of named variables to make available to `expr` during 
 #'        evaluation.
 #' 
-#' @param tmax  A named numeric vector indicating the maximum number of 
+#' @param scan  Should additional variables be added to `vars` based on 
+#'        scanning `expr` for missing global variables? The default, 
+#'        `scan = TRUE` always scans and adds to `vars`, set `scan = FALSE` to 
+#'        never scan, and `scan = <an environment-like object>` to look for 
+#'        globals there. `vars` defined by the user are always left untouched.
+#' 
+#' @param ignore  A character vector of variable names that should NOT be added 
+#'        to `vars` when `scan=TRUE`.
+#' 
+#' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
 #'        apply a single timeout from 'submitted' to 'done'. Example:
-#'        `tmax = c(total = 2.5, running = 1)` will force-stop a job 2.5 
+#'        `timeout = c(total = 2.5, running = 1)` will force-stop a job 2.5 
 #'        seconds after it is submitted, and also limits its time in the 
 #'        running state to just 1 second.
 #'        
@@ -41,8 +52,8 @@
 #'            \item{`'*'` -          }{ Every time the state changes. }
 #'            \item{`'.next'` -      }{ Only one time, the next time the state changes. }
 #'            \item{`'created'` -    }{ After `Job$new()` initialization. }
-#'            \item{`'submitted'` -  }{ Before `stop_id` and `copy_id` are resolved. }
-#'            \item{`'queued'` -     }{ After `<Job>$queue` is assigned. }
+#'            \item{`'submitted'` -  }{ After `<Job>$queue` is assigned. }
+#'            \item{`'queued'` -     }{ After `stop_id` and `copy_id` are resolved. }
 #'            \item{`'dispatched'` - }{ After `<Job>$worker` is assigned. }
 #'            \item{`'starting'` -   }{ Before evaluation begins. }
 #'            \item{`'running'` -    }{ After evaluation begins. }
@@ -57,6 +68,8 @@
 #'        
 #' @param reason  A message or other value to include in the 'interrupt' 
 #'        condition object that will be returned as the Job's result.
+#'        
+#' @param ...  Arbitrary named values to add to the returned Job object.
 #'
 #' @export
 #' 
@@ -71,8 +84,23 @@ Job <- R6Class(
     #' @description
     #' Creates a Job object defining how to run an expression on a background worker process.
     #' @return A Job object.
-    initialize = function (expr, vars = NULL, tmax = NULL, hooks = NULL, reformat = TRUE, cpus = 1L)
-      j_initialize(self, private, expr, vars, tmax, hooks, reformat, cpus),
+    initialize = function (
+        expr, 
+        vars     = NULL, 
+        scan     = TRUE, 
+        ignore   = NULL, 
+        envir    = parent.frame(),
+        timeout  = NULL, 
+        hooks    = NULL, 
+        reformat = TRUE, 
+        cpus     = 1L,
+        ... ) {
+      
+      j_initialize(
+        self, private, 
+        expr, vars, scan, ignore, envir, 
+        timeout, hooks, reformat, cpus, ... )
+    },
     
     #' @description
     #' Print method for a Job.
@@ -83,7 +111,12 @@ Job <- R6Class(
     #' @description
     #' Attach a callback function.
     #' @return A function that when called removes this callback from the Job.
-    on = function (state, func) j_on(self, private, state, func),
+    on = function (state, func) u_on(self, private, 'JH', state, func),
+    
+    #' @description
+    #' Blocks until the Job enters the given state.
+    #' @return This Job, invisibly.
+    wait = function (state = 'done') u_wait(self, private, state),
     
     #' @description
     #' Stop this Job. If the Job is running, the worker process will be rebooted.
@@ -95,8 +128,11 @@ Job <- R6Class(
     
     .expr     = NULL,
     .vars     = NULL,
+    .scan     = NULL,
+    .ignore   = NULL,
+    .envir    = NULL,
     .cpus     = NULL,
-    .tmax     = list(),
+    .timeout     = list(),
     .hooks    = list(),
     .reformat = list(),
     
@@ -118,6 +154,18 @@ Job <- R6Class(
     #' environment before evaluation.
     vars = function (value) j_vars(private, value),
     
+    #' @field scan
+    #' Get or set whether to scan for missing `vars`.
+    scan = function (value) j_scan(private, value),
+    
+    #' @field ignore
+    #' Get or set a character vector of variable names to NOT add to `vars`.
+    ignore = function (value) j_ignore(private, value),
+    
+    #' @field envir
+    #' Get or set the environment where missing `vars` can be found.
+    envir = function (value) j_envir(private, value),
+    
     #' @field reformat
     #' Get or set the `function (job, output)` for transforming raw `callr` 
     #' output to the Job's result.
@@ -127,9 +175,9 @@ Job <- R6Class(
     #' Get or set the number of CPUs to reserve for evaluating `expr`.
     cpus = function (value) j_cpus(private, value),
     
-    #' @field tmax
+    #' @field timeout
     #' Get or set the time limits to apply to this Job.
-    tmax = function (value) j_tmax(self, private, value),
+    timeout = function (value) j_timeout(self, private, value),
     
     #' @field proxy
     #' Get or set the Job to proxy in place of running `expr`.
@@ -140,16 +188,16 @@ Job <- R6Class(
     state = function (value) j_state(self, private, value),
     
     #' @field output
-    #' Get or set the Job's raw `callr` output (setting will change the Job's 
-    #' state to 'done').
+    #' Get or set the Job's raw `callr` output (assigning to `$output` will 
+    #' change the Job's state to 'done').
     output = function (value) j_output(self, private, value),
     
     #' @field result
-    #' Get the result of `expr`. Will block until Job is finished.
+    #' Result of `expr`. Will block until Job is finished.
     result = function () j_result(self, private),
     
     #' @field hooks
-    #' Get all currently registered callback hooks - a named list of functions.
+    #' Currently registered callback hooks as a named list of functions.
     hooks = function () private$.hooks,
     
     #' @field is_done
@@ -157,20 +205,30 @@ Job <- R6Class(
     is_done = function () private$.is_done,
     
     #' @field uid
-    #' Returns a short string, e.g. 'J16', that uniquely identifies this Job.
+    #' A short string, e.g. 'J16', that uniquely identifies this Job.
     uid = function () private$.uid
   )
 )
 
 
 # Sanitize and track values for later use.
-j_initialize <- function (self, private, expr, vars, tmax, hooks, reformat, cpus) {
+j_initialize <- function (self, private, expr, vars, scan, ignore, envir, timeout, hooks, reformat, cpus, ...) {
   
   expr_subst    <- substitute(expr, env = parent.frame())
   private$.expr <- validate_expression(expr, expr_subst, null_ok = FALSE)
   
+  dots <- dots_list(..., .named = TRUE)
+  for (i in names(dots))
+    self[[i]] <- dots[[i]]
+  
+  if (is_null(envir))
+    envir <- parent.frame(n = 2)
+  
   self$vars     <- vars
-  self$tmax     <- tmax
+  self$scan     <- scan
+  self$ignore   <- ignore
+  self$envir    <- envir
+  self$timeout  <- timeout
   self$reformat <- reformat
   self$cpus     <- cpus
   
@@ -185,24 +243,7 @@ j_initialize <- function (self, private, expr, vars, tmax, hooks, reformat, cpus
 
 j_print <- function (self) {
   cli_text('{self$uid} {.cls {class(self)}} [{self$state}]')
-  return (invisible(off))
-}
-
-
-j_on <- function (self, private, state, func) {
-  
-  state <- validate_string(state)
-  func  <- validate_function(func, null_ok = FALSE)
-  
-  uid <- attr(func, '.uid') <- increment_uid('JH')
-  private$.hooks %<>% c(setNames(list(func), state))
-  
-  off <- function () private$.hooks %<>% attr_ne('.uid', uid)
-  
-  if (state == self$state) func(self)
-  if (state == '*')        func(self)
-  
-  return (invisible(off))
+  return (invisible(self))
 }
 
 
@@ -217,7 +258,12 @@ j_stop <- function (self, private, reason) {
 j_output <- function (self, private, value) {
   
   if (missing(value)) {
-    while (!private$.is_done) run_now(timeoutSecs = 0.2)
+    
+    if (self$state == 'created')
+      if (inherits(self$queue, 'Queue'))
+        self$queue$submit(self)
+    
+    self$wait() # blocking
     return (private$.output)
   }
   
@@ -244,9 +290,15 @@ j_result <- function (self, private) {
   if (is_false(reformat))    return (output) 
   if (is_function(reformat)) return (reformat(output))
   
-  if (!is_null(output[['error']]))    { result <- output[['error']]  }
-  else if (hasName(output, 'result')) { result <- output[['result']] }
-  else                                { result <- output             }
+  if (hasName(output, 'error') && !is_null(output[['error']])) {
+    result <- output[['error']]
+  }
+  else if (hasName(output, 'result')) { 
+    result <- output[['result']]
+  }
+  else {
+    result <- output
+  }
   
   return (result)
 }
@@ -281,44 +333,41 @@ j_state <- function (self, private, value) {
   
   if (missing(value)) return (private$.state)
   
-  state <- validate_string(value)
+  new_state  <- validate_string(value)
+  curr_state <- private$.state
   
-  # cli_text('Job {self$uid} state change: {private$.state} -> {state}')
-  
-  if (state == private$.state) return (NULL)
-  if (private$.is_done == 'done')
-    cli_abort("Job$state can't be changed from 'done' to '{state}'.")
-  if (state == 'done' && !private$.is_done)
+  if (new_state == curr_state) return (NULL)
+  if (curr_state == 'done')
+    cli_abort("Job$state can't be changed from 'done' to '{new_state}'.")
+  if (new_state == 'done' && !private$.is_done)
     cli_abort("Job$state can't be set to 'done' until Job$output is set.")
   
-  # Start the 'total' timeout when we leave the 'created' state.
-  if (private$.state == 'created')
-    if (!is_null(tmax <- private$.tmax[['total']])) {
-      msg <- 'total runtime exceeded {tmax} second{?s}'
-      msg <- cli_fmt(cli_text(msg))
-      self$on('done', later(~self$stop(msg), delay = tmax))
-    }
+  private$.state <- new_state
   
-  private$.state <- state
+  # Start the 'total' timeout when we enter the 'submitted' state.
+  if (new_state == 'submitted')
+    if (!is_null(timeout <- private$.timeout[['total']])) {
+      msg <- 'total runtime exceeded {timeout} second{?s}'
+      msg <- cli_fmt(cli_text(msg))
+      self$on('done', later(~self$stop(msg), delay = timeout))
+    }
   
   hooks          <- private$.hooks
   private$.hooks <- hooks[names(hooks) != '.next']
-  hooks          <- hooks[names(hooks) %in% c('*', '.next', state)]
+  hooks          <- hooks[names(hooks) %in% c('*', '.next', new_state)]
   
   for (i in seq_along(hooks)) {
     func <- hooks[[i]]
-    # uid  <- attr(func, '.uid', exact = TRUE)
-    # cli_text('Executing Job {self$uid} {.val {state}} callback hook {uid}.')
     if (!is_null(formals(func))) { func(self) }
     else if (is.primitive(func)) { func(self) }
     else                         { func()     }
   }
   
-  # Start the timeout for this state, if present.
-  if (!is_null(tmax <- private$.tmax[[state]])) {
-    msg <- 'exceeded {.val {tmax}} second{?s} while in {.val {state}} state'
+  # Start the timeout for this new state, if present.
+  if (!is_null(timeout <- private$.timeout[[new_state]])) {
+    msg <- 'exceeded {.val {timeout}} second{?s} while in {.val {new_state}} state'
     msg <- cli_fmt(cli_text(msg))
-    clear_timeout <- later(~{ self$stop(msg) }, delay = tmax)
+    clear_timeout <- later(~{ self$stop(msg) }, delay = timeout)
     self$on('.next', function (job) { clear_timeout() })
   }
 }
@@ -331,9 +380,24 @@ j_vars <- function (private, value) {
   private$.vars <- validate_list(value)
 }
 
-j_tmax <- function (self, private, value) {
-  if (missing(value)) return (private$.tmax)
-  private$.tmax <- validate_tmax(value)
+j_scan <- function (private, value) {
+  if (missing(value)) return (private$.scan)
+  private$.scan <- validate_logical(value)
+}
+
+j_ignore <- function (private, value) {
+  if (missing(value)) return (private$.ignore)
+  private$.ignore <- validate_character_vector(value)
+}
+
+j_envir <- function (private, value) {
+  if (missing(value)) return (private$.envir)
+  private$.envir <- validate_environment(value)
+}
+
+j_timeout <- function (self, private, value) {
+  if (missing(value)) return (private$.timeout)
+  private$.timeout <- validate_timeout(value)
 }
 
 j_reformat <- function (private, value) {

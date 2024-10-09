@@ -6,9 +6,16 @@
 [![dev](https://github.com/cmmr/jobqueue/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/cmmr/jobqueue/actions/workflows/R-CMD-check.yaml)
 [![cran](https://www.r-pkg.org/badges/version/jobqueue)](https://CRAN.R-project.org/package=jobqueue)
 [![conda](https://anaconda.org/conda-forge/r-jobqueue/badges/version.svg)](https://anaconda.org/conda-forge/r-jobqueue)
+[![Codecov test coverage](https://codecov.io/gh/cmmr/jobqueue/graph/badge.svg)](https://app.codecov.io/gh/cmmr/jobqueue)
 <!-- badges: end -->
 
-The goal of jobqueue is to run interruptible R commands in background processes.
+
+The goals of jobqueue are to:
+
+  * Run jobs in parallel on background processes.
+  * Allow jobs to be stopped at any point.
+  * Process job results with asynchronous callbacks.
+
 
 ## Installation
 
@@ -21,6 +28,7 @@ install.packages("pak")
 pak::pak("cmmr/jobqueue")
 ```
 
+
 ## Example
 
 ``` r
@@ -32,6 +40,7 @@ job <- q$run({ paste('Hello', 'world!') })
 job$result
 #> [1] "Hello world!"
 ```
+
 
 ## Asynchronous Callbacks
 
@@ -70,6 +79,7 @@ as.promise(job)$then(callback)
 #> resolved with: 42
 ```
 
+
 ## Stopping Jobs
 
 When a running job is stopped, the background process for it is
@@ -94,16 +104,16 @@ will be returned in the condition object.
 #### Max Runtime
 
 ``` r
-job <- q$run({ Sys.sleep(2); 'Zzzzz' }, tmax = 0.2)
+job <- q$run({ Sys.sleep(2); 'Zzzzz' }, timeout = 0.2)
 job$result
 #> <interrupt: total runtime exceeded 0.2 seconds>
 ```
 
 Limits (in seconds) can be set on:
 
-- the total 'submitted' to 'done' time: `tmax = 2`
-- on a per-state basis: `tmax = list(queued = 1, running = 2)`
-- or both: `tmax = list(total = 3, queued = 2, running = 2)`
+- the total 'submitted' to 'done' time: `timeout = 2`
+- on a per-state basis: `timeout = list(queued = 1, running = 2)`
+- or both: `timeout = list(total = 3, queued = 2, running = 2)`
 
 #### Stop ID
 
@@ -130,6 +140,7 @@ job1$result
 job2$result
 #> [1] "A"
 ```
+
 
 ## Variables
 

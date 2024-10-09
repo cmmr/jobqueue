@@ -82,7 +82,7 @@
 #' }
 #' 
 #' class(jobqueue) <- c('JobQueuePlan', class(jobqueue))
-#' attr(jobqueue, "tweakable") <- c('tmax', 'hooks', 'stop_id', 'copy_id', 'cpus', 'queue')
+#' attr(jobqueue, "tweakable") <- c('timeout', 'hooks', 'stop_id', 'copy_id', 'cpus', 'queue')
 #' 
 #' 
 #' future_by_uid <- fastmap()
@@ -180,7 +180,7 @@
 #'   future$job   <- queue$run(
 #'     expr     = getExpression(future),
 #'     vars     = globals,
-#'     tmax     = future[['tmax']],
+#'     timeout     = future[['timeout']],
 #'     hooks    = future[['hooks']],
 #'     reformat = future[['reformat']],
 #'     cpus     = future[['cpus']],

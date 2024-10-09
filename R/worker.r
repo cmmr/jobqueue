@@ -1,5 +1,5 @@
 
-#' Evaluates a Job's Expression on a Background Process.
+#' A Single Background Process for Running Jobs.
 #'
 #' @name Worker
 #' 
@@ -96,7 +96,12 @@ Worker <- R6Class(
     #' @description
     #' Attach a callback function.
     #' @return A function that when called removes this callback from the Worker.
-    on = function (state, func) w_on(self, private, state, func),
+    on = function (state, func) u_on(self, private, 'WH', state, func),
+    
+    #' @description
+    #' Blocks until the Worker enters the given state.
+    #' @return This Worker, invisibly.
+    wait = function (state = 'idle') u_wait(self, private, state),
     
     #' @description
     #' Assigns a Job to this Worker for evaluation on its background 
@@ -119,7 +124,7 @@ Worker <- R6Class(
     .job         = NULL,
     config_file  = NULL,
     
-    set_state    = function (state) w__set_state(self, private, state),
+    set_state    = function (state) u__set_state(self, private, state),
     next_job     = function ()      w__next_job(self, private),
     poll_job     = function ()      w__poll_job(self, private),
     poll_startup = function ()      w__poll_startup(self, private),
@@ -195,20 +200,6 @@ w_print <- function (self) {
 }
 
 
-w_on <- function (self, private, state, func) {
-  
-  state <- validate_string(state)
-  func  <- validate_function(func, null_ok = FALSE)
-  
-  uid <- attr(func, '.uid') <- increment_uid('WH')
-  private$.hooks %<>% c(setNames(list(func), state))
-  
-  off <- function () private$.hooks %<>% attr_ne('.uid', uid)
-  
-  return (invisible(off))
-}
-
-
 # Create a new 'callr::r_session' background process.
 w_start <- function (self, private) {
   
@@ -275,28 +266,6 @@ w_run <- function (self, private, job) {
   return (invisible(self))
 }
 
-w__set_state <- function (self, private, state) {
-  
-  if (private$.state != state) {
-    
-    hooks          <- private$.hooks
-    private$.hooks <- hooks[names(hooks) != '.next']
-    hooks          <- hooks[names(hooks) %in% c('*', '.next', state)]
-    
-    private$.state <- state
-    for (i in seq_along(hooks)) {
-      func <- hooks[[i]]
-      # uid  <- attr(func, '.uid', exact = TRUE)
-      # cli_text('Executing Worker {self$uid} {.val {state}} callback hook {uid}.')
-      if (!is_null(formals(func))) { func(self) }
-      else if (is.primitive(func)) { func(self) }
-      else                         { func()     }
-    }
-    
-  }
-  return (invisible(NULL))
-}
-
 
 w__next_job <- function (self, private) {
   
@@ -330,7 +299,7 @@ w__next_job <- function (self, private) {
   # Run the user's job on the r_session external process.
   # cli_text('Starting job {private$.job$uid} on {self$uid}.')
   private$.r_session$call(
-    args = list(private$.job$expr, private$.job$vars %||% list()), 
+    args = list(private$.job$expr, private$.job$vars), 
     func = function (expr, vars) {
       eval(expr = expr, envir = vars, enclos = .GlobalEnv)
     })
@@ -425,9 +394,9 @@ w__configure <- function (self, private) {
     func = function (config_file) {
       
       if (!is.null(config_file)) {
-      
+        
         config <- readRDS(config_file)
-      
+        
         for (i in seq_along(p <- config[['packages']]))
           require(package = p[[i]], character.only = TRUE)
         
@@ -455,5 +424,4 @@ w__configure <- function (self, private) {
   
   return (NULL)
 }
-
 

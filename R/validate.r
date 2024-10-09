@@ -3,10 +3,10 @@ validate_function <- function (value, bool_ok = FALSE, if_null = NULL, null_ok =
   if (is_function(value))                           return (value)
   if (is_null(value)           && is_true(null_ok)) return (if_null)
   if (is_scalar_logical(value) && is_true(bool_ok)) return (value)
-  varname <- substitute(value)
-  errmsg  <- cant_cast('a function')
-  tryCatch(as_function(value), error = function (e) {
-    cli_abort(c(errmsg, 'x' = as.character(e) ))})
+  varname  <- substitute(value)
+  errmsg   <- cant_cast('a function')
+  on_error <- function (e) { cli_abort(c(errmsg, 'x' = as.character(e) )) }
+  tryCatch(as_function(value), error = on_error, warning = on_error)
 }
 
 validate_expression <- function (value, subst, null_ok = TRUE) {
@@ -41,7 +41,7 @@ validate_list <- function (value, null_ok = TRUE, if_null = NULL, of_type = NULL
     if (identical(of_type, 'numeric')) of_type %<>% c('integer')
     for (i in seq_along(value))
       if (!inherits(value[[i]], of_type))
-        idx_must_be(cli_fmt(cli_text('{.or {.val {of_type}}}')))
+        cli_abort(idx_must_be(cli_fmt(cli_text('{.or {.val {of_type}}}'))))
   }
   
   if (!is_list(value)) value <- as.list(value)
@@ -50,7 +50,12 @@ validate_list <- function (value, null_ok = TRUE, if_null = NULL, of_type = NULL
 }
 
 validate_hooks <- function (hooks, prefix = 'H') {
-  hooks <- validate_list(hooks)
+  
+  hooks <- validate_list(hooks, if_null = list())
+  if (length(hooks) == 0) return (hooks)
+  
+  names(hooks) <- sub('^[qwj]_', '', names(hooks))
+  
   for (i in seq_along(hooks)) {
     func <- validate_function(hooks[[i]], null_ok = FALSE)
     if (is_null(attr(func, '.uid', exact = TRUE)))
@@ -61,59 +66,50 @@ validate_hooks <- function (hooks, prefix = 'H') {
 }
 
 
-validate_tmax <- function (tmax) {
+validate_timeout <- function (timeout) {
   
-  if (length(tmax) == 1 && !is_named(tmax)) names(tmax) <- 'total'
-  tmax <- validate_list(tmax)
+  timeout <- validate_list(timeout, if_null = list(), default = 'total')
   
-  if (length(dups <- unique(names(tmax)[duplicated(names(tmax))])))
-    cli_abort('`tmax` cannot have duplicate names: {.val {dups}}')
+  if (length(dups <- unique(names(timeout)[duplicated(names(timeout))])))
+    cli_abort('`timeout` cannot have duplicate names: {.val {dups}}')
   
   expected <- 'a single positive number or NULL'
-  for (i in seq_along(tmax)) {
+  for (i in seq_along(timeout)) {
     
-    key <- paste0('`tmax$', coan(names(tmax)[[i]]), '`')
-    val <- tryCatch(
-      expr  = as.numeric(tmax[[i]]), 
-      error = function (e) cli_abort(c(
-        cant_cast(expected, value = tmax[[i]], varname = key),
-        'x' = as.character(e) )))
+    key <- paste0('timeout$', coan(names(timeout)[[i]]), '')
+    on_error <- function (e) cli_abort(c(
+      cant_cast(expected, value = timeout[[i]], varname = key),
+      'x' = as.character(e) ))
     
-    if (length(val) != 1) cli_abort('{key} must be {expected}, not {.type {tmax[[i]]}}')
-    if (val <= 0)         cli_abort('{key} must be {expected}, not {.val  {tmax[[i]]}}')
+    val <- tryCatch(as.numeric(timeout[[i]]), error = on_error, warning = on_error)
     
-    tmax[[i]] <- val
+    if (length(val) != 1) cli_abort('{`key`} must be {expected}, not {.type {timeout[[i]]}}')
+    if (val <= 0)         cli_abort('{`key`} must be {expected}, not {.val  {timeout[[i]]}}')
+    
+    timeout[[i]] <- val
   }
   
-  return (tmax)
+  return (timeout)
 }
 
 
-validate_environment <- function (value) {
+validate_environment <- function (value, null_ok = TRUE, if_null = NULL) {
   varname <- substitute(value)
-  errmsg  <- cant_cast('an environment')
-  tryCatch(as_environment(value), error = function (e) {
-    cli_abort(c(errmsg, 'x' = as.character(e) ))})
-}
-
-validate_positive_numeric <- function (value, if_null = NULL, null_ok = TRUE) {
+  
   if (is_null(value) && is_true(null_ok)) return (if_null)
-  varname <- substitute(value)
-  errmsg  <- must_be('a single positive number')
-  tryCatch(
-    expr = {
-      value <- as.numeric(value)
-      stopifnot(length(value) == 1)
-      stopifnot(is_true(value > 0))
-      value
-    }, 
-    error = function (e) { cli_abort(errmsg) })
+  
+  errmsg   <- cant_cast('an environment')
+  on_error <- function (e) { cli_abort(c(errmsg, 'x' = as.character(e) )) }
+  
+  tryCatch(as_environment(value), error = on_error, warning = on_error)
 }
 
 validate_positive_integer <- function (value, if_null = NULL, null_ok = TRUE) {
   if (is_null(value) && is_true(null_ok)) return (if_null)
-  varname <- substitute(value)
-  errmsg  <- must_be('a single positive integer')
+  varname  <- substitute(value)
+  errmsg   <- must_be('a single positive integer')
+  on_error <- function (e) cli_abort(c(errmsg, 'x' = as.character(e) ))
+  
   tryCatch(
     expr = {
       value <- as.integer(value)
@@ -121,7 +117,7 @@ validate_positive_integer <- function (value, if_null = NULL, null_ok = TRUE) {
       stopifnot(is_true(value > 0))
       value
     }, 
-    error = function (e) { cli_abort(errmsg) })
+    error = on_error, warning = on_error)
 }
 
 validate_logical <- function (value) {
@@ -137,32 +133,10 @@ validate_character_vector <- function (value, if_null = NULL) {
   cli_abort(must_be('a character vector'))
 }
 
-validate_file <- function (value, if_null = NULL, mustWork = TRUE) {
-  if (is_null(value)) return (if_null)
-  value <- normalizePath(value, winslash = '/', mustWork = mustWork)
+validate_string <- function (value) {
+  varname <- substitute(value)
+  if (!is_scalar_character(value) || is_na(value) || !nzchar(value))
+    cli_abort(must_be('a string'))
   return (value)
 }
-
-
-validate_string <- function (value, null_ok = FALSE, zlen_ok = FALSE, na_ok = FALSE) {
-  varname <- substitute(value)
-  if (is_null(value) && is_true(null_ok))  return (value)
-  if (is_na(value)   && is_true(na_ok))    return (value)
-  if (!is_scalar_character(value))         cli_abort(must_be('a string'))
-  if (!nzchar(value) && is_false(zlen_ok)) cli_abort(cannot('be ""'))
-  return (value)
-}
-
-validate_string_options <- function (value, options) {
-  
-  if (is_string(value, options)) return (value)
-  
-  varname <- substitute(value)
-  if (is_scalar_character(value))
-    cli_abort(c('!' = "`{varname}` must be one of {.val {options}}, not {.val {value}}."))
-  cli_abort(c('!' = "`{varname}` must be one of {.val {options}}, not {.type {value}}."))
-}
-
-
-
 

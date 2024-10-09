@@ -2,39 +2,77 @@
 .jobqueue_env <- new_environment()
 
 
-new_promise <- function () {
-  promise(function (resolve, reject) { NULL })
+
+u_wait <- function (self, private, state) {
+  
+  state <- validate_string(state)
+  curr  <- private$.state
+  
+  if (state != curr) {
+    prev <- curr
+    while (TRUE) {
+      curr <- private$.state
+      if (curr != prev)
+        if (state %in% c('*', '.next', curr))
+          break
+      run_now(timeoutSecs = 0.2)
+    }
+  }
+  
+  return (invisible(self))
 }
 
-noop <- function (...) return (invisible(NULL))
 
-p_resolve  <- function (promise, value)  attr(promise, 'promise_impl')$resolve(value)
-p_reject   <- function (promise, reason) attr(promise, 'promise_impl')$reject(reason)
-p_resolver <- function (promise)         attr(promise, 'promise_impl')$resolve
-p_rejecter <- function (promise)         attr(promise, 'promise_impl')$reject
-p_state    <- function (promise)         attr(promise, 'promise_impl')$.__enclos_env__$private$state
-p_result   <- function (promise)         attr(promise, 'promise_impl')$.__enclos_env__$private$value
-p_visible  <- function (promise)         attr(promise, 'promise_impl')$.__enclos_env__$private$visible
-p_pending  <- function (promise)         (p_state(promise) == 'pending')
-p_done     <- function (promise)         (p_state(promise) != 'pending')
-p_stop     <- function (promise, reason) p_resolve(promise, interrupted(reason))
+u_on <- function (self, private, prefix, state, func) {
+  
+  state <- validate_string(state)
+  func  <- validate_function(func, null_ok = FALSE)
+  
+  uid <- attr(func, '.uid') <- increment_uid(prefix)
+  private$.hooks %<>% c(setNames(list(func), state))
+  
+  off <- function () private$.hooks %<>% attr_ne('.uid', uid)
+  
+  if (state == self$state) func(self)
+  if (state == '*')        func(self)
+  
+  return (invisible(off))
+}
+
+
+u__set_state <- function (self, private, state) {
+  
+  if (private$.state != state) {
+    
+    hooks          <- private$.hooks
+    private$.hooks <- hooks[names(hooks) != '.next']
+    hooks          <- hooks[names(hooks) %in% c('*', '.next', state)]
+    
+    private$.state <- state
+    for (i in seq_along(hooks)) {
+      func <- hooks[[i]]
+      if (!is_null(formals(func))) { func(self) }
+      else if (is.primitive(func)) { func(self) }
+      else                         { func()     }
+    }
+    
+  }
+  return (invisible(NULL))
+}
 
 
 interrupted <- function (reason = 'stopped') errorCondition(message = reason, class = 'interrupt')
 
 
 
-increment_uid <- function (prefix, object = NULL) {
-  if (!is_null(attr(object, '.uid', exact = TRUE)))
-    return (attr(object, '.uid', exact = TRUE))
+increment_uid <- function (prefix) {
   nm    <- paste0('uid_', prefix)
   value <- env_get(.jobqueue_env, nm, 1L)
   assign(nm, value + 1L, .jobqueue_env)
   return (paste0(prefix, value))
 }
 
-coan <- function (x, i = NULL) {
-  if (!is_null(i)) x <- names(x)[[i]]
+coan <- function (x) {
   capture.output(as.name(x))
 }
 
@@ -82,8 +120,8 @@ idx_must_be <- function (expected) {
     if (!env_has(parent.frame(), ij)) break
     idx <- env_get(parent.frame(), ij, NULL)
     key <- names(value[[idx]]) %||% ''
-    if (nzchar(key)) { varname <- paste(varname, '$', coan(key)) }
-    else             { varname <- paste(varname, '[[', idx, ']]')  }
+    if (nzchar(key)) { varname <- paste0(varname, '$', coan(key))  }
+    else             { varname <- paste0(varname, '[[', idx, ']]') }
     value <- value[[idx]]
   }
   
