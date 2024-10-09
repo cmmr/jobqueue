@@ -2,7 +2,7 @@ Package: jobqueue
 Type: Package
 Title: Queue and Run Asynchronous Interruptible R Tasks on Background Processes
 Version: 0.1.0.9000
-Date: 2024-10-04
+Date: 2024-10-09
 Authors@R: c(
     person(
       "Daniel P.", "Smith",
