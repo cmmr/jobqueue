@@ -5,3 +5,7 @@
 ^pkgdown$
 ^\.github$
 ^codecov\.yml$
+^doc$
+^Meta$
+^LICENSE.md
+^paper.md

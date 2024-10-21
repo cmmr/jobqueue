@@ -137,7 +137,7 @@
 #'   future$job_future_uid <- future_uid
 #'   
 #'   future$stop <- function (reason = 'future stopped by user') {
-#'     if (!inherits(reason, 'condition')) reason %<>% interrupted()
+#'     if (!inherits(reason, 'condition')) reason %<>% interruptCondition()
 #'     f__assign_result(future_uid, result = reason)
 #'   }
 #'   

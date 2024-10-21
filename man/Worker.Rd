@@ -2,11 +2,11 @@
 % Please edit documentation in R/worker.r
 \name{Worker}
 \alias{Worker}
-\title{Evaluates a Job's Expression on a Background Process.}
+\title{A Background Process}
 \description{
-Evaluates a Job's Expression on a Background Process.
+A Background Process
 
-Evaluates a Job's Expression on a Background Process.
+A Background Process
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
@@ -36,6 +36,7 @@ Evaluates a Job's Expression on a Background Process.
 \item \href{#method-Worker-stop}{\code{Worker$stop()}}
 \item \href{#method-Worker-restart}{\code{Worker$restart()}}
 \item \href{#method-Worker-on}{\code{Worker$on()}}
+\item \href{#method-Worker-wait}{\code{Worker$wait()}}
 \item \href{#method-Worker-run}{\code{Worker$run()}}
 }
 }
@@ -64,7 +65,7 @@ Creates a background \code{callr::r_session} process for running \link{Job}s.
 
 \item{\code{init}}{A call or R expression wrapped in curly braces to evaluate on
 each worker just once, immediately after start-up. Will have access
-to any variables defined by \code{globals} and assets from \code{packages}.
+to variables defined by \code{globals} and assets from \code{packages}.
 Returned value is ignored.}
 
 \item{\code{hooks}}{A list of functions to run when the Worker state changes, of
@@ -193,6 +194,34 @@ or \verb{<Worker>$backlog}. Return value is ignored.}
 }
 \subsection{Returns}{
 A function that when called removes this callback from the Worker.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Worker-wait"></a>}}
+\if{latex}{\out{\hypertarget{method-Worker-wait}{}}}
+\subsection{Method \code{wait()}}{
+Blocks until the Worker enters the given state.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Worker$wait(state = "idle")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{state}}{The Worker state that will trigger this function. Typically one of:
+\describe{
+\item{\code{'*'} -        }{ Every time the state changes. }
+\item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
+\item{\code{'starting'} - }{ After starting a new \code{callr::r_session} process. }
+\item{\code{'idle'} -     }{ Waiting on new Jobs to be added. }
+\item{\code{'busy'} -     }{ After a Job starts running. }
+\item{\code{'stopped'} -  }{ After \verb{<Worker>$stop()} is called. }
+}}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+This Worker, invisibly.
 }
 }
 \if{html}{\out{<hr>}}

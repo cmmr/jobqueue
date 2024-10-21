@@ -1,0 +1,268 @@
+---
+title: "Result and Error Handling"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Result and Error Handling}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```r
+library(jobqueue)
+q <- Queue$new()
+```
+
+## Reacting to Results
+
+```r
+my_job <- q$run({ 42 })
+
+# ===  A 'jobqueue'-style callback  ============
+my_job$on('done', ~message('Result = ', .$result))
+#> Result = 42
+
+# ===  A 'promises'-style callback  ============
+my_job %...>% message('Result = ', .)
+#> Result = 42
+```
+
+<small>See also `vignette('hooks')`</small>
+
+
+
+## Output vs Result
+
+When `expr` is finished evaluating, the raw `callr::r_ression` output is assigned to `<Job>$output`.
+
+```r
+job <- q$run({ 42 })
+
+str(job$output)
+#> List of 6
+#>  $ code   : int 200
+#>  $ message: chr "done callr-rs-result-12e862875a1"
+#>  $ result : num 42
+#>  $ stdout : chr ""
+#>  $ stderr : chr ""
+#>  $ error  : NULL
+#>  - attr(*, "class")= chr "callr_session_result"
+```
+
+When you access `<Job>$result`, `<Job>$reformat` and `<Job>$catch` are used to determine what result to return. Generally, it is `<Job>$output$result`.
+
+```r
+job$result
+#> [1] 42
+```
+
+
+
+## Reformatting Output
+
+
+### Default Reformatting
+
+When `reformat = TRUE` (the default):
+
+* If `<Job>$output` inherits from `'callr_session_result'`:
+  * Return `<Job>$output$error` if it isn't `NULL`.
+  * Return `<Job>$output$result`.
+* Return `<Job>$output`.
+
+```r
+job <- q$run({ 42 })
+identical(job$result, job$output$result)
+#> [1] TRUE
+
+job <- q$run({ stop('error') })
+identical(job$result, job$output$error)
+#> [1] TRUE
+
+job <- q$run({ 42 })
+job$output <- 'Custom result'
+identical(job$result, job$output)
+#> [1] TRUE
+```
+
+
+### No Reformatting
+
+When `reformat = FALSE`, `<Job>$output` is passed through unchanged.
+
+```r
+job <- q$run({ 42 }, reformat = FALSE)
+
+identical(job$result, job$output)
+#> [1] TRUE
+
+class(job$result)
+#> "callr_session_result"
+```
+
+
+### Custom Reformatting
+
+Set `reformat = function (job) {...}` to apply a custom transformation.
+
+> **Important**
+> 
+> You may access `job$output$result` in your `reformat` function.  
+> DO NOT access `job$result`, which would start an infinite recusion.
+
+```r
+http_wrap <- function (job) {
+  result <- job$output$result
+  paste0('{"status":200,"body":{"result":', result, '}}')
+}
+
+job <- q$run({ 42 }, reformat = http_wrap)
+cat(job$result)
+#> {"status":200,"body":{"result":42}}
+```
+
+`reformat` can be set in several places:
+
+* `Queue$new(reformat = http_wrap)`
+* `Job$new(reformat = http_wrap)`
+* `<Queue>$run(reformat = http_wrap)`
+* `<Job>$reformat <- http_wrap`
+
+
+### Non-blocking Result
+
+`<Job>$output` blocks until the Job is done. If you want `<Job>$result` to not block, you can return a placeholder value instead.
+
+```r
+reformat <- function (job) {
+  if (job$is_done) { job$output$result          }
+  else             { 'result not available yet' }
+}
+
+job <- q$run({ 42 }, reformat = reformat)
+job$result
+#> [1] "result not available yet"
+
+job$state
+#> [1] "running"
+```
+
+
+
+## Error Handling
+
+By default, errors and interrupts will be caught by jobqueue and returned as a condition object from `<Job>$result`.
+
+```r
+expr <- quote(stop('error XYZ'))
+job <- q$run(expr)
+x   <- job$result
+
+inherits(x, 'condition')
+#> TRUE
+
+x
+#> Error in `q$run(expr)`:
+#> ! Error evaluating <Job>$expr on background process
+#> Caused by error in `stop("error XYZ")`:
+#> ! error XYZ
+#> ---
+#> Subprocess backtrace:
+#> 1. base::eval(expr = expr, envir = vars, enclos = .GlobalEnv)
+#> 2. base::stop("error XYZ")
+#> 3. | base::.handleSimpleError(function (e) …
+#> 4. global h(simpleError(msg, call))
+```
+
+If you want those errors to continue propagating, set `catch = FALSE`.
+
+```r
+job <- q$run(expr, catch = FALSE)
+x   <- job$result
+#> Error in "q$run(expr, catch = FALSE)" : 
+#>    ! Error evaluating <Job>$expr on background process
+#>  Caused by error in `stop("error XYZ")`:
+#>  ! error XYZ
+```
+
+These signals can be caught as usual by `try()` and `tryCatch()`.
+
+```r
+print_cnd <- function (cnd) cli::cli_text('Caught {.type {cnd}}.')
+
+job <- q$run({ 42 }, catch = FALSE)$stop()
+res <- tryCatch(job$result, error = print_cnd, interrupt = print_cnd)
+#> Caught an <interrupt> object.
+
+res
+#> NULL
+
+job <- q$run({ stop('error XYZ') }, catch = FALSE)
+res <- tryCatch(job$result, error = print_cnd, interrupt = print_cnd)
+#> Caught a <callr_status_error> object.
+
+res
+#> NULL
+```
+
+You can also signal some conditions while catching others. Perhaps stopping a 
+job is part of the "normal" workflow and shouldn't be lumped in with other 
+errors.
+
+```r
+job <- q$run({ 42 }, catch = 'interrupt')$stop()
+res <- tryCatch(job$result, error = print_cnd)
+
+res
+#> <interrupt: job stopped by user>
+
+job <- q$run({ stop('error XYZ') }, catch = 'interrupt')
+res <- tryCatch(job$result, error = print_cnd)
+#> Caught a <callr_status_error> object.
+
+res
+#> NULL
+```
+
+
+
+## Promise Handling
+
+You can pass a Job directly to any function that expects a 'promise' object, 
+such as `promises::then` or `promises::%...>%`. These functions are re-exported 
+by jobqueue, so calling `library(promises)` is optional.
+
+```r
+q$run({ 42 }) %...>% message
+#> 42
+```
+
+By default, errors and interrupts are caught by jobqueue and used for promise
+fulfillment.
+
+```r
+onFulfilled <- function (value) cli::cli_text('Fulfilled with {.type {value}}.')
+onRejected  <- function (err)   cli::cli_text('Rejected with {.type {err}}.')
+
+job <- q$run({ 42 })$stop()
+job %>% then(onFulfilled, onRejected)
+#> Fulfilled with an <interrupt> object.
+
+job <- q$run({ stop('error XYZ') })
+job %>% then(onFulfilled, onRejected)
+#> Fulfilled with a <callr_status_error> object.
+```
+
+Setting `catch = FALSE` will cause errors and interrupts be sent to the 
+promise's rejection handler instead.
+
+```r
+job <- q$run({ 42 }, catch = FALSE)$stop()
+job %>% then(onFulfilled, onRejected)
+#> Rejected with an <interrupt> object.
+
+job <- q$run({ stop('error XYZ') }, catch = FALSE)
+job %>% then(onFulfilled, onRejected)
+#> Rejected with a <callr_status_error> object.
+```
+
+

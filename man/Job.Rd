@@ -2,11 +2,20 @@
 % Please edit documentation in R/job.r
 \name{Job}
 \alias{Job}
-\title{Define a Job to Run on a Background Worker Process.}
+\title{How to Evaluate an R Expression}
 \description{
-Define a Job to Run on a Background Worker Process.
+The Job object defines several things:
+\itemize{
+\item The expression to run on a Worker process (\code{expr}).
+\item What variables to make available during evaluation (\code{vars}).
+\item How much time this task is allowed to take (\code{timeout}).
+\item User-defined functions to run and when (\code{hooks}).
+\item Result formatting (\code{reformat}).
+\item Number of CPU cores to reserve (\code{cpus}).
+}
 
-Define a Job to Run on a Background Worker Process.
+\emph{Typically you won't need to call \code{Job$new()}. Instead, create a \link{Queue} and use
+\verb{<Queue>$run()} to generate Job objects.}
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
@@ -16,27 +25,36 @@ Define a Job to Run on a Background Worker Process.
 \item{\code{vars}}{Get or set the variables that will be placed into the expression's
 environment before evaluation.}
 
-\item{\code{reformat}}{Get or set the \verb{function (job, output)} for transforming raw \code{callr}
+\item{\code{scan}}{Get or set whether to scan for missing \code{vars}.}
+
+\item{\code{ignore}}{Get or set a character vector of variable names to NOT add to \code{vars}.}
+
+\item{\code{envir}}{Get or set the environment where missing \code{vars} can be found.}
+
+\item{\code{reformat}}{Get or set the \verb{function (job, output)} for transforming raw \code{callr}.
+output to the Job's result.}
+
+\item{\code{catch}}{Get or set the signals to catch.
 output to the Job's result.}
 
 \item{\code{cpus}}{Get or set the number of CPUs to reserve for evaluating \code{expr}.}
 
-\item{\code{tmax}}{Get or set the time limits to apply to this Job.}
+\item{\code{timeout}}{Get or set the time limits to apply to this Job.}
 
 \item{\code{proxy}}{Get or set the Job to proxy in place of running \code{expr}.}
 
 \item{\code{state}}{Get or set the Job's state (setting will trigger callbacks).}
 
-\item{\code{output}}{Get or set the Job's raw \code{callr} output (setting will change the Job's
-state to 'done').}
+\item{\code{output}}{Get or set the Job's raw \code{callr} output (assigning to \verb{$output} will
+change the Job's state to 'done').}
 
-\item{\code{result}}{Get the result of \code{expr}. Will block until Job is finished.}
+\item{\code{result}}{Result of \code{expr}. Will block until Job is finished.}
 
-\item{\code{hooks}}{Get all currently registered callback hooks - a named list of functions.}
+\item{\code{hooks}}{Currently registered callback hooks as a named list of functions.}
 
 \item{\code{is_done}}{Returns TRUE or FALSE depending on if the Job's result is ready.}
 
-\item{\code{uid}}{Returns a short string, e.g. 'J16', that uniquely identifies this Job.}
+\item{\code{uid}}{A short string, e.g. 'J16', that uniquely identifies this Job.}
 }
 \if{html}{\out{</div>}}
 }
@@ -46,6 +64,7 @@ state to 'done').}
 \item \href{#method-Job-new}{\code{Job$new()}}
 \item \href{#method-Job-print}{\code{Job$print()}}
 \item \href{#method-Job-on}{\code{Job$on()}}
+\item \href{#method-Job-wait}{\code{Job$wait()}}
 \item \href{#method-Job-stop}{\code{Job$stop()}}
 }
 }
@@ -58,10 +77,15 @@ Creates a Job object defining how to run an expression on a background worker pr
 \if{html}{\out{<div class="r">}}\preformatted{Job$new(
   expr,
   vars = NULL,
-  tmax = NULL,
+  scan = FALSE,
+  ignore = NULL,
+  envir = parent.frame(),
+  timeout = NULL,
   hooks = NULL,
   reformat = TRUE,
-  cpus = 1L
+  catch = TRUE,
+  cpus = 1L,
+  ...
 )}\if{html}{\out{</div>}}
 }
 
@@ -70,36 +94,45 @@ Creates a Job object defining how to run an expression on a background worker pr
 \describe{
 \item{\code{expr}}{A call or R expression wrapped in curly braces to evaluate on a
 worker. Will have access to any variables defined by \code{vars}, as well
-as the Worker's \code{globals}, \code{packages}, and \code{init} configuration.}
+as the Worker's \code{globals}, \code{packages}, and \code{init} configuration.
+See \code{vignette('eval')}.}
 
 \item{\code{vars}}{A list of named variables to make available to \code{expr} during
 evaluation.}
 
-\item{\code{tmax}}{A named numeric vector indicating the maximum number of
+\item{\code{scan}}{Automatically add variables from \code{envir} to \code{vars} based on
+parsing/scanning \code{expr}. See \code{vignette('scan')}.}
+
+\item{\code{ignore}}{A character vector of variable names that should NOT be added
+to \code{vars} by \code{scan}.}
+
+\item{\code{envir}}{Where to search for variables when \code{scan = TRUE}.}
+
+\item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
 apply a single timeout from 'submitted' to 'done'. Example:
-\code{tmax = c(total = 2.5, running = 1)} will force-stop a job 2.5
-seconds after it is submitted, and also limits its time in the
-running state to just 1 second.}
+\code{timeout = c(total = 2.5, running = 1)}. See \code{vignette('stops')}.}
 
 \item{\code{hooks}}{A list of functions to run when the Job state changes, of the
 form \code{hooks = list(created = function (job) {...}, done = ~{...})}.
-The names of these functions should be \code{created}, \code{submitted},
-\code{queued}, \code{dispatched}, \code{starting}, \code{running}, \code{done}, or \code{'*'}.
-\code{'*'} will be run every time the state changes, whereas the others
-will only be run when the Job enters that state. Duplicate names are
-allowed.}
+See \code{vignette('hooks')}.}
 
-\item{\code{reformat}}{The underlying call to \code{callr::r_session$call()} returns
-information on stdout, stderr, etc. When \code{reformat=TRUE} (the
-default), only the result of the expression is returned. Set
-\code{reformat=FALSE} to return the entire callr output, or
-\verb{reformat=function(job,output)} to use a function of your own to
-post-process the output from callr.}
+\item{\code{reformat}}{Set \code{reformat = FALSE} to return the entire callr output
+(\verb{<Job>$output}), or \verb{reformat = function (job)} to use a function of
+your own to post-process the output from callr.
+See \code{vignette('results')}.}
+
+\item{\code{catch}}{What types of conditions to catch, e.g.
+\code{c('interrupt', 'error', 'warning')}. Or \code{TRUE} / \code{FALSE} to catch
+all/none. A caught condition will be returned by \verb{<Job>$result},
+otherwise the condition will be signaled with \verb{stop(<condition>)}
+when \verb{<Job>$result} is called. See \code{vignette('results')}.}
 
 \item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
 this number to limit the number of simultaneously running Jobs; it
 does not prevent a Job from using more CPUs than reserved.}
+
+\item{\code{...}}{Arbitrary named values to add to the returned Job object.}
 }
 \if{html}{\out{</div>}}
 }
@@ -140,17 +173,19 @@ Attach a callback function.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{state}}{The Job state that will trigger this function. Typically one of:
-\describe{
-\item{\code{'*'} -          }{ Every time the state changes. }
-\item{\code{'.next'} -      }{ Only one time, the next time the state changes. }
-\item{\code{'created'} -    }{ After \code{Job$new()} initialization. }
-\item{\code{'submitted'} -  }{ Before \code{stop_id} and \code{copy_id} are resolved. }
-\item{\code{'queued'} -     }{ After \verb{<Job>$queue} is assigned. }
-\item{\code{'dispatched'} - }{ After \verb{<Job>$worker} is assigned. }
-\item{\code{'starting'} -   }{ Before evaluation begins. }
-\item{\code{'running'} -    }{ After evaluation begins. }
-\item{\code{'done'} -       }{ After \verb{<Job>$output} is assigned. }
-}}
+\itemize{
+\item \code{'*'} -          Every time the state changes.
+\item \code{'.next'} -      Only one time, the next time the state changes.
+\item \code{'created'} -    After \code{Job$new()} initialization.
+\item \code{'submitted'} -  After \verb{<Job>$queue} is assigned.
+\item \code{'queued'} -     After \code{stop_id} and \code{copy_id} are resolved.
+\item \code{'dispatched'} - After \verb{<Job>$worker} is assigned.
+\item \code{'starting'} -   Before evaluation begins.
+\item \code{'running'} -    After evaluation begins.
+\item \code{'done'} -       After \verb{<Job>$output} is assigned.
+}
+
+Custom states can also be set/used.}
 
 \item{\code{func}}{A function that accepts a Job object as input. You can call
 \verb{<Job>$stop()} or edit its values and the changes will be persisted
@@ -165,6 +200,39 @@ A function that when called removes this callback from the Job.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Job-wait"></a>}}
+\if{latex}{\out{\hypertarget{method-Job-wait}{}}}
+\subsection{Method \code{wait()}}{
+Blocks until the Job enters the given state.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Job$wait(state = "done")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{state}}{The Job state that will trigger this function. Typically one of:
+\itemize{
+\item \code{'*'} -          Every time the state changes.
+\item \code{'.next'} -      Only one time, the next time the state changes.
+\item \code{'created'} -    After \code{Job$new()} initialization.
+\item \code{'submitted'} -  After \verb{<Job>$queue} is assigned.
+\item \code{'queued'} -     After \code{stop_id} and \code{copy_id} are resolved.
+\item \code{'dispatched'} - After \verb{<Job>$worker} is assigned.
+\item \code{'starting'} -   Before evaluation begins.
+\item \code{'running'} -    After evaluation begins.
+\item \code{'done'} -       After \verb{<Job>$output} is assigned.
+}
+
+Custom states can also be set/used.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+This Job, invisibly.
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Job-stop"></a>}}
 \if{latex}{\out{\hypertarget{method-Job-stop}{}}}
 \subsection{Method \code{stop()}}{
@@ -176,8 +244,8 @@ Stop this Job. If the Job is running, the worker process will be rebooted.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{reason}}{A message or other value to include in the 'interrupt'
-condition object that will be returned as the Job's result.}
+\item{\code{reason}}{A message to include in the 'interrupt' condition object that
+will be returned as the Job's result.}
 }
 \if{html}{\out{</div>}}
 }

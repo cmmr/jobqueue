@@ -1,0 +1,104 @@
+---
+title: "Introduction to jobqueue"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to jobqueue}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Create a Queue
+
+```r
+library(jobqueue)
+q <- Queue$new()
+```
+
+When you create a Queue, several Worker processes are created in the background. You can then evaluate R code on those background processes while your main R process is free to do other work.
+
+> **Important**
+> 
+> The background processes are persisent R sessions. Avoid modifying their 
+> `.GlobalEnv`, otherwise your R code will produce different results based 
+> on which Worker evaluates it.
+
+
+
+## Create a Job
+
+Main article: `vignette('eval')`
+
+```r
+job <- q$run({ paste('Hello', 'World!') })
+```
+
+This Job will begin evaluating immediately, assuming no other Jobs are ahead of it in the Queue.
+
+
+
+## Access the Result
+
+Main article: `vignette('results')`
+
+```r
+job$result
+#> [1] "Hello World!"
+```
+
+Running `<Job>$result` will block until the Job finishes and the result is ready.
+
+
+
+## Add a Callback Hook
+
+Main article: `vignette('hooks')`
+
+```r
+job$on('done', function (job) message(job$result))
+#> [1] "Hello World!"
+```
+
+Adding a callback hook to trigger when the Job is done allows the result to be 
+handled without blocking the main R process.
+
+
+
+## Interrupt Evaluation
+
+Main article: `vignette('stops')`
+
+```r
+job <- q$run({ Sys.sleep(10); 'Zzzzz' })
+job$stop()
+job$result
+#> <interrupt: job stopped by user>
+```
+
+If the Job's result is no longer needed and you want to free up compute 
+resources, calling `<Job>$stop()` will terminate the background process.
+Terminated Workers are automatically replaced by new ones.
+
+
+
+## Passing Data
+
+Main article: `vignette('data')`
+
+```r
+# Global variables.
+q <- Queue$new(globals = list(MY_DATA = mtcars))
+
+# A call to evaluate on the Worker.
+expr <- quote(head(MY_DATA, n)[,fields])
+
+# Non-global variables.
+vars <- list(n = 2, fields = c('mpg', 'cyl', 'disp'))
+
+job <- q$run(expr = expr, vars = vars)
+
+job$result
+#>               mpg cyl disp
+#> Mazda RX4      21   6  160
+#> Mazda RX4 Wag  21   6  160
+```
+

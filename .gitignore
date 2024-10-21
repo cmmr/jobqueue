@@ -2,4 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+paper.md
 docs
+inst/doc
+/doc/
+/Meta/

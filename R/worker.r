@@ -1,7 +1,8 @@
 
-#' A Single Background Process for Running Jobs.
+#' A Background Process
 #'
 #' @name Worker
+#' 
 #' 
 #' @param globals  A list or similar set of values that are added to the 
 #'        `.GlobalEnv` of workers.
@@ -10,7 +11,7 @@
 #' 
 #' @param init  A call or R expression wrapped in curly braces to evaluate on 
 #'        each worker just once, immediately after start-up. Will have access 
-#'        to any variables defined by `globals` and assets from `packages`. 
+#'        to variables defined by `globals` and assets from `packages`. 
 #'        Returned value is ignored.
 #'        
 #' @param hooks  A list of functions to run when the Worker state changes, of 
@@ -179,7 +180,7 @@ w_initialize <- function (self, private, globals, packages, init, hooks, options
   
   # See if we have anything for a config file.
   config <- list(
-    globals  = validate_list(globals),
+    globals  = validate_list(globals, if_null = NULL),
     packages = validate_character_vector(packages),
     init     = validate_expression(init, init_subst) )
   
@@ -226,7 +227,7 @@ w_stop <- function (self, private, reason) {
       private$job_off()
     
     for (job in c(private$.backlog, private$.job))
-      job$output <- list(error = interrupted(reason))
+      job$output <- interruptCondition(reason)
     
     private$finalize()
     
@@ -256,6 +257,9 @@ w_run <- function (self, private, job) {
   
   if (!inherits(job, 'Job'))
     cli_abort('`job` must be a Job object, not {.type {job}}.')
+  
+  if (is_null(job$run_call))
+    job$run_call <- caller_call(1L)
   
   private$.backlog %<>% c(job)
   job$worker <- self
@@ -393,6 +397,8 @@ w__configure <- function (self, private) {
     args = list(config_file = private$config_file), 
     func = function (config_file) {
       
+      worker_env <- .GlobalEnv
+      
       if (!is.null(config_file)) {
         
         config <- readRDS(config_file)
@@ -401,14 +407,14 @@ w__configure <- function (self, private) {
           require(package = p[[i]], character.only = TRUE)
         
         for (i in seq_along(g <- config[['globals']]))
-          assign(x = names(g)[[i]], value = g[[i]], pos = .GlobalEnv)
+          assign(x = names(g)[[i]], value = g[[i]], pos = worker_env)
         
         if (!is.null(i <- config[['init']]))
-          eval(expr = i, envir = .GlobalEnv, enclos = .GlobalEnv)
+          eval(expr = i, envir = worker_env, enclos = worker_env)
       }
       
       loaded <- list(
-        globals  = ls(.GlobalEnv, all.names = TRUE),
+        globals  = ls(worker_env, all.names = TRUE),
         attached = list() )
       
       invisible(lapply(

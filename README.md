@@ -2,11 +2,10 @@
 # jobqueue
 
 <!-- badges: start -->
-
 [![dev](https://github.com/cmmr/jobqueue/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/cmmr/jobqueue/actions/workflows/R-CMD-check.yaml)
 [![cran](https://www.r-pkg.org/badges/version/jobqueue)](https://CRAN.R-project.org/package=jobqueue)
 [![conda](https://anaconda.org/conda-forge/r-jobqueue/badges/version.svg)](https://anaconda.org/conda-forge/r-jobqueue)
-[![Codecov test coverage](https://codecov.io/gh/cmmr/jobqueue/graph/badge.svg)](https://app.codecov.io/gh/cmmr/jobqueue)
+[![covr](https://codecov.io/gh/cmmr/jobqueue/graph/badge.svg)](https://app.codecov.io/gh/cmmr/jobqueue)
 <!-- badges: end -->
 
 
@@ -44,9 +43,11 @@ job$result
 
 ## Asynchronous Callbacks
 
+Main article: `vignette('hooks')`
+
 ``` r
 j <- q$run(
-  expr  = { Sys.sleep(1); 42 }, 
+  expr  = { 42 }, 
   hooks = list(
     'created' = ~{ message("We're uid '", .$uid, "'.") },
     '*'       = ~{ message('  - ', .$state) }))
@@ -63,21 +64,39 @@ j$on('done', function (job) message('result = ', job$result))
 #> result = 42
 ```
 
-#### With the 'promises' Package
+
+### Converting to Promises
 
 ``` r
 job      <- q$run({ 3.14 })
 callback <- function (result) message('resolved with: ', result)
 
 job %...>% callback
-#> resolved with: 42
+#> resolved with: 3.14
 
 job %>% then(callback)
-#> resolved with: 42
+#> resolved with: 3.14
 
 as.promise(job)$then(callback)
-#> resolved with: 42
+#> resolved with: 3.14
 ```
+
+See also https://rstudio.github.io/promises/
+
+
+### Shiny Integration
+
+```r
+function(input, output, session) {
+  output$plot <- renderPlot({
+    q$run({ expensive_operation() }) %...>%
+      head(input$n) %...>%
+      plot()
+  })
+}
+```
+
+See also https://rstudio.github.io/promises/articles/promises_06_shiny.html
 
 
 ## Stopping Jobs
@@ -88,6 +107,9 @@ take its place.
 
 Stopped jobs will return a condition object of class 'interrupt' as
 their result.
+
+Main article: `vignette('stops')`
+
 
 #### Manually
 
@@ -101,7 +123,7 @@ job$result
 A custom message can also be given, e.g. `job$stop('my reason')`, which
 will be returned in the condition object.
 
-#### Max Runtime
+#### Runtime Limits
 
 ``` r
 job <- q$run({ Sys.sleep(2); 'Zzzzz' }, timeout = 0.2)
@@ -144,30 +166,28 @@ job2$result
 
 ## Variables
 
-#### Automaticly identified
+Main article: `vignette('data')`
 
 ``` r
-x <- 3
-y <- 4
-job <- q$run({ x + y })
-job$result
-#> [1] 7
+q <- Queue$new(globals = list(G = 8))
+
+expr <- quote(c(x = x , y = y, G = G))
+x    <- 3
+y    <- 4
+
+# Automatic
+job <- q$run(expr, scan = TRUE)
+dput(job$result)
+#> c(x = 3, y = 4, G = 8)
+
+# Explicit
+job <- q$run(expr, vars = list(x = 10, y = 2))
+dput(job$result)
+#> c(x = 10, y = 2, G = 8)
+
+# Mixed
+job <- q$run(expr, vars = list(x = 10), scan = TRUE)
+dput(job$result)
+#> c(x = 10, y = 4, G = 8)
 ```
 
-#### Explicitly defined
-
-``` r
-job <- q$run({ x + y }, list(x = 10, y = 2))
-job$result
-#> [1] 12
-```
-
-#### Mix of both
-
-``` r
-x <- 3
-y <- 4
-job <- q$run({ x + y }, list(x = 10), scan = TRUE)
-job$result
-#> [1] 14
-```

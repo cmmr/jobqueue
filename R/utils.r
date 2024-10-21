@@ -29,7 +29,7 @@ u_on <- function (self, private, prefix, state, func) {
   func  <- validate_function(func, null_ok = FALSE)
   
   uid <- attr(func, '.uid') <- increment_uid(prefix)
-  private$.hooks %<>% c(setNames(list(func), state))
+  private$.hooks %<>% c(set_names(list(func), state))
   
   off <- function () private$.hooks %<>% attr_ne('.uid', uid)
   
@@ -61,7 +61,11 @@ u__set_state <- function (self, private, state) {
 }
 
 
-interrupted <- function (reason = 'stopped') errorCondition(message = reason, class = 'interrupt')
+interruptCondition <- function (reason = 'stopped') {
+  x <- errorCondition(message = reason, class = 'interrupt')
+  class(x) <- c('interrupt', 'condition')
+  return (x)
+}
 
 
 

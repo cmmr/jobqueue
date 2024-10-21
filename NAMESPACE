@@ -12,14 +12,19 @@ importFrom("promises",
            "promise_race", "promise_reduce", "promise_resolve", "then" )
 importFrom("R6", "R6Class")
 importFrom("rlang", 
-           "%||%", "as_environment", "as_function", "dots_list", "env_get", "env_has", "env_name", 
+           "%||%", "as_environment", "as_function", "caller_call", "caller_fn", 
+           "catch_cnd", "dots_list", "env_get", "env_has", "env_name", 
            "is_character", "is_formula", "is_false", "is_function", "is_list", "is_named", 
            "is_named2", "is_null", "is_na", "is_true", "is_scalar_character", 
-           "is_scalar_integerish", "is_scalar_logical", "is_string", "new_environment" )
+           "is_scalar_integerish", "is_scalar_logical", "is_string", "new_environment",
+           "set_names" )
+importFrom("utils", "capture.output")
 
 export(`Job`)
 export(`Queue`)
 export(`Worker`)
+
+export(`run_now`)
 
 export(`%>%`)
 export(`%<>%`)

@@ -2,36 +2,24 @@
 % Please edit documentation in R/queue.r
 \name{Queue}
 \alias{Queue}
-\title{Interruptible, Asynchronous Background Jobs.}
+\title{Assigns Jobs to a Set of Workers}
 \description{
-Submit your jobs to a Queue and it will run them on a background R
-process when one becomes available. Jobs are launched in the same order as
-they are submitted, but may finish in a different order based on each job's
-run time. Treat the returned Job object as a promise for asynchronous
-downstream processing of the job's result.
-
-Starts R sessions that run in the background. Calls to \code{run()} evaluate R
-functions on these background sessions. \code{run()} returns a \link{Job}
-object which can be passed to \code{then()} to schedule work to be done on the
-result, when it is ready.
-
-The \link{Job} object also has a \verb{$stop()} element which can be called to return
-a result immediately. If the job was actively running in a background R
-session, that process is killed and a new process is started to take its
-place.
+Jobs go in. Results come out.
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{jobs}}{List of \link{Job}s currently managed by this Queue.}
+\item{\code{uid}}{Get or set - Unique identifier, e.g. \code{'Q1'}.}
 
-\item{\code{workers}}{List of \link{Worker}s used to process Jobs.}
+\item{\code{jobs}}{Get or set - List of \link{Job}s currently managed by this Queue.}
 
-\item{\code{uid}}{Unique identifier, e.g. 'Q1'.}
+\item{\code{workers}}{Get or set - List of \link{Worker}s used for processing Jobs.}
+
+\item{\code{hooks}}{A named list of currently registered callback hooks.}
 
 \item{\code{loaded}}{List of global variables and attached functions on the Workers.}
 
-\item{\code{state}}{Current state: starting, active, stopped, or error.}
+\item{\code{state}}{Current state: \code{'starting'}, \code{'idle'}, \code{'busy'}, \code{'stopped'}, or \code{'error.'}}
 }
 \if{html}{\out{</div>}}
 }
@@ -42,6 +30,8 @@ place.
 \item \href{#method-Queue-print}{\code{Queue$print()}}
 \item \href{#method-Queue-run}{\code{Queue$run()}}
 \item \href{#method-Queue-submit}{\code{Queue$submit()}}
+\item \href{#method-Queue-wait}{\code{Queue$wait()}}
+\item \href{#method-Queue-on}{\code{Queue$on()}}
 \item \href{#method-Queue-shutdown}{\code{Queue$shutdown()}}
 }
 }
@@ -62,11 +52,17 @@ properly set for each Job.
   max_cpus = availableCores(omit = 1L),
   workers = ceiling(max_cpus * 1.2),
   options = r_session_options(),
-  tmax = NULL,
+  scan = FALSE,
+  ignore = NULL,
+  envir = NULL,
+  timeout = NULL,
   hooks = NULL,
   reformat = TRUE,
+  catch = TRUE,
+  cpus = 1L,
   stop_id = NULL,
-  copy_id = NULL
+  copy_id = NULL,
+  lazy = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -80,12 +76,12 @@ properly set for each Job.
 
 \item{\code{init}}{A call or R expression wrapped in curly braces to evaluate on
 each worker just once, immediately after start-up. Will have access
-to any variables defined by \code{globals} and assets from \code{packages}.
+to variables defined by \code{globals} and assets from \code{packages}.
 Returned value is ignored.}
 
-\item{\code{max_cpus}}{Total number of CPU cores that can be reserved all running
-Jobs via their combined \code{cpus} arguments. Does not enforce limits on
-actual CPU utilization.}
+\item{\code{max_cpus}}{Total number of CPU cores that can be reserved by all
+running Jobs (\code{sum(cpus)}). Does not enforce limits on actual CPU
+utilization.}
 
 \item{\code{workers}}{How many background \link{Worker} processes to start. Set to more
 than \code{max_cpus} to enable interrupted workers to be quickly swapped
@@ -93,8 +89,10 @@ out with standby Workers while a replacement Worker boots up.}
 
 \item{\code{options}}{Passed to \code{callr::r_session$new()}}
 
-\item{\code{tmax, hooks, reformat, stop_id, copy_id}}{Defaults for this Queue's \verb{$run()} method. Here, \code{stop_id} and
-\code{copy_id} must be a \verb{function (job)} or \code{NULL}.}
+\item{\code{scan, ignore, envir, timeout, hooks, reformat, catch, cpus, stop_id, copy_id, lazy}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id} and
+\code{copy_id} must be either a \verb{function (job)} or \code{NULL}, and \code{hooks}
+can take on an alternate format as described in the Callback Hooks
+section.}
 }
 \if{html}{\out{</div>}}
 }
@@ -129,16 +127,19 @@ by \code{Queue$new()}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Queue$run(
   expr,
-  vars = NULL,
-  scan = is.null(vars),
-  ignore = NULL,
-  tmax = NA,
+  vars = list(),
+  scan = NA,
+  ignore = NA,
+  envir = NA,
+  timeout = NA,
   hooks = NA,
   reformat = NA,
-  cpus = 1L,
+  catch = NA,
+  cpus = NA,
   stop_id = NA,
   copy_id = NA,
-  start = TRUE
+  lazy = NA,
+  ...
 )}\if{html}{\out{</div>}}
 }
 
@@ -147,44 +148,40 @@ by \code{Queue$new()}.
 \describe{
 \item{\code{expr}}{A call or R expression wrapped in curly braces to evaluate on a
 worker. Will have access to any variables defined by \code{vars}, as well
-as the Worker's \code{globals}, \code{packages}, and \code{init} configuration.}
+as the Worker's \code{globals}, \code{packages}, and \code{init} configuration.
+See \code{vignette('eval')}.}
 
 \item{\code{vars}}{A list of named variables to make available to \code{expr} during
 evaluation.}
 
-\item{\code{scan}}{Should additional variables be added to \code{vars} based on
-scanning \code{expr} for missing global variables? By default,
-\code{scan = is.null(vars)}, meaning if you set \code{vars = list()} then no
-scan is done. Set \code{scan = TRUE} to always scan, \code{scan = FALSE} to
-never scan, and \verb{scan = <an environment-like object>} to look for
-globals there. When scanning, the worker's environment is taken into
-account, and globals on the worker are favored over globals locally.
-\code{vars} defined by the user are always left untouched.}
+\item{\code{scan}}{Automatically add variables from \code{envir} to \code{vars} based on
+parsing/scanning \code{expr}. See \code{vignette('scan')}.}
 
 \item{\code{ignore}}{A character vector of variable names that should NOT be added
 to \code{vars} by \code{scan}.}
 
-\item{\code{tmax}}{A named numeric vector indicating the maximum number of
+\item{\code{envir}}{Where to search for variables when \code{scan = TRUE}. By default,
+uses the environment where \verb{<Queue>$run()} is called.}
+
+\item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
 apply a single timeout from 'submitted' to 'done'. Example:
-\code{tmax = c(total = 2.5, running = 1)} will force-stop a job 2.5
-seconds after it is submitted, and also limits its time in the
-running state to just 1 second.}
+\code{timeout = c(total = 2.5, running = 1)}. See \code{vignette('stops')}.}
 
 \item{\code{hooks}}{A list of functions to run when the Job state changes, of the
 form \code{hooks = list(created = function (job) {...}, done = ~{...})}.
-The names of these functions should be \code{created}, \code{submitted},
-\code{queued}, \code{dispatched}, \code{starting}, \code{running}, \code{done}, or \code{'*'}.
-\code{'*'} will be run every time the state changes, whereas the others
-will only be run when the Job enters that state. Duplicate names are
-allowed.}
+See \code{vignette('hooks')}.}
 
-\item{\code{reformat}}{The underlying call to \code{callr::r_session$call()} returns
-information on stdout, stderr, etc. When \code{reformat=TRUE} (the
-default), only the result of the expression is returned. Set
-\code{reformat=FALSE} to return the entire callr output, or
-\verb{reformat=function(job,output)} to use a function of your own to
-post-process the output from callr.}
+\item{\code{reformat}}{Set \code{reformat = FALSE} to return the entire callr output
+(\verb{<Job>$output}), or \verb{reformat = function (job)} to use a function of
+your own to post-process the output from callr.
+See \code{vignette('results')}.}
+
+\item{\code{catch}}{What types of conditions to catch, e.g.
+\code{c('interrupt', 'error', 'warning')}. Or \code{TRUE} / \code{FALSE} to catch
+all/none. A caught condition will be returned by \verb{<Job>$result},
+otherwise the condition will be signaled with \verb{stop(<condition>)}
+when \verb{<Job>$result} is called. See \code{vignette('results')}.}
 
 \item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
 this number to limit the number of simultaneously running Jobs; it
@@ -194,16 +191,21 @@ does not prevent a Job from using more CPUs than reserved.}
 that Job will be stopped and return an 'interrupt' condition object
 as its result. \code{stop_id} can also be a \verb{function (job)} that returns
 the \code{stop_id} to assign to a given Job. A \code{stop_id} of \code{NULL}
-disables this feature.}
+disables this feature. See \code{vignette('stops')}.}
 
 \item{\code{copy_id}}{If an existing \link{Job} in the Queue has the same \code{copy_id},
 the newly submitted Job will become a "proxy" for that earlier Job,
 returning whatever result the earlier Job returns. \code{copy_id} can also
 be a \verb{function (job)} that returns the \code{copy_id} to assign to a given
-Job. A \code{copy_id} of \code{NULL} disables this feature.}
+Job. A \code{copy_id} of \code{NULL} disables this feature.
+See \code{vignette('stops')}.}
 
-\item{\code{start}}{Should a Job be submitted to the Queue (\code{start = TRUE}) or
-just created (\code{start = FALSE})?}
+\item{\code{lazy}}{When \code{lazy = FALSE} (the default), the job is submitted for
+evaluation immediately. Otherwise it is lazily evaluated - that is,
+only once \verb{<Job>$result}, \verb{<Job>$output}, or \verb{<Queue>$submit(<Job>)}
+is called.}
+
+\item{\code{...}}{Arbitrary named values to add to the returned Job object.}
 }
 \if{html}{\out{</div>}}
 }
@@ -229,6 +231,67 @@ Adds a Job to the Queue for running on a background process.
 }
 \subsection{Returns}{
 This Queue, invisibly.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Queue-wait"></a>}}
+\if{latex}{\out{\hypertarget{method-Queue-wait}{}}}
+\subsection{Method \code{wait()}}{
+Blocks until the Queue enters the given state.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Queue$wait(state = "idle")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{state}}{The Queue state that will trigger this function. One of:
+\describe{
+\item{\code{'*'} -        }{ Every time the state changes. }
+\item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
+\item{\code{'starting'} - }{ Workers are starting. }
+\item{\code{'idle'} -     }{ All workers are ready/idle. }
+\item{\code{'busy'} -     }{ At least one worker is busy. }
+\item{\code{'stopped'} -  }{ Shutdown is complete. }
+\item{\code{'error'} -    }{ Workers did not start cleanly. }
+}}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+This Queue, invisibly.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Queue-on"></a>}}
+\if{latex}{\out{\hypertarget{method-Queue-on}{}}}
+\subsection{Method \code{on()}}{
+Attach a callback function.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Queue$on(state, func)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{state}}{The Queue state that will trigger this function. One of:
+\describe{
+\item{\code{'*'} -        }{ Every time the state changes. }
+\item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
+\item{\code{'starting'} - }{ Workers are starting. }
+\item{\code{'idle'} -     }{ All workers are ready/idle. }
+\item{\code{'busy'} -     }{ At least one worker is busy. }
+\item{\code{'stopped'} -  }{ Shutdown is complete. }
+\item{\code{'error'} -    }{ Workers did not start cleanly. }
+}}
+
+\item{\code{func}}{A function that accepts a Queue object as input. Return value
+is ignored.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A function that when called removes this callback from the Queue.
 }
 }
 \if{html}{\out{<hr>}}

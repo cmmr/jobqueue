@@ -1,73 +1,86 @@
 
-#' Define a Job in Isolation from Queues/Workers.
+#' How to Evaluate an R Expression
 #' 
-#' 
-#'
 #' @name Job
+#'
+#' @description
+#' 
+#' The Job object defines several things:
+#' 
+#'   * The expression to run on a Worker process (`expr`).
+#'   * What variables to make available during evaluation (`vars`).
+#'   * How much time this task is allowed to take (`timeout`).
+#'   * User-defined functions to run and when (`hooks`).
+#'   * Result formatting (`reformat`).
+#'   * Number of CPU cores to reserve (`cpus`).
+#' 
+#' *Typically you won't need to call `Job$new()`. Instead, create a [Queue] and use 
+#' `<Queue>$run()` to generate Job objects.*
+#'
 #'
 #' @param expr  A call or R expression wrapped in curly braces to evaluate on a 
 #'        worker. Will have access to any variables defined by `vars`, as well 
 #'        as the Worker's `globals`, `packages`, and `init` configuration.
+#'        See `vignette('eval')`.
 #' 
 #' @param vars  A list of named variables to make available to `expr` during 
 #'        evaluation.
 #' 
-#' @param scan  Should additional variables be added to `vars` based on 
-#'        scanning `expr` for missing global variables? The default, 
-#'        `scan = TRUE` always scans and adds to `vars`, set `scan = FALSE` to 
-#'        never scan, and `scan = <an environment-like object>` to look for 
-#'        globals there. `vars` defined by the user are always left untouched.
+#' @param scan  Automatically add variables from `envir` to `vars` based on 
+#'        parsing/scanning `expr`. See `vignette('scan')`.
 #' 
 #' @param ignore  A character vector of variable names that should NOT be added 
-#'        to `vars` when `scan=TRUE`.
+#'        to `vars` by `scan`.
+#' 
+#' @param envir  Where to search for variables when `scan = TRUE`.
 #' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
 #'        apply a single timeout from 'submitted' to 'done'. Example:
-#'        `timeout = c(total = 2.5, running = 1)` will force-stop a job 2.5 
-#'        seconds after it is submitted, and also limits its time in the 
-#'        running state to just 1 second.
+#'        `timeout = c(total = 2.5, running = 1)`. See `vignette('stops')`.
 #'        
 #' @param hooks  A list of functions to run when the Job state changes, of the 
 #'        form `hooks = list(created = function (job) {...}, done = ~{...})`.
-#'        The names of these functions should be `created`, `submitted`, 
-#'        `queued`, `dispatched`, `starting`, `running`, `done`, or `'*'`. 
-#'        `'*'` will be run every time the state changes, whereas the others 
-#'        will only be run when the Job enters that state. Duplicate names are 
-#'        allowed.
+#'        See `vignette('hooks')`.
 #'        
-#' @param reformat  The underlying call to `callr::r_session$call()` returns
-#'        information on stdout, stderr, etc. When `reformat=TRUE` (the 
-#'        default), only the result of the expression is returned. Set 
-#'        `reformat=FALSE` to return the entire callr output, or 
-#'        `reformat=function(job,output)` to use a function of your own to 
-#'        post-process the output from callr.
+#' @param reformat  Set `reformat = FALSE` to return the entire callr output 
+#'        (`<Job>$output`), or `reformat = function (job)` to use a function of 
+#'        your own to post-process the output from callr.
+#'        See `vignette('results')`.
+#'        
+#' @param catch  What types of conditions to catch, e.g. 
+#'        `c('interrupt', 'error', 'warning')`. Or `TRUE` / `FALSE` to catch 
+#'        all/none. A caught condition will be returned by `<Job>$result`, 
+#'        otherwise the condition will be signaled with `stop(<condition>)`
+#'        when `<Job>$result` is called. See `vignette('results')`.
 #'        
 #' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
 #'        this number to limit the number of simultaneously running Jobs; it 
 #'        does not prevent a Job from using more CPUs than reserved.
 #'        
-#' @param state  The Job state that will trigger this function. Typically one of:
-#'        \describe{
-#'            \item{`'*'` -          }{ Every time the state changes. }
-#'            \item{`'.next'` -      }{ Only one time, the next time the state changes. }
-#'            \item{`'created'` -    }{ After `Job$new()` initialization. }
-#'            \item{`'submitted'` -  }{ After `<Job>$queue` is assigned. }
-#'            \item{`'queued'` -     }{ After `stop_id` and `copy_id` are resolved. }
-#'            \item{`'dispatched'` - }{ After `<Job>$worker` is assigned. }
-#'            \item{`'starting'` -   }{ Before evaluation begins. }
-#'            \item{`'running'` -    }{ After evaluation begins. }
-#'            \item{`'done'` -       }{ After `<Job>$output` is assigned. }
-#'        }
+#' @param state
+#' The Job state that will trigger this function. Typically one of:
 #'        
+#' * `'*'` -          Every time the state changes.
+#' * `'.next'` -      Only one time, the next time the state changes.
+#' * `'created'` -    After `Job$new()` initialization.
+#' * `'submitted'` -  After `<Job>$queue` is assigned.
+#' * `'queued'` -     After `stop_id` and `copy_id` are resolved.
+#' * `'dispatched'` - After `<Job>$worker` is assigned.
+#' * `'starting'` -   Before evaluation begins.
+#' * `'running'` -    After evaluation begins.
+#' * `'done'` -       After `<Job>$output` is assigned.
+#' 
+#' Custom states can also be set/used.
+#' 
 #' @param func  A function that accepts a Job object as input. You can call 
 #'        `<Job>$stop()` or edit its values and the changes will be persisted 
 #'        (since Jobs are reference class objects). You can also edit/stop 
 #'        other queued jobs by modifying the Jobs in `<Job>$queue$jobs`. 
 #'        Return value is ignored.
 #'        
-#' @param reason  A message or other value to include in the 'interrupt' 
-#'        condition object that will be returned as the Job's result.
+#' @param reason  A message to include in the 'interrupt' condition object that 
+#'        will be returned as the Job's result.
 #'        
 #' @param ...  Arbitrary named values to add to the returned Job object.
 #'
@@ -87,19 +100,20 @@ Job <- R6Class(
     initialize = function (
         expr, 
         vars     = NULL, 
-        scan     = TRUE, 
+        scan     = FALSE, 
         ignore   = NULL, 
         envir    = parent.frame(),
         timeout  = NULL, 
         hooks    = NULL, 
         reformat = TRUE, 
+        catch    = TRUE, 
         cpus     = 1L,
         ... ) {
       
       j_initialize(
         self, private, 
         expr, vars, scan, ignore, envir, 
-        timeout, hooks, reformat, cpus, ... )
+        timeout, hooks, reformat, catch, cpus, ... )
     },
     
     #' @description
@@ -132,15 +146,17 @@ Job <- R6Class(
     .ignore   = NULL,
     .envir    = NULL,
     .cpus     = NULL,
-    .timeout     = list(),
+    .timeout  = list(),
     .hooks    = list(),
     .reformat = list(),
+    .catch    = NULL,
     
     .uid      = NULL,
     .state    = 'initializing',
-    .proxy    = NULL,
     .is_done  = FALSE,
-    .output   = NULL
+    .output   = NULL,
+    .proxy    = NULL,
+    proxy_off = NULL
   ),
   
   active = list(
@@ -167,9 +183,14 @@ Job <- R6Class(
     envir = function (value) j_envir(private, value),
     
     #' @field reformat
-    #' Get or set the `function (job, output)` for transforming raw `callr` 
+    #' Get or set the `function (job, output)` for transforming raw `callr`.
     #' output to the Job's result.
     reformat = function (value) j_reformat(private, value),
+    
+    #' @field catch
+    #' Get or set the signals to catch. 
+    #' output to the Job's result.
+    catch = function (value) j_catch(private, value),
     
     #' @field cpus
     #' Get or set the number of CPUs to reserve for evaluating `expr`.
@@ -212,7 +233,8 @@ Job <- R6Class(
 
 
 # Sanitize and track values for later use.
-j_initialize <- function (self, private, expr, vars, scan, ignore, envir, timeout, hooks, reformat, cpus, ...) {
+j_initialize <- function (
+    self, private, expr, vars, scan, ignore, envir, timeout, hooks, reformat, catch, cpus, ...) {
   
   expr_subst    <- substitute(expr, env = parent.frame())
   private$.expr <- validate_expression(expr, expr_subst, null_ok = FALSE)
@@ -230,6 +252,7 @@ j_initialize <- function (self, private, expr, vars, scan, ignore, envir, timeou
   self$envir    <- envir
   self$timeout  <- timeout
   self$reformat <- reformat
+  self$catch    <- catch
   self$cpus     <- cpus
   
   private$.uid   <- increment_uid('J')
@@ -249,7 +272,7 @@ j_print <- function (self) {
 
 j_stop <- function (self, private, reason) {
   # cli_text('Job $stop() called with reason: {.val {reason}}')
-  self$output <- list('error' = interrupted(reason))
+  self$output <- interruptCondition(reason)
   return (invisible(self))
 }
 
@@ -267,12 +290,14 @@ j_output <- function (self, private, value) {
     return (private$.output)
   }
   
-  # cli_text('Output recieved for job {self$uid}: {.type {value}}')
-  
   # Only accept the first assignment to Job$output
   if (!private$.is_done) {
-    # cli_text('Output assigned to job {self$uid}: {.type {value}}')
-    private$.proxy   <- NULL
+    
+    if (!is_null(private$.proxy)) {
+      private$proxy_off()
+      private$.proxy <- NULL
+    }
+    
     private$.is_done <- TRUE
     private$.output  <- value
     self$state       <- 'done'
@@ -284,21 +309,35 @@ j_output <- function (self, private, value) {
 # Reformat the raw 'callr_session_result' every call.
 j_result <- function (self, private) {
   
-  output   <- self$output # blocking
   reformat <- private$.reformat
+  catch    <- private$.catch
   
-  if (is_false(reformat))    return (output) 
-  if (is_function(reformat)) return (reformat(output))
+  # reformat = TRUE | FALSE | function (job)
+  if (is_function(reformat)) {
+    result <- try(silent = TRUE, reformat(self))
+    
+  } else {
+    result <- self$output # blocking
+    
+    if (is_true(reformat) && inherits(result, 'callr_session_result')) {
+      
+      if (is_null(result[['error']])) {
+        result <- result[['result']]
+        
+      } else {
+        result              <- result[['error']]
+        result$call         <- deparse1(self$run_call)
+        result$message      <- 'Error evaluating <Job>$expr on background process'
+        result$parent_trace <- result$parent_trace[-1,]
+        result$parent$call  <- deparse1(self$expr)
+      }
+    }
+  }
   
-  if (hasName(output, 'error') && !is_null(output[['error']])) {
-    result <- output[['error']]
-  }
-  else if (hasName(output, 'result')) { 
-    result <- output[['result']]
-  }
-  else {
-    result <- output
-  }
+  # catch = TRUE | FALSE | c('interrupt', 'error', 'warning')
+  if (!is_true(catch) && inherits(result, 'condition'))
+    if (is_false(catch) || !any(catch %in% class(result)))
+      stop (result)
   
   return (result)
 }
@@ -307,18 +346,21 @@ j_result <- function (self, private) {
 # Mirror another Job's output.
 j_proxy <- function (self, private, value) {
   
-  if (missing(value)) return (private$.proxy)
+  if (missing(value))   return (private$.proxy)
+  if (private$.is_done) return (NULL)
   
-  if (!inherits(value, 'Job'))
-    cli_abort('Job$proxy must be a Job, not {.type {value}}.')
+  proxy <- value
+  if (!is_null(proxy) && !inherits(proxy, 'Job'))
+    cli_abort('proxy must be a Job or NULL, not {.type {proxy}}.')
   
-  if (!private$.is_done) {
-    private$.proxy <- value
-    private$.proxy$on('done', function (job) {
-      if (identical(self$proxy$uid, job$uid))
-        self$output <- job$output
-    })
-  }
+  # Remove the previously set proxy.
+  if (!is_null(private$.proxy)) private$proxy_off()
+  
+  # Function for removing this new proxy.
+  if (!is_null(proxy))
+    private$proxy_off <- proxy$on('done', ~{ self$output <- .$output })
+  
+  private$.proxy <- proxy
 }
 
 
@@ -342,7 +384,7 @@ j_state <- function (self, private, value) {
   if (new_state == 'done' && !private$.is_done)
     cli_abort("Job$state can't be set to 'done' until Job$output is set.")
   
-  private$.state <- new_state
+  u__set_state(self, private, state = new_state)
   
   # Start the 'total' timeout when we enter the 'submitted' state.
   if (new_state == 'submitted')
@@ -351,17 +393,6 @@ j_state <- function (self, private, value) {
       msg <- cli_fmt(cli_text(msg))
       self$on('done', later(~self$stop(msg), delay = timeout))
     }
-  
-  hooks          <- private$.hooks
-  private$.hooks <- hooks[names(hooks) != '.next']
-  hooks          <- hooks[names(hooks) %in% c('*', '.next', new_state)]
-  
-  for (i in seq_along(hooks)) {
-    func <- hooks[[i]]
-    if (!is_null(formals(func))) { func(self) }
-    else if (is.primitive(func)) { func(self) }
-    else                         { func()     }
-  }
   
   # Start the timeout for this new state, if present.
   if (!is_null(timeout <- private$.timeout[[new_state]])) {
@@ -405,6 +436,11 @@ j_reformat <- function (private, value) {
   private$.reformat <- validate_function(value, bool_ok = TRUE, if_null = TRUE)
 }
 
+j_catch <- function (private, value) {
+  if (missing(value)) return (private$.catch)
+  private$.catch <- validate_character_vector(value, bool_ok = TRUE)
+}
+
 j_cpus <- function (private, value) {
   if (missing(value)) return (private$.cpus)
   private$.cpus <- validate_positive_integer(value, if_null = 1L)
@@ -421,8 +457,15 @@ as.promise.Job <- function (x) {
   p   <- attr(job, '.jobqueue_promise', exact = TRUE)
   
   if (is_null(p)) {
-    if (job$is_done) { p <- promise_resolve(job$result)                      }
-    else             { p <- promise(~{ job$on('done', ~resolve(.$result)) }) }
+    
+    p <- promise(function (resolve, reject) {
+      job$on('done', function (job) {
+        cnd <- catch_cnd(result <- job$result)
+        if (is_null(cnd)) { resolve(result) }
+        else              { reject(cnd)     }
+      })
+    })
+    
     attr(job, '.jobqueue_promise') <- p
   }
   

@@ -5,12 +5,11 @@ test_that('job', {
   
   job <- expect_silent(q$run(
     expr     = quote(2 + 3), 
-    scan     = FALSE,
     cpus     = NULL,
     lazy     = TRUE, 
     envir    = NULL, 
     timeout  = list('queued' = 1),
-    reformat = ~{ .$result * 2 }))
+    reformat = ~{ .$output$result * 2 }))
   
   expect_true(is.function(job$reformat))
   expect_equal(job$result, 10)

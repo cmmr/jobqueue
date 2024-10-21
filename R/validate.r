@@ -20,8 +20,7 @@ validate_expression <- function (value, subst, null_ok = TRUE) {
   cli_abort(must_be(c('a call', 'an expression in curly braces')))
 }
 
-
-validate_list <- function (value, null_ok = TRUE, if_null = NULL, of_type = NULL, named = TRUE, default = NULL) {
+validate_list <- function (value, null_ok = TRUE, if_null = list(), of_type = NULL, named = TRUE, default = NULL) {
   
   varname <- substitute(value)
   
@@ -51,7 +50,7 @@ validate_list <- function (value, null_ok = TRUE, if_null = NULL, of_type = NULL
 
 validate_hooks <- function (hooks, prefix = 'H') {
   
-  hooks <- validate_list(hooks, if_null = list())
+  hooks <- validate_list(hooks)
   if (length(hooks) == 0) return (hooks)
   
   names(hooks) <- sub('^[qwj]_', '', names(hooks))
@@ -68,7 +67,7 @@ validate_hooks <- function (hooks, prefix = 'H') {
 
 validate_timeout <- function (timeout) {
   
-  timeout <- validate_list(timeout, if_null = list(), default = 'total')
+  timeout <- validate_list(timeout, default = 'total')
   
   if (length(dups <- unique(names(timeout)[duplicated(names(timeout))])))
     cli_abort('`timeout` cannot have duplicate names: {.val {dups}}')
@@ -101,7 +100,10 @@ validate_environment <- function (value, null_ok = TRUE, if_null = NULL) {
   errmsg   <- cant_cast('an environment')
   on_error <- function (e) { cli_abort(c(errmsg, 'x' = as.character(e) )) }
   
-  tryCatch(as_environment(value), error = on_error, warning = on_error)
+  tryCatch(
+    expr    = as_environment(value, parent = baseenv()), 
+    error   = on_error, 
+    warning = on_error )
 }
 
 validate_positive_integer <- function (value, if_null = NULL, null_ok = TRUE) {
@@ -117,7 +119,8 @@ validate_positive_integer <- function (value, if_null = NULL, null_ok = TRUE) {
       stopifnot(is_true(value > 0))
       value
     }, 
-    error = on_error, warning = on_error)
+    error   = on_error, 
+    warning = on_error )
 }
 
 validate_logical <- function (value) {
@@ -126,9 +129,12 @@ validate_logical <- function (value) {
   cli_abort(must_be('a character vector'))
 }
 
-validate_character_vector <- function (value, if_null = NULL) {
-  if (is_null(value))                       return (if_null)
-  if (is_character(value) && !anyNA(value)) return (value)
+validate_character_vector <- function (value, if_null = NULL, bool_ok = FALSE) {
+  if (is_null(value)) return (if_null)
+  if (!anyNA(value)) {
+    if (is_character(value))                          return (value)
+    if (is_scalar_logical(value) && is_true(bool_ok)) return (value)
+  }
   varname <- substitute(value)
   cli_abort(must_be('a character vector'))
 }

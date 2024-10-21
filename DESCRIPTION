@@ -2,7 +2,7 @@ Package: jobqueue
 Type: Package
 Title: Queue and Run Asynchronous Interruptible R Tasks on Background Processes
 Version: 0.1.0.9000
-Date: 2024-10-09
+Date: 2024-10-21
 Authors@R: c(
     person(
       "Daniel P.", "Smith",
@@ -13,9 +13,11 @@ Authors@R: c(
       "Alkek Center for Metagenomics and Microbiome Research", 
       role = c("cph", "fnd") ))
 Description:
-    Takes an R expression and returns a Job object with a '$stop' method which 
-    can be called to terminate the background job. Also provides timeouts and 
-    other mechanisms for terminating a background job before it is finished.
+    Takes an R expression and returns a Job object with a '$stop()' method 
+    which can be called to terminate the background job. Also provides timeouts 
+    and other mechanisms for automatically terminating a background job. The 
+    result of the expression is available synchronously via '$result' or 
+    asynchronously with callbacks or the 'promises' package framework.
 URL: https://cmmr.github.io/jobqueue/
 BugReports: https://github.com/cmmr/jobqueue/issues
 License: MIT + file LICENSE
@@ -36,6 +38,11 @@ Imports:
     parallelly,
     promises,
     R6,
-    rlang
+    rlang,
+    utils
 Suggests:
+    glue,
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
+VignetteBuilder: knitr

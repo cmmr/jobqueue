@@ -6,5 +6,6 @@ template:
   theme: breeze-dark
   bslib:
     code-bg: "#2b2b2b"
-
+    base_font: {google: "Noto Sans"}
+    heading_font: {google: "Noto Sans"}
   

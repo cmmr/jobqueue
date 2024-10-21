@@ -6,7 +6,7 @@ test_that('basic', {
 
   expect_no_error(q$print())
 
-  job <- expect_silent(q$run({ 2 + 2 }, scan = FALSE))
+  job <- expect_silent(q$run({ 2 + 2 }))
   expect_false(job$is_done)
   expect_equal(job$result, 4)
   expect_equal(job$state, 'done')
@@ -16,10 +16,10 @@ test_that('basic', {
   expect_equal(job$result, 8)
 
   z   <- 2
-  job <- expect_silent(q$run({ x + z }, vars = list(x = 3)))
+  job <- expect_silent(q$run({ x + z }, vars = list(x = 3), scan = TRUE))
   expect_equal(job$result, 5)
 
-  expect_equal(q$state, 'active')
+  expect_equal(q$state, 'idle')
   expect_equal(length(q$workers), 1L)
 
   expect_true(is.list(q$hooks))
@@ -47,25 +47,25 @@ test_that('config', {
     packages = 'magrittr',
     init     = { y <- 37 },
     hooks    = list(
-      'q_active'  = ~{ e$state = .$state },
-      'q_.next'   = ~{ e$.next = .$state },
-      'q_*'       = ~{ e$.star = .$state }
+      'q_idle'  = ~{ e$state = .$state },
+      'q_.next' = ~{ e$.next = .$state },
+      'q_*'     = ~{ e$.star = .$state }
     )))
 
   q$on('stopped', function () { e$state = 'stopped' })
   q$on('stopped', class) # A primitive; for code coverage.
 
   x <- y <- 1
-  job <- q$run({c(x, y) %>% sum})
+  job <- q$run({c(x, y) %>% sum}, scan = TRUE)
 
   expect_equal(job$result, 42 + 37)
-  expect_equal(e$state, 'active')
-  expect_equal(e$.next, 'active')
-  expect_equal(e$.star, 'active')
+  expect_equal(e$state, 'idle')
+  expect_equal(e$.next, 'starting')
+  expect_equal(e$.star, 'idle')
 
   expect_silent(q$shutdown())
   expect_equal(e$state, 'stopped')
-  expect_equal(e$.next, 'active')
+  expect_equal(e$.next, 'starting')
   expect_equal(e$.star, 'stopped')
 })
 
@@ -74,13 +74,13 @@ test_that('workers', {
 
   q <- expect_silent(Queue$new(workers = 2L, max_cpus = 3L))
 
-  q$run({ Sys.sleep(1) }, scan = FALSE)
-  q$run({ Sys.sleep(1) }, scan = FALSE)
-  q$run({ Sys.sleep(1) }, scan = FALSE)
+  q$run({ Sys.sleep(1) })
+  q$run({ Sys.sleep(1) })
+  q$run({ Sys.sleep(1) })
 
   expect_equal(map(q$jobs, 'state'), rep('queued', 3))
 
-  q$wait()
+  q$wait('.next')
   expect_equal(map(q$jobs, 'state'), c('running', 'running', 'queued'))
   expect_equal(map(q$workers, 'state'), rep('busy', 2))
 
@@ -92,14 +92,14 @@ test_that('max_cpus', {
 
   q <- expect_silent(Queue$new(workers = 3L, max_cpus = 2L))
 
-  q$run({ Sys.sleep(1) }, scan = FALSE)
-  q$run({ Sys.sleep(1) }, scan = FALSE)
-  q$run({ Sys.sleep(1) }, scan = FALSE)
+  q$run({ Sys.sleep(1) })
+  q$run({ Sys.sleep(1) })
+  q$run({ Sys.sleep(1) })
 
   expect_equal(map(q$jobs, 'state'), rep('queued', 3))
 
-  q$wait()
-  q$run({ Sys.sleep(1) }, scan = FALSE)
+  q$wait('.next')
+  q$run({ Sys.sleep(1) })
   
   expect_equal(map(q$jobs, 'state'), c(rep('running', 2), rep('queued', 2)))
   expect_equal(map(q$workers, 'state'), c('busy', 'busy', 'idle'))
@@ -110,7 +110,7 @@ test_that('max_cpus', {
 
 test_that('interrupt', {
 
-  q <- expect_silent(Queue$new(workers = 1L, scan = FALSE))
+  q <- expect_silent(Queue$new(workers = 1L))
 
   job <- q$run({ Sys.sleep(1) })
   expect_silent(job$stop())
