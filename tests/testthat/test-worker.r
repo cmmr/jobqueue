@@ -9,7 +9,7 @@ test_that('worker', {
   
   expect_error(w$start())
   expect_error(w$run('not a Job'))
-  expect_no_error(w$print())
+  expect_no_error(suppressMessages(w$print()))
   expect_true(is.list(w$hooks))
   expect_true(is.list(w$backlog))
   expect_true(is.null(w$job))

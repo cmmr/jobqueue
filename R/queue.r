@@ -285,7 +285,8 @@ q_initialize <- function (
     scan, ignore, envir, timeout, hooks, reformat, catch, cpus, 
     stop_id, copy_id, lazy ) {
   
-  init_subst <- substitute(init, env = parent.frame())
+  init_subst       <- substitute(init, env = parent.frame())
+  private$up_since <- Sys.time()
   
   # Assign hooks by q_ and w_ prefixes
   hooks <- validate_list(hooks)

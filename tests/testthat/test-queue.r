@@ -3,8 +3,8 @@ test_that('basic', {
 
   q <- expect_silent(Queue$new(workers = 1L))
   expect_equal(q$state, 'starting')
-
-  expect_no_error(q$print())
+  
+  expect_no_error(suppressMessages(q$print()))
 
   job <- expect_silent(q$run({ 2 + 2 }))
   expect_false(job$is_done)

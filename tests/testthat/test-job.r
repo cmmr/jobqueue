@@ -27,7 +27,7 @@ test_that('job', {
   expect_true(is.list(job$hooks))
   expect_true(is.list(job$timeout))
   expect_true(startsWith(job$uid, 'J'))
-  expect_no_error(job$print())
+  expect_no_error(suppressMessages(job$print()))
   
   
   job1       <- expect_silent(q$run({ Sys.sleep(1) }, hooks = list('submitted' = class)))
