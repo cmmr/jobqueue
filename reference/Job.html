@@ -42,7 +42,6 @@ Typically you won't need to call Job$new(). Instead, create a Queue and use
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/eval.html">Expressions and Variables</a></li>
     <li><a class="dropdown-item" href="../articles/hooks.html">Callback Hooks</a></li>
     <li><a class="dropdown-item" href="../articles/results.html">Result and Error Handling</a></li>
-    <li><a class="dropdown-item" href="../articles/scan.html">Automatic Substitution</a></li>
     <li><a class="dropdown-item" href="../articles/stops.html">Stopping Jobs</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -84,25 +83,12 @@ Typically you won't need to call Job$new(). Instead, create a Queue and use
 environment before evaluation.</p></dd>
 
 
-<dt><code>scan</code></dt>
-<dd><p>Get or set whether to scan for missing <code>vars</code>.</p></dd>
-
-
-<dt><code>ignore</code></dt>
-<dd><p>Get or set a character vector of variable names to NOT add to <code>vars</code>.</p></dd>
-
-
-<dt><code>envir</code></dt>
-<dd><p>Get or set the environment where missing <code>vars</code> can be found.</p></dd>
-
-
 <dt><code>reformat</code></dt>
-<dd><p>Get or set the <code>function (job, output)</code> for transforming raw <code>callr</code>.
-output to the Job's result.</p></dd>
+<dd><p>Get or set the <code>function (job)</code> for defining <code>&lt;Job&gt;$result</code>.</p></dd>
 
 
-<dt><code>catch</code></dt>
-<dd><p>Get or set the signals to catch.
+<dt><code>signal</code></dt>
+<dd><p>Get or set the conditions to signal.
 output to the Job's result.</p></dd>
 
 
@@ -123,8 +109,8 @@ output to the Job's result.</p></dd>
 
 
 <dt><code>output</code></dt>
-<dd><p>Get or set the Job's raw <code>callr</code> output (assigning to <code>$output</code> will
-change the Job's state to 'done').</p></dd>
+<dd><p>Get or set the Job's raw output (assigning to <code>$output</code> will
+change the Job's state to <code>'done'</code>).</p></dd>
 
 
 <dt><code>result</code></dt>
@@ -163,13 +149,10 @@ change the Job's state to 'done').</p></dd>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  <span class="va">expr</span>,</span>
 <span>  vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  scan <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  ignore <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sys.parent.html" class="external-link">parent.frame</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  timeout <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  hooks <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  reformat <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  catch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  reformat <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  signal <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cpus <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
@@ -189,20 +172,6 @@ See <code><a href="../articles/eval.html">vignette('eval')</a></code>.</p></dd>
 evaluation.</p></dd>
 
 
-<dt><code>scan</code></dt>
-<dd><p>Automatically add variables from <code>envir</code> to <code>vars</code> based on
-parsing/scanning <code>expr</code>. See <code><a href="../articles/scan.html">vignette('scan')</a></code>.</p></dd>
-
-
-<dt><code>ignore</code></dt>
-<dd><p>A character vector of variable names that should NOT be added
-to <code>vars</code> by <code>scan</code>.</p></dd>
-
-
-<dt><code>envir</code></dt>
-<dd><p>Where to search for variables when <code>scan = TRUE</code>.</p></dd>
-
-
 <dt><code>timeout</code></dt>
 <dd><p>A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
@@ -217,18 +186,19 @@ See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd
 
 
 <dt><code>reformat</code></dt>
-<dd><p>Set <code>reformat = FALSE</code> to return the entire callr output
-(<code>&lt;Job&gt;$output</code>), or <code>reformat = function (job)</code> to use a function of
-your own to post-process the output from callr.
+<dd><p>Set <code>reformat = function (job)</code> to define what
+<code>&lt;Job&gt;$result</code> should return. The default, <code>reformat = NULL</code> passes
+<code>&lt;Job&gt;$output</code> unchanged to <code>&lt;Job&gt;$result</code>.
 See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
 
 
-<dt><code>catch</code></dt>
-<dd><p>What types of conditions to catch, e.g.
-<code>c('interrupt', 'error', 'warning')</code>. Or <code>TRUE</code> / <code>FALSE</code> to catch
-all/none. A caught condition will be returned by <code>&lt;Job&gt;$result</code>,
-otherwise the condition will be signaled with <code>stop(&lt;condition&gt;)</code>
-when <code>&lt;Job&gt;$result</code> is called. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
+<dt><code>signal</code></dt>
+<dd><p>Should calling <code>&lt;Job&gt;$result</code> signal on condition objects?
+When <code>FALSE</code>, <code>&lt;Job&gt;$result</code> will return the object without
+taking additional action. Setting to <code>TRUE</code> or a character vector of
+condition classes, e.g. <code>c('interrupt', 'error', 'warning')</code>, will
+cause the equivalent of <code>stop(&lt;condition&gt;)</code> to be called when those
+conditions are produced. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
 
 
 <dt><code>cpus</code></dt>

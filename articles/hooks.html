@@ -39,7 +39,6 @@
 <li><a class="dropdown-item" href="../articles/eval.html">Expressions and Variables</a></li>
     <li><a class="dropdown-item" href="../articles/hooks.html">Callback Hooks</a></li>
     <li><a class="dropdown-item" href="../articles/results.html">Result and Error Handling</a></li>
-    <li><a class="dropdown-item" href="../articles/scan.html">Automatic Substitution</a></li>
     <li><a class="dropdown-item" href="../articles/stops.html">Stopping Jobs</a></li>
   </ul>
 </li>
@@ -206,10 +205,6 @@ trigger regardless of the present state name.</p>
 <h3 id="worker-states">Worker States<a class="anchor" aria-label="anchor" href="#worker-states"></a>
 </h3>
 <table class="table">
-<colgroup>
-<col width="21%">
-<col width="78%">
-</colgroup>
 <thead><tr class="header">
 <th>State</th>
 <th>Triggers</th>
@@ -217,7 +212,7 @@ trigger regardless of the present state name.</p>
 <tbody>
 <tr class="odd">
 <td><code>'starting'</code></td>
-<td>After starting a new <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> process.</td>
+<td>After starting a new Rscript process.</td>
 </tr>
 <tr class="even">
 <td><code>'idle'</code></td>
@@ -261,18 +256,15 @@ trigger regardless of the present state name.</p>
 resolved.</td>
 </tr>
 <tr class="even">
-<td><code>'dispatched'</code></td>
-<td>After <code>&lt;Job&gt;$worker</code> is assigned.</td>
-</tr>
-<tr class="odd">
 <td><code>'starting'</code></td>
 <td>Before evaluation begins.</td>
 </tr>
-<tr class="even">
-<td><code>'running'</code></td>
-<td>After evaluation begins.</td>
-</tr>
 <tr class="odd">
+<td><code>'running'</code></td>
+<td>After <code>&lt;Job&gt;$worker</code> is set and evaluation
+begins.</td>
+</tr>
+<tr class="even">
 <td><code>'done'</code></td>
 <td>After <code>&lt;Job&gt;$output</code> is assigned.</td>
 </tr>

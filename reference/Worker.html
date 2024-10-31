@@ -24,7 +24,6 @@ A Background Process"></head><body>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/eval.html">Expressions and Variables</a></li>
     <li><a class="dropdown-item" href="../articles/hooks.html">Callback Hooks</a></li>
     <li><a class="dropdown-item" href="../articles/results.html">Result and Error Handling</a></li>
-    <li><a class="dropdown-item" href="../articles/scan.html">Automatic Substitution</a></li>
     <li><a class="dropdown-item" href="../articles/stops.html">Stopping Jobs</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -55,16 +54,12 @@ A Background Process"></head><body>
 <dd><p>A named list of currently registered callback hooks.</p></dd>
 
 
-<dt><code>backlog</code></dt>
-<dd><p>A list of Jobs waiting to run on this Worker.</p></dd>
-
-
 <dt><code>job</code></dt>
 <dd><p>The currently running Job.</p></dd>
 
 
-<dt><code>r_session</code></dt>
-<dd><p>The <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> background process interface.</p></dd>
+<dt><code>ps</code></dt>
+<dd><p>The <code><a href="https://ps.r-lib.org/reference/ps_handle.html" class="external-link">ps::ps_handle()</a></code> for the background process.</p></dd>
 
 
 <dt><code>state</code></dt>
@@ -77,6 +72,10 @@ A Background Process"></head><body>
 
 <dt><code>uid</code></dt>
 <dd><p>A short string, e.g. 'W11', that uniquely identifies this Worker.</p></dd>
+
+
+<dt><code>wd</code></dt>
+<dd><p>The Worker's working directory.</p></dd>
 
 
 </dl><p></p></div>
@@ -97,15 +96,9 @@ A Background Process"></head><body>
 <li><p><a href="#method-Worker-run"><code>Worker$run()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-Worker-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
-<p>Creates a background <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> process for running <a href="Job.html">Job</a>s.</p><div class="section">
+<p>Creates a background Rscript process for running <a href="Job.html">Job</a>s.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Worker.html">Worker</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
-<span>  globals <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  packages <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  init <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  hooks <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  options <span class="op">=</span> <span class="fu">callr</span><span class="fu">::</span><span class="fu"><a href="https://callr.r-lib.org/reference/r_session_options.html" class="external-link">r_session_options</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Worker.html">Worker</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>globals <span class="op">=</span> <span class="cn">NULL</span>, packages <span class="op">=</span> <span class="cn">NULL</span>, init <span class="op">=</span> <span class="cn">NULL</span>, hooks <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -133,10 +126,6 @@ The names of these functions should be <code>starting</code>, <code>idle</code>,
 <code>stopped</code>, or <code>'*'</code>. <code>'*'</code> will be run every time the state changes,
 whereas the others will only be run when the Worker enters that state.
 Duplicate names are allowed.</p></dd>
-
-
-<dt><code>options</code></dt>
-<dd><p>Passed to <code>callr::r_session$new()</code></p></dd>
 
 
 </dl><p></p></div>
@@ -168,7 +157,7 @@ Duplicate names are allowed.</p></dd>
 
 </div><p></p><hr><a id="method-Worker-start"></a><div class="section">
 <h3 id="method-start-">Method <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code><a class="anchor" aria-label="anchor" href="#method-start-"></a></h3>
-<p>Starts a new background <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> process using the
+<p>Starts a new background Rscript process using the
 configuration previously defined with <code>Worker$new()</code>.</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">start</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
@@ -181,9 +170,8 @@ configuration previously defined with <code>Worker$new()</code>.</p><div class="
 
 </div><p></p><hr><a id="method-Worker-stop"></a><div class="section">
 <h3 id="method-stop-">Method <code><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop()</a></code><a class="anchor" aria-label="anchor" href="#method-stop-"></a></h3>
-<p>Stops a Worker by terminating the background <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> process
-and calling <code>&lt;Job&gt;$stop(reason)</code> on any Jobs currently assigned to this
-Worker.</p><div class="section">
+<p>Stops a Worker by terminating the background Rscript process and calling
+<code>&lt;Job&gt;$stop(reason)</code> on any Jobs currently assigned to this Worker.</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"worker stopped by user"</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
@@ -241,13 +229,13 @@ assigned to this Worker.</p></dd>
 <dd><p>Only one time, the next time the state changes.</p></dd>
 
 <dt><code>'starting'</code> - </dt>
-<dd><p>After starting a new <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> process.</p></dd>
+<dd><p>Waiting for the background process to load.</p></dd>
 
 <dt><code>'idle'</code> -     </dt>
-<dd><p>Waiting on new Jobs to be added.</p></dd>
+<dd><p>Waiting for Jobs to be <code>$run()</code>.</p></dd>
 
 <dt><code>'busy'</code> -     </dt>
-<dd><p>After a Job starts running.</p></dd>
+<dd><p>While a Job is running.</p></dd>
 
 <dt><code>'stopped'</code> -  </dt>
 <dd><p>After <code>&lt;Worker&gt;$stop()</code> is called.</p></dd>
@@ -259,9 +247,7 @@ assigned to this Worker.</p></dd>
 <dt><code>func</code></dt>
 <dd><p>A function that accepts a Worker object as input. You can call
 <code>&lt;Worker&gt;$stop()</code> or edit its values and the changes will be
-persisted (since Workers are reference class objects). You can also
-edit/stop the active or backlogged jobs by modifying <code>&lt;Worker&gt;$job</code>
-or <code>&lt;Worker&gt;$backlog</code>. Return value is ignored.</p></dd>
+persisted (since Workers are reference class objects).</p></dd>
 
 
 </dl><p></p></div>
@@ -288,13 +274,13 @@ or <code>&lt;Worker&gt;$backlog</code>. Return value is ignored.</p></dd>
 <dd><p>Only one time, the next time the state changes.</p></dd>
 
 <dt><code>'starting'</code> - </dt>
-<dd><p>After starting a new <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> process.</p></dd>
+<dd><p>Waiting for the background process to load.</p></dd>
 
 <dt><code>'idle'</code> -     </dt>
-<dd><p>Waiting on new Jobs to be added.</p></dd>
+<dd><p>Waiting for Jobs to be <code>$run()</code>.</p></dd>
 
 <dt><code>'busy'</code> -     </dt>
-<dd><p>After a Job starts running.</p></dd>
+<dd><p>While a Job is running.</p></dd>
 
 <dt><code>'stopped'</code> -  </dt>
 <dd><p>After <code>&lt;Worker&gt;$stop()</code> is called.</p></dd>
@@ -313,9 +299,7 @@ or <code>&lt;Worker&gt;$backlog</code>. Return value is ignored.</p></dd>
 </div><p></p><hr><a id="method-Worker-run"></a><div class="section">
 <h3 id="method-run-">Method <code>run()</code><a class="anchor" aria-label="anchor" href="#method-run-"></a></h3>
 <p>Assigns a Job to this Worker for evaluation on its background
-<code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> process. Jobs can be assigned even when the Worker is
-in the 'starting' or 'busy' state. A backlog of jobs will be evaluated
-sequentially in the order they were added.</p><div class="section">
+Rscript process. Worker must be in <code>'idle'</code> state.</p><div class="section">
 <h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">job</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>

@@ -22,7 +22,6 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/eval.html">Expressions and Variables</a></li>
     <li><a class="dropdown-item" href="../articles/hooks.html">Callback Hooks</a></li>
     <li><a class="dropdown-item" href="../articles/results.html">Result and Error Handling</a></li>
-    <li><a class="dropdown-item" href="../articles/scan.html">Automatic Substitution</a></li>
     <li><a class="dropdown-item" href="../articles/stops.html">Stopping Jobs</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -91,7 +90,7 @@
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Creates n <code>workers</code> background processes for handling <code>$run()</code> and
 <code>$submit()</code> calls. These workers are initialized according to the
-<code>globals</code>, <code>packages</code>, <code>init</code>, and <code>options</code> arguments. The Queue will
+<code>globals</code>, <code>packages</code>, and <code>init</code> arguments. The Queue will
 not use more than <code>max_cpus</code> at once, assuming the <code>cpus</code> argument is
 properly set for each Job.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
@@ -99,16 +98,12 @@ properly set for each Job.</p><div class="section">
 <span>  globals <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  packages <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  init <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  max_cpus <span class="op">=</span> <span class="fu">availableCores</span><span class="op">(</span>omit <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span>,</span>
+<span>  max_cpus <span class="op">=</span> <span class="fu">detectCores</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  workers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">ceiling</a></span><span class="op">(</span><span class="va">max_cpus</span> <span class="op">*</span> <span class="fl">1.2</span><span class="op">)</span>,</span>
-<span>  options <span class="op">=</span> <span class="fu">r_session_options</span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  scan <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  ignore <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  envir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  timeout <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  hooks <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  reformat <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  catch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  reformat <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  signal <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cpus <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  stop_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  copy_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -146,11 +141,7 @@ than <code>max_cpus</code> to enable interrupted workers to be quickly swapped
 out with standby Workers while a replacement Worker boots up.</p></dd>
 
 
-<dt><code>options</code></dt>
-<dd><p>Passed to <code>callr::r_session$new()</code></p></dd>
-
-
-<dt><code>scan, ignore, envir, timeout, hooks, reformat, catch, cpus, stop_id, copy_id, lazy</code></dt>
+<dt><code>timeout, hooks, reformat, signal, cpus, stop_id, copy_id, lazy</code></dt>
 <dd><p>Defaults for this Queue's <code>$run()</code> method. Here only, <code>stop_id</code> and
 <code>copy_id</code> must be either a <code>function (job)</code> or <code>NULL</code>, and <code>hooks</code>
 can take on an alternate format as described in the Callback Hooks
@@ -189,13 +180,10 @@ by <code>Queue$new()</code>.</p><div class="section">
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span></span>
 <span>  <span class="va">expr</span>,</span>
 <span>  vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  scan <span class="op">=</span> <span class="cn">NA</span>,</span>
-<span>  ignore <span class="op">=</span> <span class="cn">NA</span>,</span>
-<span>  envir <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  timeout <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  hooks <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  reformat <span class="op">=</span> <span class="cn">NA</span>,</span>
-<span>  catch <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  signal <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  cpus <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  stop_id <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  copy_id <span class="op">=</span> <span class="cn">NA</span>,</span>
@@ -218,21 +206,6 @@ See <code><a href="../articles/eval.html">vignette('eval')</a></code>.</p></dd>
 evaluation.</p></dd>
 
 
-<dt><code>scan</code></dt>
-<dd><p>Automatically add variables from <code>envir</code> to <code>vars</code> based on
-parsing/scanning <code>expr</code>. See <code><a href="../articles/scan.html">vignette('scan')</a></code>.</p></dd>
-
-
-<dt><code>ignore</code></dt>
-<dd><p>A character vector of variable names that should NOT be added
-to <code>vars</code> by <code>scan</code>.</p></dd>
-
-
-<dt><code>envir</code></dt>
-<dd><p>Where to search for variables when <code>scan = TRUE</code>. By default,
-uses the environment where <code>&lt;Queue&gt;$run()</code> is called.</p></dd>
-
-
 <dt><code>timeout</code></dt>
 <dd><p>A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
@@ -247,18 +220,18 @@ See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd
 
 
 <dt><code>reformat</code></dt>
-<dd><p>Set <code>reformat = FALSE</code> to return the entire callr output
-(<code>&lt;Job&gt;$output</code>), or <code>reformat = function (job)</code> to use a function of
-your own to post-process the output from callr.
-See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
+<dd><p>Set <code>reformat = function (job)</code> to define what
+<code>&lt;Job&gt;$result</code> should return. The default, <code>reformat = NULL</code> returns
+<code>&lt;Job&gt;$output</code> as <code>&lt;Job&gt;$result</code>. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
 
 
-<dt><code>catch</code></dt>
-<dd><p>What types of conditions to catch, e.g.
-<code>c('interrupt', 'error', 'warning')</code>. Or <code>TRUE</code> / <code>FALSE</code> to catch
-all/none. A caught condition will be returned by <code>&lt;Job&gt;$result</code>,
-otherwise the condition will be signaled with <code>stop(&lt;condition&gt;)</code>
-when <code>&lt;Job&gt;$result</code> is called. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
+<dt><code>signal</code></dt>
+<dd><p>Should calling <code>&lt;Job&gt;$result</code> signal on condition objects?
+When <code>FALSE</code>, <code>&lt;Job&gt;$result</code> will return the object without
+taking additional action. Setting to <code>TRUE</code> or a character vector of
+condition classes, e.g. <code>c('interrupt', 'error', 'warning')</code>, will
+cause the equivalent of <code>stop(&lt;condition&gt;)</code> to be called when those
+conditions are produced. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
 
 
 <dt><code>cpus</code></dt>

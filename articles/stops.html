@@ -39,7 +39,6 @@
 <li><a class="dropdown-item" href="../articles/eval.html">Expressions and Variables</a></li>
     <li><a class="dropdown-item" href="../articles/hooks.html">Callback Hooks</a></li>
     <li><a class="dropdown-item" href="../articles/results.html">Result and Error Handling</a></li>
-    <li><a class="dropdown-item" href="../articles/scan.html">Automatic Substitution</a></li>
     <li><a class="dropdown-item" href="../articles/stops.html">Stopping Jobs</a></li>
   </ul>
 </li>
@@ -76,9 +75,8 @@
 </h2>
 <p>You can save compute resources by stopping the execution of Jobs that
 are no longer needed. If that Job is currently running on a Worker, then
-the associated <code><a href="https://callr.r-lib.org/reference/r_session.html" class="external-link">callr::r_session</a></code> background process is
-terminated, and a replacement process is spun up to take its place in
-the Worker pool.</p>
+the associated Rscript background process is terminated, and a
+replacement process is spun up to take its place in the Worker pool.</p>
 <p>There are several ways to stop a Job:</p>
 <ul>
 <li>
