@@ -1,10 +1,14 @@
 
 validate_function <- function (value, bool_ok = FALSE, if_null = NULL, null_ok = TRUE) {
+  
   if (is_function(value))                           return (value)
   if (is_null(value)           && is_true(null_ok)) return (if_null)
   if (is_scalar_logical(value) && is_true(bool_ok)) return (value)
+  
   varname  <- substitute(value)
   errmsg   <- cant_cast('a function')
+  if (!is_formula(value)) cli_abort(errmsg)
+  
   on_error <- function (e) { cli_abort(c(errmsg, 'x' = as.character(e) )) }
   tryCatch(as_function(value), error = on_error, warning = on_error)
 }

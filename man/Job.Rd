@@ -25,16 +25,9 @@ The Job object defines several things:
 \item{\code{vars}}{Get or set the variables that will be placed into the expression's
 environment before evaluation.}
 
-\item{\code{scan}}{Get or set whether to scan for missing \code{vars}.}
+\item{\code{reformat}}{Get or set the \verb{function (job)} for defining \verb{<Job>$result}.}
 
-\item{\code{ignore}}{Get or set a character vector of variable names to NOT add to \code{vars}.}
-
-\item{\code{envir}}{Get or set the environment where missing \code{vars} can be found.}
-
-\item{\code{reformat}}{Get or set the \verb{function (job, output)} for transforming raw \code{callr}.
-output to the Job's result.}
-
-\item{\code{catch}}{Get or set the signals to catch.
+\item{\code{signal}}{Get or set the conditions to signal.
 output to the Job's result.}
 
 \item{\code{cpus}}{Get or set the number of CPUs to reserve for evaluating \code{expr}.}
@@ -45,8 +38,8 @@ output to the Job's result.}
 
 \item{\code{state}}{Get or set the Job's state (setting will trigger callbacks).}
 
-\item{\code{output}}{Get or set the Job's raw \code{callr} output (assigning to \verb{$output} will
-change the Job's state to 'done').}
+\item{\code{output}}{Get or set the Job's raw output (assigning to \verb{$output} will
+change the Job's state to \code{'done'}).}
 
 \item{\code{result}}{Result of \code{expr}. Will block until Job is finished.}
 
@@ -77,13 +70,10 @@ Creates a Job object defining how to run an expression on a background worker pr
 \if{html}{\out{<div class="r">}}\preformatted{Job$new(
   expr,
   vars = NULL,
-  scan = FALSE,
-  ignore = NULL,
-  envir = parent.frame(),
   timeout = NULL,
   hooks = NULL,
-  reformat = TRUE,
-  catch = TRUE,
+  reformat = NULL,
+  signal = FALSE,
   cpus = 1L,
   ...
 )}\if{html}{\out{</div>}}
@@ -100,14 +90,6 @@ See \code{vignette('eval')}.}
 \item{\code{vars}}{A list of named variables to make available to \code{expr} during
 evaluation.}
 
-\item{\code{scan}}{Automatically add variables from \code{envir} to \code{vars} based on
-parsing/scanning \code{expr}. See \code{vignette('scan')}.}
-
-\item{\code{ignore}}{A character vector of variable names that should NOT be added
-to \code{vars} by \code{scan}.}
-
-\item{\code{envir}}{Where to search for variables when \code{scan = TRUE}.}
-
 \item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
 apply a single timeout from 'submitted' to 'done'. Example:
@@ -117,16 +99,17 @@ apply a single timeout from 'submitted' to 'done'. Example:
 form \code{hooks = list(created = function (job) {...}, done = ~{...})}.
 See \code{vignette('hooks')}.}
 
-\item{\code{reformat}}{Set \code{reformat = FALSE} to return the entire callr output
-(\verb{<Job>$output}), or \verb{reformat = function (job)} to use a function of
-your own to post-process the output from callr.
+\item{\code{reformat}}{Set \verb{reformat = function (job)} to define what
+\verb{<Job>$result} should return. The default, \code{reformat = NULL} passes
+\verb{<Job>$output} unchanged to \verb{<Job>$result}.
 See \code{vignette('results')}.}
 
-\item{\code{catch}}{What types of conditions to catch, e.g.
-\code{c('interrupt', 'error', 'warning')}. Or \code{TRUE} / \code{FALSE} to catch
-all/none. A caught condition will be returned by \verb{<Job>$result},
-otherwise the condition will be signaled with \verb{stop(<condition>)}
-when \verb{<Job>$result} is called. See \code{vignette('results')}.}
+\item{\code{signal}}{Should calling \verb{<Job>$result} signal on condition objects?
+When \code{FALSE}, \verb{<Job>$result} will return the object without
+taking additional action. Setting to \code{TRUE} or a character vector of
+condition classes, e.g. \code{c('interrupt', 'error', 'warning')}, will
+cause the equivalent of \verb{stop(<condition>)} to be called when those
+conditions are produced. See \code{vignette('results')}.}
 
 \item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
 this number to limit the number of simultaneously running Jobs; it

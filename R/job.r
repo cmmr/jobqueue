@@ -26,14 +26,6 @@
 #' @param vars  A list of named variables to make available to `expr` during 
 #'        evaluation.
 #' 
-#' @param scan  Automatically add variables from `envir` to `vars` based on 
-#'        parsing/scanning `expr`. See `vignette('scan')`.
-#' 
-#' @param ignore  A character vector of variable names that should NOT be added 
-#'        to `vars` by `scan`.
-#' 
-#' @param envir  Where to search for variables when `scan = TRUE`.
-#' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
 #'        apply a single timeout from 'submitted' to 'done'. Example:
@@ -43,16 +35,17 @@
 #'        form `hooks = list(created = function (job) {...}, done = ~{...})`.
 #'        See `vignette('hooks')`.
 #'        
-#' @param reformat  Set `reformat = FALSE` to return the entire callr output 
-#'        (`<Job>$output`), or `reformat = function (job)` to use a function of 
-#'        your own to post-process the output from callr.
+#' @param reformat  Set `reformat = function (job)` to define what 
+#'        `<Job>$result` should return. The default, `reformat = NULL` passes 
+#'        `<Job>$output` unchanged to `<Job>$result`.
 #'        See `vignette('results')`.
 #'        
-#' @param catch  What types of conditions to catch, e.g. 
-#'        `c('interrupt', 'error', 'warning')`. Or `TRUE` / `FALSE` to catch 
-#'        all/none. A caught condition will be returned by `<Job>$result`, 
-#'        otherwise the condition will be signaled with `stop(<condition>)`
-#'        when `<Job>$result` is called. See `vignette('results')`.
+#' @param signal  Should calling `<Job>$result` signal on condition objects?
+#'        When `FALSE`, `<Job>$result` will return the object without 
+#'        taking additional action. Setting to `TRUE` or a character vector of 
+#'        condition classes, e.g. `c('interrupt', 'error', 'warning')`, will
+#'        cause the equivalent of `stop(<condition>)` to be called when those
+#'        conditions are produced. See `vignette('results')`.
 #'        
 #' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
 #'        this number to limit the number of simultaneously running Jobs; it 
@@ -100,20 +93,17 @@ Job <- R6Class(
     initialize = function (
         expr, 
         vars     = NULL, 
-        scan     = FALSE, 
-        ignore   = NULL, 
-        envir    = parent.frame(),
         timeout  = NULL, 
         hooks    = NULL, 
-        reformat = TRUE, 
-        catch    = TRUE, 
+        reformat = NULL, 
+        signal   = FALSE, 
         cpus     = 1L,
         ... ) {
       
       j_initialize(
         self, private, 
-        expr, vars, scan, ignore, envir, 
-        timeout, hooks, reformat, catch, cpus, ... )
+        expr, vars, 
+        timeout, hooks, reformat, signal, cpus, ... )
     },
     
     #' @description
@@ -142,21 +132,23 @@ Job <- R6Class(
     
     .expr     = NULL,
     .vars     = NULL,
-    .scan     = NULL,
-    .ignore   = NULL,
-    .envir    = NULL,
     .cpus     = NULL,
     .timeout  = list(),
     .hooks    = list(),
-    .reformat = list(),
-    .catch    = NULL,
+    .reformat = NULL,
+    .signal   = NULL,
     
     .uid      = NULL,
     .state    = 'initializing',
     .is_done  = FALSE,
     .output   = NULL,
     .proxy    = NULL,
-    proxy_off = NULL
+    
+    finalize = function () {
+      if (identical(self$uid, self$worker$job$uid))
+        if (!is_null(ps <- self$worker$ps))
+          ps_kill(ps)
+    }
   ),
   
   active = list(
@@ -170,27 +162,14 @@ Job <- R6Class(
     #' environment before evaluation.
     vars = function (value) j_vars(private, value),
     
-    #' @field scan
-    #' Get or set whether to scan for missing `vars`.
-    scan = function (value) j_scan(private, value),
-    
-    #' @field ignore
-    #' Get or set a character vector of variable names to NOT add to `vars`.
-    ignore = function (value) j_ignore(private, value),
-    
-    #' @field envir
-    #' Get or set the environment where missing `vars` can be found.
-    envir = function (value) j_envir(private, value),
-    
     #' @field reformat
-    #' Get or set the `function (job, output)` for transforming raw `callr`.
-    #' output to the Job's result.
+    #' Get or set the `function (job)` for defining `<Job>$result`.
     reformat = function (value) j_reformat(private, value),
     
-    #' @field catch
-    #' Get or set the signals to catch. 
+    #' @field signal
+    #' Get or set the conditions to signal. 
     #' output to the Job's result.
-    catch = function (value) j_catch(private, value),
+    signal = function (value) j_signal(private, value),
     
     #' @field cpus
     #' Get or set the number of CPUs to reserve for evaluating `expr`.
@@ -209,8 +188,8 @@ Job <- R6Class(
     state = function (value) j_state(self, private, value),
     
     #' @field output
-    #' Get or set the Job's raw `callr` output (assigning to `$output` will 
-    #' change the Job's state to 'done').
+    #' Get or set the Job's raw output (assigning to `$output` will 
+    #' change the Job's state to `'done'`).
     output = function (value) j_output(self, private, value),
     
     #' @field result
@@ -234,7 +213,7 @@ Job <- R6Class(
 
 # Sanitize and track values for later use.
 j_initialize <- function (
-    self, private, expr, vars, scan, ignore, envir, timeout, hooks, reformat, catch, cpus, ...) {
+    self, private, expr, vars, timeout, hooks, reformat, signal, cpus, ...) {
   
   expr_subst    <- substitute(expr, env = parent.frame())
   private$.expr <- validate_expression(expr, expr_subst, null_ok = FALSE)
@@ -243,16 +222,10 @@ j_initialize <- function (
   for (i in names(dots))
     self[[i]] <- dots[[i]]
   
-  if (is_null(envir))
-    envir <- parent.frame(n = 2)
-  
   self$vars     <- vars
-  self$scan     <- scan
-  self$ignore   <- ignore
-  self$envir    <- envir
   self$timeout  <- timeout
   self$reformat <- reformat
-  self$catch    <- catch
+  self$signal   <- signal
   self$cpus     <- cpus
   
   private$.uid   <- increment_uid('J')
@@ -271,7 +244,6 @@ j_print <- function (self) {
 
 
 j_stop <- function (self, private, reason) {
-  # cli_text('Job $stop() called with reason: {.val {reason}}')
   self$output <- interruptCondition(reason)
   return (invisible(self))
 }
@@ -292,12 +264,7 @@ j_output <- function (self, private, value) {
   
   # Only accept the first assignment to Job$output
   if (!private$.is_done) {
-    
-    if (!is_null(private$.proxy)) {
-      private$proxy_off()
-      private$.proxy <- NULL
-    }
-    
+    private$.proxy   <- NULL
     private$.is_done <- TRUE
     private$.output  <- value
     self$state       <- 'done'
@@ -306,38 +273,21 @@ j_output <- function (self, private, value) {
 }
 
 
-# Reformat the raw 'callr_session_result' every call.
+# Reformat and/or signal `<Job>$output`.
 j_result <- function (self, private) {
   
-  reformat <- private$.reformat
-  catch    <- private$.catch
+  reformat <- self$reformat # NULL/function (job)
   
-  # reformat = TRUE | FALSE | function (job)
-  if (is_function(reformat)) {
-    result <- try(silent = TRUE, reformat(self))
-    
-  } else {
-    result <- self$output # blocking
-    
-    if (is_true(reformat) && inherits(result, 'callr_session_result')) {
-      
-      if (is_null(result[['error']])) {
-        result <- result[['result']]
-        
-      } else {
-        result              <- result[['error']]
-        result$call         <- deparse1(self$run_call)
-        result$message      <- 'Error evaluating <Job>$expr on background process'
-        result$parent_trace <- result$parent_trace[-1,]
-        result$parent$call  <- deparse1(self$expr)
-      }
-    }
-  }
+  if (is_null(reformat)) { result <- self$output    }
+  else                   { result <- reformat(self) }
   
-  # catch = TRUE | FALSE | c('interrupt', 'error', 'warning')
-  if (!is_true(catch) && inherits(result, 'condition'))
-    if (is_false(catch) || !any(catch %in% class(result)))
-      stop (result)
+  signal <- self$signal # TRUE/FALSE/c('interrupt', 'error')
+  if (!is_false(signal) && inherits(result, 'condition'))
+    if (is_true(signal) || any(signal %in% class(result)))
+      cli_abort(
+        .envir  = self$caller_env, 
+        parent  = result,
+        message = deparse1(self$expr) )
   
   return (result)
 }
@@ -353,12 +303,10 @@ j_proxy <- function (self, private, value) {
   if (!is_null(proxy) && !inherits(proxy, 'Job'))
     cli_abort('proxy must be a Job or NULL, not {.type {proxy}}.')
   
-  # Remove the previously set proxy.
-  if (!is_null(private$.proxy)) private$proxy_off()
-  
-  # Function for removing this new proxy.
-  if (!is_null(proxy))
-    private$proxy_off <- proxy$on('done', ~{ self$output <- .$output })
+  proxy$on('done', function (job) {
+    if (identical(self$proxy$uid, job$uid))
+      self$output <- job$output
+  })
   
   private$.proxy <- proxy
 }
@@ -411,21 +359,6 @@ j_vars <- function (private, value) {
   private$.vars <- validate_list(value)
 }
 
-j_scan <- function (private, value) {
-  if (missing(value)) return (private$.scan)
-  private$.scan <- validate_logical(value)
-}
-
-j_ignore <- function (private, value) {
-  if (missing(value)) return (private$.ignore)
-  private$.ignore <- validate_character_vector(value)
-}
-
-j_envir <- function (private, value) {
-  if (missing(value)) return (private$.envir)
-  private$.envir <- validate_environment(value)
-}
-
 j_timeout <- function (self, private, value) {
   if (missing(value)) return (private$.timeout)
   private$.timeout <- validate_timeout(value)
@@ -433,12 +366,12 @@ j_timeout <- function (self, private, value) {
 
 j_reformat <- function (private, value) {
   if (missing(value)) return (private$.reformat)
-  private$.reformat <- validate_function(value, bool_ok = TRUE, if_null = TRUE)
+  private$.reformat <- validate_function(value)
 }
 
-j_catch <- function (private, value) {
-  if (missing(value)) return (private$.catch)
-  private$.catch <- validate_character_vector(value, bool_ok = TRUE)
+j_signal <- function (private, value) {
+  if (missing(value)) return (private$.signal)
+  private$.signal <- validate_character_vector(value, bool_ok = TRUE)
 }
 
 j_cpus <- function (private, value) {

@@ -41,7 +41,7 @@ Jobs go in. Results come out.
 \subsection{Method \code{new()}}{
 Creates n \code{workers} background processes for handling \verb{$run()} and
 \verb{$submit()} calls. These workers are initialized according to the
-\code{globals}, \code{packages}, \code{init}, and \code{options} arguments. The Queue will
+\code{globals}, \code{packages}, and \code{init} arguments. The Queue will
 not use more than \code{max_cpus} at once, assuming the \code{cpus} argument is
 properly set for each Job.
 \subsection{Usage}{
@@ -49,16 +49,12 @@ properly set for each Job.
   globals = NULL,
   packages = NULL,
   init = NULL,
-  max_cpus = availableCores(omit = 1L),
+  max_cpus = detectCores(),
   workers = ceiling(max_cpus * 1.2),
-  options = r_session_options(),
-  scan = FALSE,
-  ignore = NULL,
-  envir = NULL,
   timeout = NULL,
   hooks = NULL,
-  reformat = TRUE,
-  catch = TRUE,
+  reformat = NULL,
+  signal = FALSE,
   cpus = 1L,
   stop_id = NULL,
   copy_id = NULL,
@@ -87,9 +83,7 @@ utilization.}
 than \code{max_cpus} to enable interrupted workers to be quickly swapped
 out with standby Workers while a replacement Worker boots up.}
 
-\item{\code{options}}{Passed to \code{callr::r_session$new()}}
-
-\item{\code{scan, ignore, envir, timeout, hooks, reformat, catch, cpus, stop_id, copy_id, lazy}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id} and
+\item{\code{timeout, hooks, reformat, signal, cpus, stop_id, copy_id, lazy}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id} and
 \code{copy_id} must be either a \verb{function (job)} or \code{NULL}, and \code{hooks}
 can take on an alternate format as described in the Callback Hooks
 section.}
@@ -128,13 +122,10 @@ by \code{Queue$new()}.
 \if{html}{\out{<div class="r">}}\preformatted{Queue$run(
   expr,
   vars = list(),
-  scan = NA,
-  ignore = NA,
-  envir = NA,
   timeout = NA,
   hooks = NA,
   reformat = NA,
-  catch = NA,
+  signal = NA,
   cpus = NA,
   stop_id = NA,
   copy_id = NA,
@@ -154,15 +145,6 @@ See \code{vignette('eval')}.}
 \item{\code{vars}}{A list of named variables to make available to \code{expr} during
 evaluation.}
 
-\item{\code{scan}}{Automatically add variables from \code{envir} to \code{vars} based on
-parsing/scanning \code{expr}. See \code{vignette('scan')}.}
-
-\item{\code{ignore}}{A character vector of variable names that should NOT be added
-to \code{vars} by \code{scan}.}
-
-\item{\code{envir}}{Where to search for variables when \code{scan = TRUE}. By default,
-uses the environment where \verb{<Queue>$run()} is called.}
-
 \item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
 apply a single timeout from 'submitted' to 'done'. Example:
@@ -172,16 +154,16 @@ apply a single timeout from 'submitted' to 'done'. Example:
 form \code{hooks = list(created = function (job) {...}, done = ~{...})}.
 See \code{vignette('hooks')}.}
 
-\item{\code{reformat}}{Set \code{reformat = FALSE} to return the entire callr output
-(\verb{<Job>$output}), or \verb{reformat = function (job)} to use a function of
-your own to post-process the output from callr.
-See \code{vignette('results')}.}
+\item{\code{reformat}}{Set \verb{reformat = function (job)} to define what
+\verb{<Job>$result} should return. The default, \code{reformat = NULL} returns
+\verb{<Job>$output} as \verb{<Job>$result}. See \code{vignette('results')}.}
 
-\item{\code{catch}}{What types of conditions to catch, e.g.
-\code{c('interrupt', 'error', 'warning')}. Or \code{TRUE} / \code{FALSE} to catch
-all/none. A caught condition will be returned by \verb{<Job>$result},
-otherwise the condition will be signaled with \verb{stop(<condition>)}
-when \verb{<Job>$result} is called. See \code{vignette('results')}.}
+\item{\code{signal}}{Should calling \verb{<Job>$result} signal on condition objects?
+When \code{FALSE}, \verb{<Job>$result} will return the object without
+taking additional action. Setting to \code{TRUE} or a character vector of
+condition classes, e.g. \code{c('interrupt', 'error', 'warning')}, will
+cause the equivalent of \verb{stop(<condition>)} to be called when those
+conditions are produced. See \code{vignette('results')}.}
 
 \item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
 this number to limit the number of simultaneously running Jobs; it

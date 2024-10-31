@@ -26,15 +26,6 @@
 #' @param vars  A list of named variables to make available to `expr` during 
 #'        evaluation.
 #' 
-#' @param scan  Automatically add variables from `envir` to `vars` based on 
-#'        parsing/scanning `expr`. See `vignette('scan')`.
-#' 
-#' @param ignore  A character vector of variable names that should NOT be added 
-#'        to `vars` by `scan`.
-#' 
-#' @param envir  Where to search for variables when `scan = TRUE`. By default, 
-#'        uses the environment where `<Queue>$run()` is called.
-#' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
 #'        apply a single timeout from 'submitted' to 'done'. Example:
@@ -44,16 +35,16 @@
 #'        form `hooks = list(created = function (job) {...}, done = ~{...})`.
 #'        See `vignette('hooks')`.
 #'        
-#' @param reformat  Set `reformat = FALSE` to return the entire callr output 
-#'        (`<Job>$output`), or `reformat = function (job)` to use a function of 
-#'        your own to post-process the output from callr.
-#'        See `vignette('results')`.
+#' @param reformat  Set `reformat = function (job)` to define what 
+#'        `<Job>$result` should return. The default, `reformat = NULL` returns 
+#'        `<Job>$output` as `<Job>$result`. See `vignette('results')`.
 #'        
-#' @param catch  What types of conditions to catch, e.g. 
-#'        `c('interrupt', 'error', 'warning')`. Or `TRUE` / `FALSE` to catch 
-#'        all/none. A caught condition will be returned by `<Job>$result`, 
-#'        otherwise the condition will be signaled with `stop(<condition>)`
-#'        when `<Job>$result` is called. See `vignette('results')`.
+#' @param signal  Should calling `<Job>$result` signal on condition objects?
+#'        When `FALSE`, `<Job>$result` will return the object without 
+#'        taking additional action. Setting to `TRUE` or a character vector of 
+#'        condition classes, e.g. `c('interrupt', 'error', 'warning')`, will
+#'        cause the equivalent of `stop(<condition>)` to be called when those
+#'        conditions are produced. See `vignette('results')`.
 #'        
 #' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
 #'        this number to limit the number of simultaneously running Jobs; it 
@@ -66,8 +57,6 @@
 #' @param workers  How many background [Worker] processes to start. Set to more 
 #'        than `max_cpus` to enable interrupted workers to be quickly swapped 
 #'        out with standby Workers while a replacement Worker boots up.
-#'        
-#' @param options  Passed to `callr::r_session$new()`
 #'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
@@ -122,11 +111,11 @@ Queue <- R6Class(
     #' @description
     #' Creates n `workers` background processes for handling `$run()` and 
     #' `$submit()` calls. These workers are initialized according to the 
-    #' `globals`, `packages`, `init`, and `options` arguments. The Queue will 
+    #' `globals`, `packages`, and `init` arguments. The Queue will 
     #' not use more than `max_cpus` at once, assuming the `cpus` argument is 
     #' properly set for each Job.
     #'
-    #' @param scan,ignore,envir,timeout,hooks,reformat,catch,cpus,stop_id,copy_id,lazy
+    #' @param timeout,hooks,reformat,signal,cpus,stop_id,copy_id,lazy
     #'        Defaults for this Queue's `$run()` method. Here only, `stop_id` and 
     #'        `copy_id` must be either a `function (job)` or `NULL`, and `hooks`
     #'        can take on an alternate format as described in the Callback Hooks
@@ -137,16 +126,12 @@ Queue <- R6Class(
         globals   = NULL,
         packages  = NULL,
         init      = NULL,
-        max_cpus  = availableCores(omit = 1L),
+        max_cpus  = detectCores(),
         workers   = ceiling(max_cpus * 1.2),
-        options   = r_session_options(),
-        scan      = FALSE,
-        ignore    = NULL,
-        envir     = NULL,
         timeout   = NULL,
         hooks     = NULL,
-        reformat  = TRUE,
-        catch     = TRUE,
+        reformat  = NULL,
+        signal    = FALSE,
         cpus      = 1L,
         stop_id   = NULL,
         copy_id   = NULL,
@@ -154,8 +139,8 @@ Queue <- R6Class(
        
       q_initialize(
         self, private, 
-        globals, packages, init, max_cpus, workers, options,
-        scan, ignore, envir, timeout, hooks, reformat, catch, cpus, 
+        globals, packages, init, max_cpus, workers, 
+        timeout, hooks, reformat, signal, cpus, 
         stop_id, copy_id, lazy )
     },
     
@@ -175,13 +160,10 @@ Queue <- R6Class(
     run = function (
         expr, 
         vars     = list(), 
-        scan     = NA, 
-        ignore   = NA,
-        envir    = NA,
         timeout  = NA, 
         hooks    = NA, 
         reformat = NA, 
-        catch    = NA, 
+        signal   = NA, 
         cpus     = NA, 
         stop_id  = NA, 
         copy_id  = NA, 
@@ -190,8 +172,8 @@ Queue <- R6Class(
       
       q_run(
         self, private, 
-        expr, vars, scan, ignore, envir, 
-        timeout, hooks, reformat, catch, 
+        expr, vars, 
+        timeout, hooks, reformat, signal, 
         cpus, stop_id, copy_id, lazy, ... )
     },
     
@@ -281,8 +263,8 @@ Queue <- R6Class(
 
 q_initialize <- function (
     self, private, 
-    globals, packages, init, max_cpus, workers, options,
-    scan, ignore, envir, timeout, hooks, reformat, catch, cpus, 
+    globals, packages, init, max_cpus, workers, 
+    timeout, hooks, reformat, signal, cpus, 
     stop_id, copy_id, lazy ) {
   
   init_subst       <- substitute(init, env = parent.frame())
@@ -300,9 +282,8 @@ q_initialize <- function (
   # Queue configuration
   self$uid          <- increment_uid('Q')
   private$.hooks    <- validate_hooks(hooks[['queue']], 'QH')
-  private$max_cpus  <- validate_positive_integer(max_cpus, if_null = availableCores(omit = 1L))
+  private$max_cpus  <- validate_positive_integer(max_cpus, if_null = detectCores())
   private$n_workers <- validate_positive_integer(workers,  if_null = ceiling(private$max_cpus * 1.2))
-  private$options   <- validate_list(options,              if_null = r_session_options())
   
   # Worker configuration
   private$w_conf[['globals']]  <- validate_list(globals, if_null = NULL)
@@ -311,13 +292,10 @@ q_initialize <- function (
   private$w_conf[['hooks']]    <- validate_hooks(hooks[['worker']], 'WH')
   
   # Job configuration defaults
-  private$j_conf[['scan']]     <- validate_logical(scan)
-  private$j_conf[['ignore']]   <- validate_character_vector(ignore)
-  private$j_conf[['envir']]    <- validate_environment(envir, null_ok = TRUE)
   private$j_conf[['timeout']]  <- validate_timeout(timeout)
   private$j_conf[['hooks']]    <- validate_hooks(hooks[['job']], 'JH')
-  private$j_conf[['reformat']] <- validate_function(reformat, bool_ok = TRUE, if_null = TRUE)
-  private$j_conf[['catch']]    <- validate_character_vector(catch, bool_ok = TRUE)
+  private$j_conf[['reformat']] <- validate_function(reformat)
+  private$j_conf[['signal']]   <- validate_character_vector(signal, bool_ok = TRUE)
   private$j_conf[['cpus']]     <- validate_positive_integer(cpus, if_null = 1L)
   private$j_conf[['stop_id']]  <- validate_function(stop_id)
   private$j_conf[['copy_id']]  <- validate_function(copy_id)
@@ -369,8 +347,8 @@ q_print <- function (self, private) {
 
 q_run <- function (
     self, private, 
-    expr, vars, scan, ignore, envir, 
-    timeout, hooks, reformat, catch, 
+    expr, vars, 
+    timeout, hooks, reformat, signal, 
     cpus, stop_id, copy_id, lazy, ...) {
   
   expr_subst <- substitute(expr, env = parent.frame())
@@ -379,9 +357,6 @@ q_run <- function (
   # Replace NA values with defaults from Queue$new() call.
   j_conf <- private$j_conf
   
-  if (is_null(j_conf[['envir']]))
-    j_conf[['envir']] <- parent.frame(n = 2)
-  
   if (is_formula(stop_id)) stop_id <- as_function(stop_id)
   if (is_formula(copy_id)) copy_id <- as_function(copy_id)
   
@@ -389,13 +364,10 @@ q_run <- function (
     expr     = expr, 
     vars     = vars,
     queue    = self,
-    scan     = if (is_na(scan))     j_conf[['scan']]     else scan,
-    ignore   = if (is_na(ignore))   j_conf[['ignore']]   else ignore,
-    envir    = if (is_na(envir))    j_conf[['envir']]    else envir,
     timeout  = if (is_na(timeout))  j_conf[['timeout']]  else timeout,
     hooks    = if (is_na(hooks))    j_conf[['hooks']]    else hooks,
     reformat = if (is_na(reformat)) j_conf[['reformat']] else reformat,
-    catch    = if (is_na(catch))    j_conf[['catch']]    else catch,
+    signal   = if (is_na(signal))   j_conf[['signal']]   else signal,
     cpus     = if (is_na(cpus))     j_conf[['cpus']]     else cpus,
     stop_id  = if (is_na(stop_id))  j_conf[['stop_id']]  else stop_id,
     copy_id  = if (is_na(copy_id))  j_conf[['copy_id']]  else copy_id,
@@ -404,7 +376,7 @@ q_run <- function (
   # Option to not start the job just yet.
   if (is_na(lazy))   lazy <- j_conf[['lazy']]
   if (is_false(lazy)) {
-    job$run_call <- caller_call(1L)
+    job$caller_env <- caller_env(2L)
     self$submit(job)
   }
   
@@ -419,8 +391,8 @@ q_submit <- function (self, private, job) {
   
   if (job$is_done) return (invisible(job))
   
-  if (is_null(job$run_call))
-    job$run_call <- caller_call(1L)
+  if (is_null(job$caller_env))
+    job$caller_env <- caller_env(2L)
   
   job$queue          <- self
   private$total_runs <- private$total_runs + 1L
@@ -428,30 +400,6 @@ q_submit <- function (self, private, job) {
   job$state <- 'submitted'
   if (job$state != 'submitted')
     return (invisible(job))
-  
-  # Find globals in expr and add them to vars.
-  if (is_true(job$scan)) {
-    
-    expr     <- job$expr
-    vars     <- job$vars %||% list()
-    envir    <- job$envir
-    ignore   <- job$ignore
-    
-    if (!private$is_ready) self$wait()
-    globals  <- self$loaded$globals
-    attached <- self$loaded$attached
-    
-    add <- globalsOf(expr, envir, method = "liberal", mustExist = FALSE)
-    add <- cleanup(add)
-    pkg <- sapply(attr(add, 'where'), env_name)
-    nms <- setdiff(names(add), c(names(vars), ignore, globals))
-    
-    for (nm in nms)
-      if (!identical(pkg[[nm]], attached[[nm]]))
-        vars[[nm]] <- add[[nm]]
-    
-    job$vars <- vars
-  }
   
   # Check for `stop_id` hash collision => stop the other job.
   if (is_formula(job$stop_id))  job$stop_id <- as_function(job$stop_id)
@@ -506,7 +454,7 @@ q__dispatch <- function (self, private) {
   queued_jobs  <- get_eq(self$jobs,    'state', 'queued')
   queued_jobs  <- queued_jobs[cumsum(map(queued_jobs, 'cpus')) <= free_cpus]
   for (i in seq_len(min(length(idle_workers), length(queued_jobs)))) {
-    idle_workers[[i]]$run(queued_jobs[[i]])
+    try(idle_workers[[i]]$run(queued_jobs[[i]]))
   }
   
   # Update <Queue>$state and trigger callback hooks.
@@ -552,7 +500,6 @@ q__poll_startup <- function (self, private) {
         globals  = private$w_conf[['globals']], 
         packages = private$w_conf[['packages']], 
         init     = private$w_conf[['init']], 
-        options  = private$w_conf[['options']],
         hooks    = private$w_conf[['hooks']] )
       
       self$workers %<>% c(worker)

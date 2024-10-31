@@ -40,6 +40,7 @@ u_on <- function (self, private, prefix, state, func) {
 }
 
 
+
 u__set_state <- function (self, private, state) {
   
   if (private$.state != state) {
@@ -62,9 +63,8 @@ u__set_state <- function (self, private, state) {
 
 
 interruptCondition <- function (reason = 'stopped') {
-  x <- errorCondition(message = reason, class = 'interrupt')
-  class(x) <- c('interrupt', 'condition')
-  return (x)
+  if (is_condition(reason)) reason <- reason$message
+  cnd('interrupt', message = as.character(reason))
 }
 
 
@@ -74,6 +74,25 @@ increment_uid <- function (prefix) {
   value <- env_get(.jobqueue_env, nm, 1L)
   assign(nm, value + 1L, .jobqueue_env)
   return (paste0(prefix, value))
+}
+
+working_dir <- function (uid) {
+  path <- file.path(tempdir(), 'jobqueue', uid)
+  dir.create(path, recursive = TRUE)
+  normalizePath(path, winslash = '/')
+}
+
+read_logs <- function (wd) {
+  
+  logs <- NULL
+  
+  for (stream in c('stdout', 'stderr')) {
+    fp <- file.path(wd, paste(stream, '.txt'))
+    if (file.exists(fp) && file.size(fp))
+      logs %<>% c(sprintf('%s>  %s', stream, readLines(fp)))
+  }
+  
+  return (logs)
 }
 
 coan <- function (x) {
@@ -154,5 +173,18 @@ attr_ne <- function (x, attr, val) {
 # Return elements from a list where identical(x[[i]]$el, val)
 get_eq <- function (x, el, val) {
   x[unlist(sapply(seq_along(x), function (i) identical(x[[i]][[el]], val)))]
+}
+
+
+slurp <- function (wd, ...) {
+  paths <- file.path(wd, list(...))
+  sizes <- file.size(paths)
+  txt   <- ""
+  for (i in which(sizes > 0)) {
+    con    <- paths[[i]]
+    nchars <- sizes[[i]]
+    txt <- paste0(txt, readChar(con, nchars))
+  }
+  return (txt)
 }
 

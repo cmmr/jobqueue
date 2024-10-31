@@ -3,7 +3,7 @@ test_that('basic', {
 
   q <- expect_silent(Queue$new(workers = 1L))
   expect_equal(q$state, 'starting')
-  
+
   expect_no_error(suppressMessages(q$print()))
 
   job <- expect_silent(q$run({ 2 + 2 }))
@@ -14,10 +14,6 @@ test_that('basic', {
 
   job <- expect_silent(q$run({ x + y }, vars = list(x = 3, y = 5)))
   expect_equal(job$result, 8)
-
-  z   <- 2
-  job <- expect_silent(q$run({ x + z }, vars = list(x = 3), scan = TRUE))
-  expect_equal(job$result, 5)
 
   expect_equal(q$state, 'idle')
   expect_equal(length(q$workers), 1L)
@@ -55,8 +51,7 @@ test_that('config', {
   q$on('stopped', function () { e$state = 'stopped' })
   q$on('stopped', class) # A primitive; for code coverage.
 
-  x <- y <- 1
-  job <- q$run({c(x, y) %>% sum}, scan = TRUE)
+  job <- q$run({ c(x, y) %>% sum })
 
   expect_equal(job$result, 42 + 37)
   expect_equal(e$state, 'idle')

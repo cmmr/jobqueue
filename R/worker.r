@@ -21,25 +21,21 @@
 #'        whereas the others will only be run when the Worker enters that state. 
 #'        Duplicate names are allowed.
 #'        
-#' @param options  Passed to `callr::r_session$new()`
-#'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
 #' @param state  The Worker state that will trigger this function. Typically one of:
 #'        \describe{
 #'            \item{`'*'` -        }{ Every time the state changes. }
 #'            \item{`'.next'` -    }{ Only one time, the next time the state changes. }
-#'            \item{`'starting'` - }{ After starting a new `callr::r_session` process. }
-#'            \item{`'idle'` -     }{ Waiting on new Jobs to be added. }
-#'            \item{`'busy'` -     }{ After a Job starts running. }
+#'            \item{`'starting'` - }{ Waiting for the background process to load. }
+#'            \item{`'idle'` -     }{ Waiting for Jobs to be `$run()`. }
+#'            \item{`'busy'` -     }{ While a Job is running. }
 #'            \item{`'stopped'` -  }{ After `<Worker>$stop()` is called. }
 #'        }
 #'        
 #' @param func  A function that accepts a Worker object as input. You can call 
 #'        `<Worker>$stop()` or edit its values and the changes will be 
-#'        persisted (since Workers are reference class objects). You can also 
-#'        edit/stop the active or backlogged jobs by modifying `<Worker>$job` 
-#'        or `<Worker>$backlog`. Return value is ignored.
+#'        persisted (since Workers are reference class objects).
 #'        
 #' @param reason  Passed to `<Job>$stop(reason)` for any Jobs currently 
 #'        assigned to this Worker.
@@ -56,16 +52,15 @@ Worker <- R6Class(
   public = list(
     
     #' @description
-    #' Creates a background `callr::r_session` process for running [Job]s.
+    #' Creates a background Rscript process for running [Job]s.
     #' @return A Worker object.
     initialize = function (
         globals  = NULL, 
         packages = NULL, 
         init     = NULL,
-        hooks    = NULL,
-        options  = callr::r_session_options() ) {
+        hooks    = NULL ) {
       
-      w_initialize(self, private, globals, packages, init, hooks, options)
+      w_initialize(self, private, globals, packages, init, hooks)
     },
     
     
@@ -76,23 +71,24 @@ Worker <- R6Class(
     print = function (...) w_print(self),
     
     #' @description
-    #' Starts a new background `callr::r_session` process using the 
+    #' Starts a new background Rscript process using the 
     #' configuration previously defined with `Worker$new()`.
     #' @return The Worker, invisibly.
     start = function () w_start(self, private),
     
     #' @description
-    #' Stops a Worker by terminating the background `callr::r_session` process 
-    #' and calling `<Job>$stop(reason)` on any Jobs currently assigned to this 
-    #' Worker.
+    #' Stops a Worker by terminating the background Rscript process and calling 
+    #' `<Job>$stop(reason)` on any Jobs currently assigned to this Worker.
     #' @return The Worker, invisibly.
-    stop = function (reason = 'worker stopped by user') w_stop(self, private, reason),
+    stop = function (reason = 'worker stopped by user')
+      w_stop(self, private, reason),
     
     #' @description
     #' Restarts a Worker by calling `<Worker>$stop(reason)` and 
     #' `<Worker>$start()` in succession.
     #' @return The Worker, invisibly.
-    restart = function (reason = 'restarting worker') w_restart(self, reason),
+    restart = function (reason = 'restarting worker') 
+      w_restart(self, private, reason),
     
     #' @description
     #' Attach a callback function.
@@ -106,34 +102,34 @@ Worker <- R6Class(
     
     #' @description
     #' Assigns a Job to this Worker for evaluation on its background 
-    #' `callr::r_session` process. Jobs can be assigned even when the Worker is 
-    #' in the 'starting' or 'busy' state. A backlog of jobs will be evaluated 
-    #' sequentially in the order they were added.
+    #' Rscript process. Worker must be in `'idle'` state.
     #' @return This Worker, invisibly.
     run = function (job) w_run(self, private, job)
   ),
   
   private = list(
     
-    .hooks       = NULL,
-    .options     = NULL,
-    .r_session   = NULL,
-    .state       = 'stopped',
-    .backlog     = list(),
-    .loaded      = NULL,
-    .uid         = NULL,
-    .job         = NULL,
-    config_file  = NULL,
+    .hooks     = NULL,
+    .state     = 'stopped',
+    .loaded    = NULL,
+    .uid       = NULL,
+    .job       = NULL,
+    .ps        = NULL,
+    .wd        = NULL,
+    caller_env = NULL,
+    lock       = NULL,
     
     set_state    = function (state) u__set_state(self, private, state),
-    next_job     = function ()      w__next_job(self, private),
     poll_job     = function ()      w__poll_job(self, private),
     poll_startup = function ()      w__poll_startup(self, private),
     configure    = function ()      w__configure(self, private),
+    job_done     = function (job)   w__job_done(self, private, job),
+    fp           = function (...)   file.path(private$.wd, paste0(...)),
     
     finalize = function () {
-      if (!is_null(rs <- private$.r_session))  rs$close()
-      if (!is_null(cf <- private$config_file)) unlink(cf)
+      if (!is_null(ps  <- private$.ps))  ps_kill(ps)
+      if (!is_null(lck <- private$lock)) unlock(lck)
+      if (!is_null(wd  <- private$.wd))  unlink(wd, recursive = TRUE)
     }
   ),
   
@@ -143,17 +139,13 @@ Worker <- R6Class(
     #' A named list of currently registered callback hooks.
     hooks = function () private$.hooks,
     
-    #' @field backlog
-    #' A list of Jobs waiting to run on this Worker.
-    backlog = function () private$.backlog,
-    
     #' @field job
     #' The currently running Job.
     job = function () private$.job,
     
-    #' @field r_session
-    #' The `callr::r_session` background process interface.
-    r_session = function () private$.r_session,
+    #' @field ps
+    #' The `ps::ps_handle()` for the background process.
+    ps = function () private$.ps,
     
     #' @field state
     #' The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.
@@ -161,33 +153,32 @@ Worker <- R6Class(
     
     #' @field loaded
     #' A list of global variables and attached functions on this Worker.
-    loaded = function () private$.loaded,
+    loaded = function () w_loaded(self, private),
     
     #' @field uid
     #' A short string, e.g. 'W11', that uniquely identifies this Worker.
-    uid = function () private$.uid
+    uid = function () private$.uid,
+    
+    #' @field wd
+    #' The Worker's working directory.
+    wd = function () private$.wd
   )
 )
 
 
-w_initialize <- function (self, private, globals, packages, init, hooks, options) {
+w_initialize <- function (self, private, globals, packages, init, hooks) {
   
   init_subst <- substitute(init, env = parent.frame())
   
-  private$.uid     <- increment_uid('W')
-  private$.hooks   <- validate_hooks(hooks, 'WH')
-  private$.options <- validate_list(options, if_null = r_session_options())
+  private$.uid       <- increment_uid('W')
+  private$.wd        <- working_dir(private$.uid)
+  private$.hooks     <- validate_hooks(hooks, 'WH')
+  private$caller_env <- caller_env(2L)
   
-  # See if we have anything for a config file.
-  config <- list(
+  saveRDS(file = private$fp('config.rds'), list(
     globals  = validate_list(globals, if_null = NULL),
     packages = validate_character_vector(packages),
-    init     = validate_expression(init, init_subst) )
-  
-  if (!all(sapply(config, is_null))) {
-    private$config_file <- tempfile(fileext = '.rds')
-    saveRDS(config, file = private$config_file)
-  }
+    init     = validate_expression(init, init_subst) ))
   
   self$start()
   
@@ -201,17 +192,28 @@ w_print <- function (self) {
 }
 
 
-# Create a new 'callr::r_session' background process.
+# Create a new Rscript background process.
 w_start <- function (self, private) {
   
   if (private$.state != 'stopped')
     cli_abort('Worker is already {private$.state}.')
   
   private$set_state('starting')
+  private$lock <- lock(private$fp('ready.lock'))
   
-  private$.r_session <- r_session$new(
+  cnd <- catch_cnd(system2(
+    command = 'Rscript', 
+    args    = c('--vanilla', '-e', 'jobqueue:::p__start()', shQuote(private$.wd)), 
     wait    = FALSE, 
-    options = private$.options )
+    stdout  = private$fp('stdout.txt'), 
+    stderr  = private$fp('stderr.txt') ))
+  
+  if (!is_null(cnd))
+    self$stop(error_cnd(
+      parent  = cnd,
+      message = c(
+        "can't start Rscript subprocess",
+        read_logs(private$.wd) )))
   
   private$poll_startup()
   
@@ -220,135 +222,121 @@ w_start <- function (self, private) {
 
 
 w_stop <- function (self, private, reason) {
+    
+  output <- interruptCondition(reason)
   
-  if (private$.state != 'stopped') {
-    
-    if (is_function(private$job_off))
-      private$job_off()
-    
-    for (job in c(private$.backlog, private$.job))
-      job$output <- interruptCondition(reason)
-    
-    private$finalize()
-    
-    private$.job        <- NULL
-    private$job_off     <- NULL
-    private$config_file <- NULL
-    private$.backlog    <- list()
-    
-    private$set_state('stopped')
+  if (!is_null(job <- private$.job)) {
+    private$.job <- NULL
+    job$output   <- output
   }
+  
+  if (!is_null(ps <- private$.ps)) {
+    if (ps_is_running(ps)) ps_kill(ps)
+    private$.ps <- NULL
+  }
+  
+  if (!is_null(private$lock)) {
+    unlock(private$lock)
+    private$lock <- NULL
+  }
+  
+  files <- list.files(private$.wd)
+  files <- setdiff('config.rds', files)
+  unlink(private$fp(files))
+  
+  private$set_state('stopped')
+  
+  if (inherits(reason, 'condition'))
+    cnd_signal(reason)
   
   return (invisible(self))
 }
 
 
-w_restart <- function (self, reason) {
-  
+w_restart <- function (self, private, reason) {
   self$stop(reason)
   self$start()
-  
   return (invisible(self))
 }
 
 
-# Jobs are internally delayed until the worker is ready for them.
+w_loaded <- function (self, private) {
+  if (is_null(private$.loaded)) {
+    fp <- file.path(private$.wd, 'loaded.rds')
+    private$.loaded <- readRDS(fp)
+  }
+  return (private$.loaded)
+}
+
+
 w_run <- function (self, private, job) {
   
-  if (!inherits(job, 'Job'))
-    cli_abort('`job` must be a Job object, not {.type {job}}.')
+  if (!inherits(job, 'Job')) cli_abort('not a Job: {.type {job}}')
+  if (self$state != 'idle')  cli_abort('Worker not idle')
+  if (!is_null(job$proxy))   cli_abort('cannot run proxied Jobs')
   
-  if (is_null(job$run_call))
-    job$run_call <- caller_call(1L)
+  job$state <- 'starting'
+  if (job$state != 'starting') cli_abort('Job refused startup')
   
-  private$.backlog %<>% c(job)
-  job$worker <- self
-  job$state  <- 'dispatched'
+  private$set_state('busy')
   
-  private$next_job()
+  private$.job <- job
+  job$worker   <- self
+  if (is_null(job$caller_env))
+    job$caller_env <- caller_env(2L)
+  
+  # Data to send to the background process.
+  saveRDS(
+    file   = private$fp('request.rds'), 
+    object = list(uid = job$uid, expr = job$expr, vars = job$vars) )
+  
+  # Unblock / re-block the background process.
+  old_lock     <- private$lock
+  private$lock <- lock(private$fp(job$uid, '.lock'))
+  unlock(old_lock)
+  
+  job$state <- 'running'
+  job$on('done', private$job_done)
+  
+  later(private$poll_job, 0.2)
   
   return (invisible(self))
 }
 
 
-w__next_job <- function (self, private) {
-  
-  if (!is_null(private$.job))       return (NULL)
-  if (private$.state == 'starting') return (NULL)
-  if (private$.state == 'stopped')  return (NULL)
-  
-  while (length(private$.backlog) > 0) {
-    
-    job              <- private$.backlog[[1]]
-    private$.backlog <- private$.backlog[-1]
-    
-    if (job$state == 'dispatched') {
-      job$state <- 'starting'
-      if (job$state == 'starting') {
-        private$.job <- job
-        break
-      }
-    }
-  }
-  
-  if (is_null(private$.job)) {
-    private$set_state('idle')
-    return (NULL)
-  }
-  
-  # If a running job is interrupted, restart its worker. Call job_off() to cancel.
-  private$set_state('busy')
-  private$job_off <- private$.job$on('done', function (job) { self$restart() })
-  
-  # Run the user's job on the r_session external process.
-  # cli_text('Starting job {private$.job$uid} on {self$uid}.')
-  private$.r_session$call(
-    args = list(private$.job$expr, private$.job$vars), 
-    func = function (expr, vars) {
-      eval(expr = expr, envir = vars, enclos = .GlobalEnv)
-    })
-  
-  private$.job$state <- 'running'
-  later(private$poll_job, 0.5)
-}
-
-
-# Repeatably check if the r_session is finished with the job.
+# Repeatably check if the Rscript is finished with the job.
 w__poll_job <- function (self, private) {
   
-  # cli_text('Polling job {private$.job$uid} on {self$uid}.')
+  job <- private$.job
   
-  rs <- private$.r_session
-  
-  if (rs$poll_process(1) == "timeout") {
+  if (private$.state == 'busy' && !is_null(job)) {
     
-    # The background process is still busy.
-    later(private$poll_job, 0.2)
-    
-  } else {
-    # cli_text('Job {private$.job$uid} on {self$uid} is finished.')
-    
-    # This worker's active job has finished.
-    job             <- private$.job
-    job_off         <- private$job_off
-    private$.job    <- NULL
-    private$job_off <- NULL
-    
-    output <- tryCatch(rs$read(), error = function (e) list(error = e))
-    
-    # cancel the on('done') trigger that restarts this worker.
-    if (is_function(job_off)) job_off()
-    
-    job$worker <- NULL
-    
-    # cli_text('Assigning output to job {job$uid}: {.type {output}}.')
-    job$output <- output # trigger the job's on('done') triggers.
-    
-    if (private$.r_session$get_state() == 'idle') {
-      private$next_job() # Start the next backlogged job or set worker to 'idle'.
-    } else {
+    # Crashed?
+    if (!ps_is_running(ps <- private$.ps)) {
+      
+      output <- error_cnd(
+        call    = job$caller_env, 
+        message = c(
+          'worker subprocess terminated unexpectedly',
+          read_logs(private$.wd) ))
+      
+      private$.job <- NULL
+      job$output   <- output
       self$restart()
     }
+    
+    # Finished?
+    else if (file.exists(fp <- private$fp('output.rds'))) {
+      private$.job <- NULL
+      job$output   <- readRDS(fp)
+      private$set_state('idle')
+    }
+    
+    # Running?
+    else {
+      later(private$poll_job, 0.2)
+    }
+    
   }
   
   return (NULL)
@@ -357,77 +345,51 @@ w__poll_job <- function (self, private) {
 
 w__poll_startup <- function (self, private) {
   
-  rs <- private$.r_session
-  
-  if (rs$poll_process(1) == "timeout") {
+  if (private$.state == 'starting') {
     
-    # The background process is still busy.
-    later(private$poll_startup, 0.2)
     
-  } else {
+    # Find PID
+    if (is_null(private$.ps))
+      if (file.exists(fp <- private$fp('pid.txt')))
+        private$.ps <- ps_handle(pid = as.integer(readLines(fp)))
     
-    # Collect the result and other details.
-    output <- tryCatch(rs$read(), error = function (e) list(error = e))
-    code   <- output[['code']]  # 201 = just booted up; 200 = config finished
-    
-    if (!is_true(code %in% c(200L, 201L)) || !is_null(output[['error']])) {
-      warning('Error when starting r_session worker process:')
-      warning(output[['error']] %||% output)
-      self$stop('worker startup failed')
+    # No PID yet
+    if (is_null(private$.ps)) {
+      later(private$poll_startup, 0.2)
     }
-    else if (code == 201L) {
-      private$configure()
+    
+    # Crashed?
+    else if (!ps_is_running(private$.ps)) {
+      
+      parent_fp <- private$fp('error.rds')
+      parent    <- if (file.exists(parent_fp)) readRDS(parent_fp)
+        
+      self$stop(error_cnd(
+        call    = private$caller_env, 
+        parent  = parent,
+        message = c(
+          'worker startup failed',
+          read_logs(private$.wd) )))
     }
-    else if (code == 200L) {
-      private$.loaded <- output[['result']]
+    
+    # Ready?
+    else if (file.exists(private$fp('_ready_'))) {
       private$set_state('idle')
-      private$next_job()
     }
     
+    # Starting?
+    else {
+      later(private$poll_startup, 0.2)
+    }
+  
   }
   
   return (NULL)
 }
 
 
-# r_session finished booting, now add our config to it.
-w__configure <- function (self, private) {
-  
-  private$.r_session$call(
-    args = list(config_file = private$config_file), 
-    func = function (config_file) {
-      
-      worker_env <- .GlobalEnv
-      
-      if (!is.null(config_file)) {
-        
-        config <- readRDS(config_file)
-        
-        for (i in seq_along(p <- config[['packages']]))
-          require(package = p[[i]], character.only = TRUE)
-        
-        for (i in seq_along(g <- config[['globals']]))
-          assign(x = names(g)[[i]], value = g[[i]], pos = worker_env)
-        
-        if (!is.null(i <- config[['init']]))
-          eval(expr = i, envir = worker_env, enclos = worker_env)
-      }
-      
-      loaded <- list(
-        globals  = ls(worker_env, all.names = TRUE),
-        attached = list() )
-      
-      invisible(lapply(
-        X   = rev(intersect(search(), paste0('package:', loadedNamespaces()))), 
-        FUN = function (pkg) {
-          for (nm in getNamespaceExports(sub('^package:', '', pkg)))
-            loaded[['attached']][[nm]] <<- pkg }))
-      
-      return (loaded)
-    })
-    
-    private$poll_startup()
-  
-  return (NULL)
+# If a running job is interrupted, restart its worker.
+w__job_done <- function (self, private, job) {
+  if (identical(job$uid, private$.job$uid))
+    self$restart()
 }
-

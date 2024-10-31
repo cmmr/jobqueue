@@ -98,12 +98,12 @@ Queue, Worker, and Job objects update their `$state` as described in the tables 
 
 ### Worker States
 
-| State          | Triggers                                                |
-|----------------|---------------------------------------------------------|
-| `'starting'`   | After starting a new `callr::r_session` process.        |
-| `'idle'`       | Waiting on Jobs to be submitted.                        |
-| `'busy'`       | After a Job starts running.                             |
-| `'stopped'`    | After `<Worker>$stop()` is called.                      |
+| State          | Triggers                                     |
+|----------------|----------------------------------------------|
+| `'starting'`   | After starting a new Rscript process.        |
+| `'idle'`       | Waiting on Jobs to be submitted.             |
+| `'busy'`       | After a Job starts running.                  |
+| `'stopped'`    | After `<Worker>$stop()` is called.           |
 
 
 ### Job States
@@ -113,9 +113,8 @@ Queue, Worker, and Job objects update their `$state` as described in the tables 
 | `'created'`    | After `Job$new()` initialization.                       |
 | `'submitted'`  | After `<Job>$queue` is assigned.                        |
 | `'queued'`     | After `stop_id` and `copy_id` are resolved.             |
-| `'dispatched'` | After `<Job>$worker` is assigned.                       |
 | `'starting'`   | Before evaluation begins.                               |
-| `'running'`    | After evaluation begins.                                |
+| `'running'`    | After `<Job>$worker` is set and evaluation begins.      |
 | `'done'`       | After `<Job>$output` is assigned.                       |
 
 

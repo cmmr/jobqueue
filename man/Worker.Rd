@@ -13,17 +13,17 @@ A Background Process
 \describe{
 \item{\code{hooks}}{A named list of currently registered callback hooks.}
 
-\item{\code{backlog}}{A list of Jobs waiting to run on this Worker.}
-
 \item{\code{job}}{The currently running Job.}
 
-\item{\code{r_session}}{The \code{callr::r_session} background process interface.}
+\item{\code{ps}}{The \code{ps::ps_handle()} for the background process.}
 
 \item{\code{state}}{The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.}
 
 \item{\code{loaded}}{A list of global variables and attached functions on this Worker.}
 
 \item{\code{uid}}{A short string, e.g. 'W11', that uniquely identifies this Worker.}
+
+\item{\code{wd}}{The Worker's working directory.}
 }
 \if{html}{\out{</div>}}
 }
@@ -44,15 +44,9 @@ A Background Process
 \if{html}{\out{<a id="method-Worker-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-new}{}}}
 \subsection{Method \code{new()}}{
-Creates a background \code{callr::r_session} process for running \link{Job}s.
+Creates a background Rscript process for running \link{Job}s.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$new(
-  globals = NULL,
-  packages = NULL,
-  init = NULL,
-  hooks = NULL,
-  options = callr::r_session_options()
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$new(globals = NULL, packages = NULL, init = NULL, hooks = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -74,8 +68,6 @@ The names of these functions should be \code{starting}, \code{idle}, \code{busy}
 \code{stopped}, or \code{'*'}. \code{'*'} will be run every time the state changes,
 whereas the others will only be run when the Worker enters that state.
 Duplicate names are allowed.}
-
-\item{\code{options}}{Passed to \code{callr::r_session$new()}}
 }
 \if{html}{\out{</div>}}
 }
@@ -107,7 +99,7 @@ The Worker, invisibly.
 \if{html}{\out{<a id="method-Worker-start"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-start}{}}}
 \subsection{Method \code{start()}}{
-Starts a new background \code{callr::r_session} process using the
+Starts a new background Rscript process using the
 configuration previously defined with \code{Worker$new()}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$start()}\if{html}{\out{</div>}}
@@ -121,9 +113,8 @@ The Worker, invisibly.
 \if{html}{\out{<a id="method-Worker-stop"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-stop}{}}}
 \subsection{Method \code{stop()}}{
-Stops a Worker by terminating the background \code{callr::r_session} process
-and calling \verb{<Job>$stop(reason)} on any Jobs currently assigned to this
-Worker.
+Stops a Worker by terminating the background Rscript process and calling
+\verb{<Job>$stop(reason)} on any Jobs currently assigned to this Worker.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$stop(reason = "worker stopped by user")}\if{html}{\out{</div>}}
 }
@@ -178,17 +169,15 @@ Attach a callback function.
 \describe{
 \item{\code{'*'} -        }{ Every time the state changes. }
 \item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
-\item{\code{'starting'} - }{ After starting a new \code{callr::r_session} process. }
-\item{\code{'idle'} -     }{ Waiting on new Jobs to be added. }
-\item{\code{'busy'} -     }{ After a Job starts running. }
+\item{\code{'starting'} - }{ Waiting for the background process to load. }
+\item{\code{'idle'} -     }{ Waiting for Jobs to be \verb{$run()}. }
+\item{\code{'busy'} -     }{ While a Job is running. }
 \item{\code{'stopped'} -  }{ After \verb{<Worker>$stop()} is called. }
 }}
 
 \item{\code{func}}{A function that accepts a Worker object as input. You can call
 \verb{<Worker>$stop()} or edit its values and the changes will be
-persisted (since Workers are reference class objects). You can also
-edit/stop the active or backlogged jobs by modifying \verb{<Worker>$job}
-or \verb{<Worker>$backlog}. Return value is ignored.}
+persisted (since Workers are reference class objects).}
 }
 \if{html}{\out{</div>}}
 }
@@ -212,9 +201,9 @@ Blocks until the Worker enters the given state.
 \describe{
 \item{\code{'*'} -        }{ Every time the state changes. }
 \item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
-\item{\code{'starting'} - }{ After starting a new \code{callr::r_session} process. }
-\item{\code{'idle'} -     }{ Waiting on new Jobs to be added. }
-\item{\code{'busy'} -     }{ After a Job starts running. }
+\item{\code{'starting'} - }{ Waiting for the background process to load. }
+\item{\code{'idle'} -     }{ Waiting for Jobs to be \verb{$run()}. }
+\item{\code{'busy'} -     }{ While a Job is running. }
 \item{\code{'stopped'} -  }{ After \verb{<Worker>$stop()} is called. }
 }}
 }
@@ -229,9 +218,7 @@ This Worker, invisibly.
 \if{latex}{\out{\hypertarget{method-Worker-run}{}}}
 \subsection{Method \code{run()}}{
 Assigns a Job to this Worker for evaluation on its background
-\code{callr::r_session} process. Jobs can be assigned even when the Worker is
-in the 'starting' or 'busy' state. A backlog of jobs will be evaluated
-sequentially in the order they were added.
+Rscript process. Worker must be in \code{'idle'} state.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$run(job)}\if{html}{\out{</div>}}
 }

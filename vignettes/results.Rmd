@@ -32,93 +32,35 @@ my_job %...>% message('Result = ', .)
 
 ## Output vs Result
 
-When `expr` is finished evaluating, the raw `callr::r_ression` output is assigned to `<Job>$output`.
+When `expr` is finished evaluating, the result is assigned to `<Job>$output`.
 
 ```r
 job <- q$run({ 42 })
 
-str(job$output)
-#> List of 6
-#>  $ code   : int 200
-#>  $ message: chr "done callr-rs-result-12e862875a1"
-#>  $ result : num 42
-#>  $ stdout : chr ""
-#>  $ stderr : chr ""
-#>  $ error  : NULL
-#>  - attr(*, "class")= chr "callr_session_result"
+job$output
+#> [1] 42
 ```
 
-When you access `<Job>$result`, `<Job>$reformat` and `<Job>$catch` are used to determine what result to return. Generally, it is `<Job>$output$result`.
+By default, `<Job>$result` will return the exact same value as `<Job>$output`.
 
 ```r
 job$result
 #> [1] 42
 ```
 
+However, while `<Job>$output` is a fixed value, `<Job>$result` is highly configurable. Most notably by the `reformat` and `signal` arguments.
+
 
 
 ## Reformatting Output
 
-
-### Default Reformatting
-
-When `reformat = TRUE` (the default):
-
-* If `<Job>$output` inherits from `'callr_session_result'`:
-  * Return `<Job>$output$error` if it isn't `NULL`.
-  * Return `<Job>$output$result`.
-* Return `<Job>$output`.
-
-```r
-job <- q$run({ 42 })
-identical(job$result, job$output$result)
-#> [1] TRUE
-
-job <- q$run({ stop('error') })
-identical(job$result, job$output$error)
-#> [1] TRUE
-
-job <- q$run({ 42 })
-job$output <- 'Custom result'
-identical(job$result, job$output)
-#> [1] TRUE
-```
-
-
-### No Reformatting
-
-When `reformat = FALSE`, `<Job>$output` is passed through unchanged.
-
-```r
-job <- q$run({ 42 }, reformat = FALSE)
-
-identical(job$result, job$output)
-#> [1] TRUE
-
-class(job$result)
-#> "callr_session_result"
-```
-
-
-### Custom Reformatting
-
-Set `reformat = function (job) {...}` to apply a custom transformation.
+Use `reformat = function (job) {...}` to define what should be returned by `<Job>$result`.
 
 > **Important**
 > 
-> You may access `job$output$result` in your `reformat` function.  
+> You may access `job$output` in your `reformat` function.  
 > DO NOT access `job$result`, which would start an infinite recusion.
 
-```r
-http_wrap <- function (job) {
-  result <- job$output$result
-  paste0('{"status":200,"body":{"result":', result, '}}')
-}
-
-job <- q$run({ 42 }, reformat = http_wrap)
-cat(job$result)
-#> {"status":200,"body":{"result":42}}
-```
 
 `reformat` can be set in several places:
 
@@ -128,7 +70,46 @@ cat(job$result)
 * `<Job>$reformat <- http_wrap`
 
 
-### Non-blocking Result
+### Transformation
+
+```r
+http_wrap <- function (job) {
+  result <- job$output
+  paste0('{"status":200,"body":{"result":', result, '}}')
+}
+
+job <- q$run({ 42 }, reformat = http_wrap)
+cat(job$result)
+#> {"status":200,"body":{"result":42}}
+```
+
+### Job Details
+
+```r
+with_id <- function (job) {
+  list(result = job$output, id = job$id)
+}
+
+job <- q$run({ 42 }, reformat = with_id, id = 'abc')
+dput(job$result)
+#> list(result = 42, id = "abc")
+```
+
+
+### stdout / stderr
+
+```r
+all_output <- function (job) {
+  list(result = job$output, stdout = job$stdout, stderr = job$stderr)
+}
+
+job <- q$run({ cat('hi'); message('hey'); 42 }, reformat = all_output)
+dput(job$result)
+#> list(result = 42, stdout = "hi", stderr = "hey")
+```
+
+
+### Non-blocking
 
 `<Job>$output` blocks until the Job is done. If you want `<Job>$result` to not block, you can return a placeholder value instead.
 
@@ -148,7 +129,7 @@ job$state
 
 
 
-## Error Handling
+## Signaling Errors
 
 By default, errors and interrupts will be caught by jobqueue and returned as a condition object from `<Job>$result`.
 
@@ -173,12 +154,12 @@ x
 #> 4. global h(simpleError(msg, call))
 ```
 
-If you want those errors to continue propagating, set `catch = FALSE`.
+If you want those errors to continue propagating, set `signal = TRUE`.
 
 ```r
-job <- q$run(expr, catch = FALSE)
+job <- q$run(expr, signal = TRUE)
 x   <- job$result
-#> Error in "q$run(expr, catch = FALSE)" : 
+#> Error in "q$run(expr, signal = TRUE)" : 
 #>    ! Error evaluating <Job>$expr on background process
 #>  Caused by error in `stop("error XYZ")`:
 #>  ! error XYZ
@@ -189,16 +170,16 @@ These signals can be caught as usual by `try()` and `tryCatch()`.
 ```r
 print_cnd <- function (cnd) cli::cli_text('Caught {.type {cnd}}.')
 
-job <- q$run({ 42 }, catch = FALSE)$stop()
+job <- q$run({ 42 }, signal = TRUE)$stop()
 res <- tryCatch(job$result, error = print_cnd, interrupt = print_cnd)
 #> Caught an <interrupt> object.
 
 res
 #> NULL
 
-job <- q$run({ stop('error XYZ') }, catch = FALSE)
+job <- q$run({ stop('error XYZ') }, signal = TRUE)
 res <- tryCatch(job$result, error = print_cnd, interrupt = print_cnd)
-#> Caught a <callr_status_error> object.
+#> Caught an <error> object.
 
 res
 #> NULL
@@ -209,15 +190,15 @@ job is part of the "normal" workflow and shouldn't be lumped in with other
 errors.
 
 ```r
-job <- q$run({ 42 }, catch = 'interrupt')$stop()
+job <- q$run({ 42 }, signal = 'error')$stop()
 res <- tryCatch(job$result, error = print_cnd)
 
 res
 #> <interrupt: job stopped by user>
 
-job <- q$run({ stop('error XYZ') }, catch = 'interrupt')
+job <- q$run({ stop('error XYZ') }, signal = 'error')
 res <- tryCatch(job$result, error = print_cnd)
-#> Caught a <callr_status_error> object.
+#> Caught an <error> object.
 
 res
 #> NULL
@@ -249,20 +230,20 @@ job %>% then(onFulfilled, onRejected)
 
 job <- q$run({ stop('error XYZ') })
 job %>% then(onFulfilled, onRejected)
-#> Fulfilled with a <callr_status_error> object.
+#> Fulfilled with an <error> object.
 ```
 
-Setting `catch = FALSE` will cause errors and interrupts be sent to the 
+Setting `signal = TRUE` will cause errors and interrupts be sent to the 
 promise's rejection handler instead.
 
 ```r
-job <- q$run({ 42 }, catch = FALSE)$stop()
+job <- q$run({ 42 }, signal = TRUE)$stop()
 job %>% then(onFulfilled, onRejected)
 #> Rejected with an <interrupt> object.
 
-job <- q$run({ stop('error XYZ') }, catch = FALSE)
+job <- q$run({ stop('error XYZ') }, signal = TRUE)
 job %>% then(onFulfilled, onRejected)
-#> Rejected with a <callr_status_error> object.
+#> Rejected with an <error> object.
 ```
 
 

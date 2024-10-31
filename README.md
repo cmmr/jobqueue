@@ -169,25 +169,11 @@ job2$result
 Main article: `vignette('data')`
 
 ``` r
-q <- Queue$new(globals = list(G = 8))
-
+q    <- Queue$new(globals = list(G = 8))
 expr <- quote(c(x = x , y = y, G = G))
-x    <- 3
-y    <- 4
+job  <- q$run(expr, vars = list(x = 10, y = 2))
 
-# Automatic
-job <- q$run(expr, scan = TRUE)
-dput(job$result)
-#> c(x = 3, y = 4, G = 8)
-
-# Explicit
-job <- q$run(expr, vars = list(x = 10, y = 2))
 dput(job$result)
 #> c(x = 10, y = 2, G = 8)
-
-# Mixed
-job <- q$run(expr, vars = list(x = 10), scan = TRUE)
-dput(job$result)
-#> c(x = 10, y = 4, G = 8)
 ```
 

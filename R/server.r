@@ -32,7 +32,6 @@
 #     init    = NULL, 
 #     workers = parallelly::availableCores(),
 #     standby = ceiling(workers / 4),
-#     options = callr::r_session_options(),
 #     quiet   = FALSE, 
 #     onHeaders         = NULL, 
 #     staticPaths       = NULL, 
@@ -52,7 +51,6 @@
 #     init    = init,
 #     workers = workers,
 #     standby = standby,
-#     options = options,
 #     quiet   = quiet, 
 #     onHeaders         = onHeaders, 
 #     staticPaths       = staticPaths, 
@@ -81,7 +79,6 @@
 #         init     = NULL, 
 #         workers  = parallelly::availableCores(),
 #         standby  = ceiling(workers / 4),
-#         options  = callr::r_session_options(),
 #         quiet    = FALSE, 
 #         onHeaders         = NULL, 
 #         staticPaths       = NULL, 
@@ -91,7 +88,7 @@
 #         self, private, 
 #         handler, host, port, parse, 
 #         hook, timeout, stop_id, copy_id, 
-#         globals, packages, init, workers, standby, options,
+#         globals, packages, init, workers, standby, 
 #         quiet, onHeaders, staticPaths, staticPathOptions )
 #     },
 #     
@@ -132,7 +129,7 @@
 #     self, private, 
 #     handler, host, port, parse, 
 #     hook, timeout, stop_id, copy_id, 
-#     globals, packages, init, workers, standby, options,
+#     globals, packages, init, workers, standby, 
 #     quiet, onHeaders, staticPaths, staticPathOptions ) {
 #   
 #   if (!nzchar(system.file(package = 'httpuv')))
@@ -151,8 +148,7 @@
 #     packages = packages, 
 #     init     = init, 
 #     workers  = workers, 
-#     standby  = standby,
-#     options  = options )
+#     standby  = standby )
 #   
 #   # Start a 'httpuv' http server.
 #   private$.server <- httpuv::startServer(

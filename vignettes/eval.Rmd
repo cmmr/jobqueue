@@ -107,7 +107,3 @@ Here we assigned two global variables on the Workers: `A` and `B`. We also
 attached the 'jsonlite' R package to the Workers' search paths. When `expr` is 
 evaluated, it uses `A`, `B`, and `toJSON` from the Worker's environment, and 
 `x` from `vars`.
-
-If you're not the "best practices" type, see `vignette('scan')` for details on 
-how automatic substitution can be employed in place of, or in addition to 
-`vars`.
