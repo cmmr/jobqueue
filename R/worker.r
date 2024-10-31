@@ -203,7 +203,7 @@ w_start <- function (self, private) {
   
   cnd <- catch_cnd(system2(
     command = 'Rscript', 
-    args    = c('--vanilla', '-e', 'jobqueue:::p__start()', shQuote(private$.wd)), 
+    args    = shQuote(c('--vanilla', '-e', 'jobqueue:::p__start()', private$.wd)), 
     wait    = FALSE, 
     stdout  = private$fp('stdout.txt'), 
     stderr  = private$fp('stderr.txt') ))
