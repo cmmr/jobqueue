@@ -35,8 +35,8 @@ Imports:
     later,
     magrittr,
     parallel,
+    processx,
     promises,
-    ps,
     R6,
     rlang,
     utils

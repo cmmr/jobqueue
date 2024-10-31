@@ -146,8 +146,8 @@ Job <- R6Class(
     
     finalize = function () {
       if (identical(self$uid, self$worker$job$uid))
-        if (!is_null(ps <- self$worker$ps))
-          ps_kill(ps)
+        if (!is_null(px <- self$worker$px))
+          px$kill()
     }
   ),
   
@@ -296,12 +296,13 @@ j_result <- function (self, private) {
 # Mirror another Job's output.
 j_proxy <- function (self, private, value) {
   
-  if (missing(value))   return (private$.proxy)
-  if (private$.is_done) return (NULL)
+  if (missing(value)) return (private$.proxy)
   
   proxy <- value
   if (!is_null(proxy) && !inherits(proxy, 'Job'))
     cli_abort('proxy must be a Job or NULL, not {.type {proxy}}.')
+  
+  if (private$.is_done) return (NULL)
   
   proxy$on('done', function (job) {
     if (identical(self$proxy$uid, job$uid))

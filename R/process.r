@@ -4,20 +4,15 @@
 
 p__start <- function () {
   
-  cnd <- rlang::catch_cnd(classes = "error", {
-    
-    wd <- commandArgs(trailingOnly = TRUE)
-    stopifnot(isTRUE(dir.exists(wd)))
-    setwd(dir = wd)
-    
-    writeLines(as.character(Sys.getpid()), '_pid.txt')
-    file.rename('_pid.txt', 'pid.txt')
-    
-    env <- new.env(parent = .GlobalEnv)
-    p__config(env) # Read/apply config.rds
-    p__report(env) # Write loaded.rds
-    p__listen(env) # Evaluation loop
-  })
+  cnd <- rlang::catch_cnd(
+    classes = "error", 
+    expr    = local({
+      env <- new.env(parent = .GlobalEnv)
+      p__config(env) # Read/apply config.rds
+      p__report(env) # Write loaded.rds
+      p__listen(env) # Evaluation loop
+    })
+  )
   
   if (!is.null(cnd)) {
     saveRDS(cnd, 'error.rds')
@@ -83,14 +78,17 @@ p__listen <- function (env) {
     lockfile <- paste0(request$uid, '.lock')
     
     # Evaluate the Job.
-    cnd <- rlang::catch_cnd(classes = "error", {
-      output <- eval(
-        expr   = request$expr, 
-        envir  = request$vars, 
-        enclos = env )
-    })
+    cnd <- rlang::catch_cnd(
+      classes = "error", 
+      expr    = {
+        output <- eval(
+          expr   = request$expr, 
+          envir  = request$vars, 
+          enclos = env )
+      }
+    )
     
-    # Return any signaled condition instead of output
+    # Return a signaled error instead of output
     if (!is.null(cnd)) output <- cnd
     
     saveRDS(output, '_output.rds')

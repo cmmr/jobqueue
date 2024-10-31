@@ -14,7 +14,7 @@ test_that('job', {
   expect_equal(job$result, 10)
   p <- expect_silent(as.promise(job))
   
-  job <- expect_silent(q$run({ 2 + 3 }, reformat = NULL))
+  job <- expect_silent(q$run({ 2 + 3 }))
   p   <- expect_silent(as.promise(job))
   expect_error(job$proxy <- 'not a Job')
   expect_error(job$state <- 'done')

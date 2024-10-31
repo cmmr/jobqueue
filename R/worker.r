@@ -114,7 +114,7 @@ Worker <- R6Class(
     .loaded    = NULL,
     .uid       = NULL,
     .job       = NULL,
-    .ps        = NULL,
+    .px        = NULL,
     .wd        = NULL,
     caller_env = NULL,
     lock       = NULL,
@@ -127,7 +127,7 @@ Worker <- R6Class(
     fp           = function (...)   file.path(private$.wd, paste0(...)),
     
     finalize = function () {
-      if (!is_null(ps  <- private$.ps))  ps_kill(ps)
+      if (!is_null(px  <- private$.px))  px$kill()
       if (!is_null(lck <- private$lock)) unlock(lck)
       if (!is_null(wd  <- private$.wd))  unlink(wd, recursive = TRUE)
     }
@@ -143,9 +143,9 @@ Worker <- R6Class(
     #' The currently running Job.
     job = function () private$.job,
     
-    #' @field ps
-    #' The `ps::ps_handle()` for the background process.
-    ps = function () private$.ps,
+    #' @field px
+    #' The `processx::process` object for the background process.
+    px = function () private$.px,
     
     #' @field state
     #' The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.
@@ -201,12 +201,16 @@ w_start <- function (self, private) {
   private$set_state('starting')
   private$lock <- lock(private$fp('ready.lock'))
   
-  cnd <- catch_cnd(system2(
-    command = 'Rscript', 
-    args    = shQuote(c('--vanilla', '-e', 'jobqueue:::p__start()', private$.wd)), 
-    wait    = FALSE, 
-    stdout  = private$fp('stdout.txt'), 
-    stderr  = private$fp('stderr.txt') ))
+  cnd <- catch_cnd({
+    
+    private$.px <- process$new(
+      command = 'Rscript',
+      args    = c('--vanilla', '-e', 'jobqueue:::p__start()'),
+      stdout  = private$fp('stdout.txt'),
+      stderr  = private$fp('stderr.txt'),
+      wd      = private$.wd )
+    
+  })
   
   if (!is_null(cnd))
     self$stop(error_cnd(
@@ -230,9 +234,9 @@ w_stop <- function (self, private, reason) {
     job$output   <- output
   }
   
-  if (!is_null(ps <- private$.ps)) {
-    if (ps_is_running(ps)) ps_kill(ps)
-    private$.ps <- NULL
+  if (!is_null(px <- private$.px)) {
+    if (px$is_alive()) px$kill()
+    private$.px <- NULL
   }
   
   if (!is_null(private$lock)) {
@@ -312,7 +316,7 @@ w__poll_job <- function (self, private) {
   if (private$.state == 'busy' && !is_null(job)) {
     
     # Crashed?
-    if (!ps_is_running(ps <- private$.ps)) {
+    if (is_null(private$.px) || !private$.px$is_alive()) {
       
       output <- error_cnd(
         call    = job$caller_env, 
@@ -347,19 +351,8 @@ w__poll_startup <- function (self, private) {
   
   if (private$.state == 'starting') {
     
-    
-    # Find PID
-    if (is_null(private$.ps))
-      if (file.exists(fp <- private$fp('pid.txt')))
-        private$.ps <- ps_handle(pid = as.integer(readLines(fp)))
-    
-    # No PID yet
-    if (is_null(private$.ps)) {
-      later(private$poll_startup, 0.2)
-    }
-    
     # Crashed?
-    else if (!ps_is_running(private$.ps)) {
+    if (is_null(private$.px) || !private$.px$is_alive()) {
       
       parent_fp <- private$fp('error.rds')
       parent    <- if (file.exists(parent_fp)) readRDS(parent_fp)
