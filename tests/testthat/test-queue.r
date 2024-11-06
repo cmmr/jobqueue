@@ -20,7 +20,6 @@ test_that('basic', {
 
   expect_true(is.list(q$hooks))
   expect_true(startsWith(q$uid, 'Q'))
-  expect_setequal(names(q$loaded), c('globals', 'attached'))
 
   expect_error(q$submit('not a Job'))
 
@@ -109,15 +108,15 @@ test_that('interrupt', {
 
   job <- q$run({ Sys.sleep(1) })
   expect_silent(job$stop())
-  expect_s3_class(job$result, class = c('interrupt', 'error', 'condition'))
+  expect_s3_class(job$result, class = c('interrupt', 'condition'))
 
   job <- q$run({ Sys.sleep(1) }, timeout = 0.1)
-  expect_s3_class(job$result, class = c('interrupt', 'error', 'condition'))
+  expect_s3_class(job$result, class = c('interrupt', 'condition'))
 
   job1 <- q$run({ Sys.sleep(1); 'A' }, stop_id = function (job) 123)
   job2 <- q$run({ 'B' },               stop_id = ~{ 123 })
 
-  expect_s3_class(job1$result, class = c('interrupt', 'error', 'condition'))
+  expect_s3_class(job1$result, class = c('interrupt', 'condition'))
   expect_equal(job2$result, 'B')
 
   job1 <- q$run({ Sys.sleep(0.1); 'A' }, copy_id = ~{ 456 })

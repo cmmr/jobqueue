@@ -3,7 +3,6 @@ importFrom("cli",
            "cli_abort", "cli_bullets", "cli_div", "cli_end", 
            "cli_fmt", "cli_rule", "cli_text", 
            "col_grey", "col_green", "col_red", "col_yellow" )
-importFrom("filelock", "lock", "unlock")
 importFrom("later", "later", "run_now")
 importFrom("magrittr", "%>%", "%<>%")
 importFrom("parallel", "detectCores")
@@ -11,7 +10,7 @@ importFrom("promises",
            "%...>%", "%...T>%", "as.promise", "promise", "promise_all", "promise_map", 
            "promise_race", "promise_reduce", "promise_resolve", "then" )
 importFrom("R6", "R6Class")
-importFrom("processx", "process")
+importFrom("ps", "ps_handle", "ps_kill", "ps_is_running", "ps_interrupt")
 importFrom("rlang", 
            "%||%", "as_environment", "as_function", "caller_env", "caller_fn", 
            "catch_cnd", "cnd", "cnd_signal", "dots_list", "env_get", "env_has", 
@@ -20,6 +19,7 @@ importFrom("rlang",
            "is_named2", "is_null", "is_na", "is_true", "is_scalar_character", 
            "is_scalar_integerish", "is_scalar_logical", "is_string", "new_environment",
            "set_names" )
+importFrom("semaphore", "create_semaphore", "increment_semaphore", "remove_semaphore")
 importFrom("utils", "capture.output")
 
 export(`Job`)

@@ -14,7 +14,7 @@ test_that('worker', {
   expect_true(startsWith(w$uid, 'W'))
   
   expect_silent(w$wait())
-  expect_true(inherits(w$px, 'process'))
+  expect_true(inherits(w$ps, 'ps_handle'))
   expect_error(w$run('not a Job'))
   
   expect_silent(w$run(Job$new({ 1 })))

@@ -114,22 +114,21 @@ Worker <- R6Class(
     .loaded    = NULL,
     .uid       = NULL,
     .job       = NULL,
-    .px        = NULL,
+    .ps        = NULL,
     .wd        = NULL,
     caller_env = NULL,
-    lock       = NULL,
+    semaphore  = NULL,
     
     set_state    = function (state) u__set_state(self, private, state),
     poll_job     = function ()      w__poll_job(self, private),
     poll_startup = function ()      w__poll_startup(self, private),
-    configure    = function ()      w__configure(self, private),
     job_done     = function (job)   w__job_done(self, private, job),
     fp           = function (...)   file.path(private$.wd, paste0(...)),
     
     finalize = function () {
-      if (!is_null(px  <- private$.px))  px$kill()
-      if (!is_null(lck <- private$lock)) unlock(lck)
-      if (!is_null(wd  <- private$.wd))  unlink(wd, recursive = TRUE)
+      if (!is_null(private$.ps))       ps_kill(private$.ps)
+      if (!is_null(private$semaphore)) remove_semaphore(private$semaphore)
+      if (!is_null(private$.wd))       unlink(private$.wd, recursive = TRUE)
     }
   ),
   
@@ -143,17 +142,13 @@ Worker <- R6Class(
     #' The currently running Job.
     job = function () private$.job,
     
-    #' @field px
-    #' The `processx::process` object for the background process.
-    px = function () private$.px,
+    #' @field ps
+    #' The `ps::ps_handle()` object for the background process.
+    ps = function () private$.ps,
     
     #' @field state
     #' The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.
     state = function () private$.state,
-    
-    #' @field loaded
-    #' A list of global variables and attached functions on this Worker.
-    loaded = function () w_loaded(self, private),
     
     #' @field uid
     #' A short string, e.g. 'W11', that uniquely identifies this Worker.
@@ -199,18 +194,16 @@ w_start <- function (self, private) {
     cli_abort('Worker is already {private$.state}.')
   
   private$set_state('starting')
-  private$lock <- lock(private$fp('ready.lock'))
   
-  cnd <- catch_cnd({
-    
-    private$.px <- process$new(
-      command = 'Rscript',
-      args    = c('--vanilla', '-e', 'jobqueue:::p__start()'),
-      stdout  = private$fp('stdout.txt'),
-      stderr  = private$fp('stderr.txt'),
-      wd      = private$.wd )
-    
-  })
+  private$semaphore <- create_semaphore()
+  saveRDS(private$semaphore, private$fp('semaphore.rds'))
+  
+  cnd <- catch_cnd(system2(
+    command = 'Rscript',
+    args    = shQuote(c('--vanilla', '-e', 'jobqueue:::p__start()', private$.wd)),
+    stdout  = private$fp('stdout.txt'),
+    stderr  = private$fp('stderr.txt'), 
+    wait    = FALSE ))
   
   if (!is_null(cnd))
     self$stop(error_cnd(
@@ -219,33 +212,31 @@ w_start <- function (self, private) {
         "can't start Rscript subprocess",
         read_logs(private$.wd) )))
   
-  private$poll_startup()
+  later(private$poll_startup)
   
   return (invisible(self))
 }
 
 
 w_stop <- function (self, private, reason) {
-    
-  output <- interruptCondition(reason)
   
   if (!is_null(job <- private$.job)) {
     private$.job <- NULL
-    job$output   <- output
+    job$output   <- interruptCondition(reason)
   }
   
-  if (!is_null(px <- private$.px)) {
-    if (px$is_alive()) px$kill()
-    private$.px <- NULL
+  if (!is_null(ps <- private$.ps)) {
+    if (ps_is_running(ps)) ps_kill(ps)
+    private$.ps <- NULL
   }
   
-  if (!is_null(private$lock)) {
-    unlock(private$lock)
-    private$lock <- NULL
+  if (!is_null(private$semaphore)) {
+    remove_semaphore(private$semaphore)
+    private$semaphore <- NULL
   }
   
   files <- list.files(private$.wd)
-  files <- setdiff('config.rds', files)
+  files <- setdiff(files, 'config.rds')
   unlink(private$fp(files))
   
   private$set_state('stopped')
@@ -264,15 +255,6 @@ w_restart <- function (self, private, reason) {
 }
 
 
-w_loaded <- function (self, private) {
-  if (is_null(private$.loaded)) {
-    fp <- file.path(private$.wd, 'loaded.rds')
-    private$.loaded <- readRDS(fp)
-  }
-  return (private$.loaded)
-}
-
-
 w_run <- function (self, private, job) {
   
   if (!inherits(job, 'Job')) cli_abort('not a Job: {.type {job}}')
@@ -281,28 +263,24 @@ w_run <- function (self, private, job) {
   
   job$state <- 'starting'
   if (job$state != 'starting') cli_abort('Job refused startup')
-  
-  private$set_state('busy')
-  
-  private$.job <- job
   job$worker   <- self
+  private$.job <- job
+  job$on('done', private$job_done)
+  
   if (is_null(job$caller_env))
     job$caller_env <- caller_env(2L)
   
   # Data to send to the background process.
   saveRDS(
     file   = private$fp('request.rds'), 
-    object = list(uid = job$uid, expr = job$expr, vars = job$vars) )
+    object = list(expr = job$expr, vars = job$vars) )
   
-  # Unblock / re-block the background process.
-  old_lock     <- private$lock
-  private$lock <- lock(private$fp(job$uid, '.lock'))
-  unlock(old_lock)
+  # Unblock the background process.
+  increment_semaphore(private$semaphore)
   
+  private$set_state('busy')
   job$state <- 'running'
-  job$on('done', private$job_done)
-  
-  later(private$poll_job, 0.2)
+  later(private$poll_job)
   
   return (invisible(self))
 }
@@ -312,35 +290,38 @@ w_run <- function (self, private, job) {
 w__poll_job <- function (self, private) {
   
   job <- private$.job
+  ps  <- private$.ps
   
-  if (private$.state == 'busy' && !is_null(job)) {
+  if (private$.state != 'busy')    return (NULL)
+  if (!inherits(job, 'Job'))       return (NULL)
+  if (!inherits(ps,  'ps_handle')) return (NULL)
+  
+  output_fp <- private$fp('output.rds')
+  
+  # Crashed?
+  if (!ps_is_running(ps)) {
     
-    # Crashed?
-    if (is_null(private$.px) || !private$.px$is_alive()) {
-      
-      output <- error_cnd(
-        call    = job$caller_env, 
-        message = c(
-          'worker subprocess terminated unexpectedly',
-          read_logs(private$.wd) ))
-      
-      private$.job <- NULL
-      job$output   <- output
-      self$restart()
-    }
+    output <- error_cnd(
+      call    = job$caller_env, 
+      message = c(
+        'worker subprocess terminated unexpectedly',
+        read_logs(private$.wd) ))
     
-    # Finished?
-    else if (file.exists(fp <- private$fp('output.rds'))) {
-      private$.job <- NULL
-      job$output   <- readRDS(fp)
-      private$set_state('idle')
-    }
-    
-    # Running?
-    else {
-      later(private$poll_job, 0.2)
-    }
-    
+    private$.job <- NULL
+    job$output   <- output
+    self$restart()
+  }
+  
+  # Finished?
+  else if (file.exists(output_fp)) {
+    private$.job <- NULL
+    job$output   <- readRDS(output_fp)
+    unlink(output_fp)
+    private$set_state('idle')
+  }
+  
+  else {
+    later(private$poll_job, delay = 0.2)
   }
   
   return (NULL)
@@ -349,32 +330,41 @@ w__poll_job <- function (self, private) {
 
 w__poll_startup <- function (self, private) {
   
-  if (private$.state == 'starting') {
+  if (private$.state != 'starting') return (NULL)
+  
+  # Crashed?
+  if (file.exists(fp <- private$fp('error.rds'))) {
+    self$stop(error_cnd(
+      call    = private$caller_env, 
+      parent  = if (file.exists(fp)) readRDS(fp),
+      message = c(
+        'worker startup failed: error occured',
+        read_logs(private$.wd) )))
+  }
+  
+  # Ready?
+  else if (file.exists(fp <- private$fp('ps_info.rds'))) {
+    cnd <- catch_cnd({
+      ps_info     <- readRDS(fp)
+      private$.ps <- ps::ps_handle(ps_info$pid, ps_info$time) })
     
-    # Crashed?
-    if (is_null(private$.px) || !private$.px$is_alive()) {
-      
-      parent_fp <- private$fp('error.rds')
-      parent    <- if (file.exists(parent_fp)) readRDS(parent_fp)
-        
+    if (!is_null(cnd) || !ps_is_running(private$.ps)) {
       self$stop(error_cnd(
         call    = private$caller_env, 
-        parent  = parent,
+        parent  = cnd,
         message = c(
-          'worker startup failed',
+          'worker startup failed: process not running',
           read_logs(private$.wd) )))
-    }
-    
-    # Ready?
-    else if (file.exists(private$fp('_ready_'))) {
+      
+    } else {
       private$set_state('idle')
     }
     
-    # Starting?
-    else {
-      later(private$poll_startup, 0.2)
-    }
+  }
   
+  # Booting?
+  else if (private$.state == 'starting') {
+    later(private$poll_startup, delay = 0.2)
   }
   
   return (NULL)

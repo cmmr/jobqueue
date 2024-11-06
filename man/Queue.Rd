@@ -57,8 +57,7 @@ properly set for each Job.
   signal = FALSE,
   cpus = 1L,
   stop_id = NULL,
-  copy_id = NULL,
-  lazy = FALSE
+  copy_id = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -83,7 +82,7 @@ utilization.}
 than \code{max_cpus} to enable interrupted workers to be quickly swapped
 out with standby Workers while a replacement Worker boots up.}
 
-\item{\code{timeout, hooks, reformat, signal, cpus, stop_id, copy_id, lazy}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id} and
+\item{\code{timeout, hooks, reformat, signal, cpus, stop_id, copy_id}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id} and
 \code{copy_id} must be either a \verb{function (job)} or \code{NULL}, and \code{hooks}
 can take on an alternate format as described in the Callback Hooks
 section.}
@@ -129,7 +128,6 @@ by \code{Queue$new()}.
   cpus = NA,
   stop_id = NA,
   copy_id = NA,
-  lazy = NA,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -181,11 +179,6 @@ returning whatever result the earlier Job returns. \code{copy_id} can also
 be a \verb{function (job)} that returns the \code{copy_id} to assign to a given
 Job. A \code{copy_id} of \code{NULL} disables this feature.
 See \code{vignette('stops')}.}
-
-\item{\code{lazy}}{When \code{lazy = FALSE} (the default), the job is submitted for
-evaluation immediately. Otherwise it is lazily evaluated - that is,
-only once \verb{<Job>$result}, \verb{<Job>$output}, or \verb{<Queue>$submit(<Job>)}
-is called.}
 
 \item{\code{...}}{Arbitrary named values to add to the returned Job object.}
 }

@@ -15,11 +15,9 @@ A Background Process
 
 \item{\code{job}}{The currently running Job.}
 
-\item{\code{ps}}{The \code{ps::ps_handle()} for the background process.}
+\item{\code{ps}}{The \code{ps::ps_handle()} object for the background process.}
 
 \item{\code{state}}{The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.}
-
-\item{\code{loaded}}{A list of global variables and attached functions on this Worker.}
 
 \item{\code{uid}}{A short string, e.g. 'W11', that uniquely identifies this Worker.}
 

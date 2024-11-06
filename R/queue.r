@@ -60,11 +60,6 @@
 #'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
-#' @param lazy  When `lazy = FALSE` (the default), the job is submitted for 
-#'        evaluation immediately. Otherwise it is lazily evaluated - that is, 
-#'        only once `<Job>$result`, `<Job>$output`, or `<Queue>$submit(<Job>)` 
-#'        is called.
-#'        
 #' @param stop_id  If an existing [Job] in the Queue has the same `stop_id`,  
 #'        that Job will be stopped and return an 'interrupt' condition object 
 #'        as its result. `stop_id` can also be a `function (job)` that returns 
@@ -115,7 +110,7 @@ Queue <- R6Class(
     #' not use more than `max_cpus` at once, assuming the `cpus` argument is 
     #' properly set for each Job.
     #'
-    #' @param timeout,hooks,reformat,signal,cpus,stop_id,copy_id,lazy
+    #' @param timeout,hooks,reformat,signal,cpus,stop_id,copy_id
     #'        Defaults for this Queue's `$run()` method. Here only, `stop_id` and 
     #'        `copy_id` must be either a `function (job)` or `NULL`, and `hooks`
     #'        can take on an alternate format as described in the Callback Hooks
@@ -134,14 +129,13 @@ Queue <- R6Class(
         signal    = FALSE,
         cpus      = 1L,
         stop_id   = NULL,
-        copy_id   = NULL,
-        lazy      = FALSE ) {
+        copy_id   = NULL ) {
        
       q_initialize(
         self, private, 
         globals, packages, init, max_cpus, workers, 
         timeout, hooks, reformat, signal, cpus, 
-        stop_id, copy_id, lazy )
+        stop_id, copy_id )
     },
     
     
@@ -167,14 +161,13 @@ Queue <- R6Class(
         cpus     = NA, 
         stop_id  = NA, 
         copy_id  = NA, 
-        lazy     = NA,
         ... ) {
       
       q_run(
         self, private, 
         expr, vars, 
         timeout, hooks, reformat, signal, 
-        cpus, stop_id, copy_id, lazy, ... )
+        cpus, stop_id, copy_id, ... )
     },
     
     
@@ -265,7 +258,7 @@ q_initialize <- function (
     self, private, 
     globals, packages, init, max_cpus, workers, 
     timeout, hooks, reformat, signal, cpus, 
-    stop_id, copy_id, lazy ) {
+    stop_id, copy_id ) {
   
   init_subst       <- substitute(init, env = parent.frame())
   private$up_since <- Sys.time()
@@ -299,10 +292,9 @@ q_initialize <- function (
   private$j_conf[['cpus']]     <- validate_positive_integer(cpus, if_null = 1L)
   private$j_conf[['stop_id']]  <- validate_function(stop_id)
   private$j_conf[['copy_id']]  <- validate_function(copy_id)
-  private$j_conf[['lazy']]     <- validate_logical(lazy)
   
   private$set_state('starting')
-  private$poll_startup()
+  later(private$poll_startup)
   
   return (invisible(self))
 }
@@ -349,7 +341,7 @@ q_run <- function (
     self, private, 
     expr, vars, 
     timeout, hooks, reformat, signal, 
-    cpus, stop_id, copy_id, lazy, ...) {
+    cpus, stop_id, copy_id, ...) {
   
   expr_subst <- substitute(expr, env = parent.frame())
   expr       <- validate_expression(expr, expr_subst, null_ok = FALSE)
@@ -373,12 +365,8 @@ q_run <- function (
     copy_id  = if (is_na(copy_id))  j_conf[['copy_id']]  else copy_id,
     ... )
   
-  # Option to not start the job just yet.
-  if (is_na(lazy))   lazy <- j_conf[['lazy']]
-  if (is_false(lazy)) {
-    job$caller_env <- caller_env(2L)
-    self$submit(job)
-  }
+  job$caller_env <- caller_env(2L)
+  self$submit(job)
   
   return (invisible(job))
 }
@@ -505,7 +493,7 @@ q__poll_startup <- function (self, private) {
       self$workers %<>% c(worker)
     }
     
-    later(private$poll_startup, 0.2)
+    later(private$poll_startup, delay = 0.2)
   }
   
 }

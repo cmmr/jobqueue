@@ -2,7 +2,7 @@ Package: jobqueue
 Type: Package
 Title: Queue and Run Asynchronous Interruptible R Tasks on Background Processes
 Version: 0.1.0.9000
-Date: 2024-10-31
+Date: 2024-11-06
 Authors@R: c(
     person(
       "Daniel P.", "Smith",
@@ -31,14 +31,14 @@ Depends:
     R (>= 4.2.0)
 Imports:
     cli,
-    filelock,
     later,
     magrittr,
     parallel,
-    processx,
     promises,
+    ps,
     R6,
     rlang,
+    semaphore,
     utils
 Suggests:
     glue,

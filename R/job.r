@@ -146,8 +146,8 @@ Job <- R6Class(
     
     finalize = function () {
       if (identical(self$uid, self$worker$job$uid))
-        if (!is_null(px <- self$worker$px))
-          px$kill()
+        if (!is_null(ps <- self$worker$ps))
+          ps_kill(ps)
     }
   ),
   
@@ -253,11 +253,6 @@ j_stop <- function (self, private, reason) {
 j_output <- function (self, private, value) {
   
   if (missing(value)) {
-    
-    if (self$state == 'created')
-      if (inherits(self$queue, 'Queue'))
-        self$queue$submit(self)
-    
     self$wait() # blocking
     return (private$.output)
   }
@@ -304,12 +299,12 @@ j_proxy <- function (self, private, value) {
   
   if (private$.is_done) return (NULL)
   
+  private$.proxy <- proxy
   proxy$on('done', function (job) {
     if (identical(self$proxy$uid, job$uid))
       self$output <- job$output
   })
   
-  private$.proxy <- proxy
 }
 
 
