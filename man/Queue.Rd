@@ -32,7 +32,7 @@ Jobs go in. Results come out.
 \item \href{#method-Queue-submit}{\code{Queue$submit()}}
 \item \href{#method-Queue-wait}{\code{Queue$wait()}}
 \item \href{#method-Queue-on}{\code{Queue$on()}}
-\item \href{#method-Queue-shutdown}{\code{Queue$shutdown()}}
+\item \href{#method-Queue-stop}{\code{Queue$stop()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -270,12 +270,12 @@ A function that when called removes this callback from the Queue.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Queue-shutdown"></a>}}
-\if{latex}{\out{\hypertarget{method-Queue-shutdown}{}}}
-\subsection{Method \code{shutdown()}}{
+\if{html}{\out{<a id="method-Queue-stop"></a>}}
+\if{latex}{\out{\hypertarget{method-Queue-stop}{}}}
+\subsection{Method \code{stop()}}{
 Stop all jobs and workers.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Queue$shutdown(reason = "job queue shut down by user")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Queue$stop(reason = "job queue shut down by user")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

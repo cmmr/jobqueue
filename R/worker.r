@@ -195,6 +195,10 @@ w_start <- function (self, private) {
   
   private$set_state('starting')
   
+  files <- list.files(private$.wd)
+  files <- setdiff(files, 'config.rds')
+  unlink(private$fp(files))
+  
   private$semaphore <- create_semaphore()
   saveRDS(private$semaphore, private$fp('semaphore.rds'))
   
@@ -235,10 +239,6 @@ w_stop <- function (self, private, reason) {
     private$semaphore <- NULL
   }
   
-  files <- list.files(private$.wd)
-  files <- setdiff(files, 'config.rds')
-  unlink(private$fp(files))
-  
   private$set_state('stopped')
   
   if (inherits(reason, 'condition'))
@@ -271,9 +271,8 @@ w_run <- function (self, private, job) {
     job$caller_env <- caller_env(2L)
   
   # Data to send to the background process.
-  saveRDS(
-    file   = private$fp('request.rds'), 
-    object = list(expr = job$expr, vars = job$vars) )
+  request <- list(expr = job$expr, vars = job$vars, cpus = job$cpus)
+  saveRDS(request, private$fp('request.rds'))
   
   # Unblock the background process.
   increment_semaphore(private$semaphore)
@@ -334,6 +333,7 @@ w__poll_startup <- function (self, private) {
   
   # Crashed?
   if (file.exists(fp <- private$fp('error.rds'))) {
+    
     self$stop(error_cnd(
       call    = private$caller_env, 
       parent  = if (file.exists(fp)) readRDS(fp),
@@ -344,6 +344,7 @@ w__poll_startup <- function (self, private) {
   
   # Ready?
   else if (file.exists(fp <- private$fp('ps_info.rds'))) {
+    
     cnd <- catch_cnd({
       ps_info     <- readRDS(fp)
       private$.ps <- ps::ps_handle(ps_info$pid, ps_info$time) })

@@ -5,6 +5,7 @@
 \alias{reexports}
 \alias{\%<>\%}
 \alias{\%>\%}
+\alias{later}
 \alias{run_now}
 \alias{\%...>\%}
 \alias{\%...T>\%}
@@ -21,7 +22,7 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{later}{\code{\link[later]{run_now}}}
+  \item{later}{\code{\link[later]{later}}, \code{\link[later]{run_now}}}
 
   \item{magrittr}{\code{\link[magrittr:compound]{\%<>\%}}, \code{\link[magrittr:pipe]{\%>\%}}}
 

@@ -190,8 +190,8 @@ Queue <- R6Class(
     #' @description
     #' Stop all jobs and workers.
     #' @return This Queue, invisibly.
-    shutdown = function (reason = 'job queue shut down by user') {
-      q_shutdown(self, private, reason)
+    stop = function (reason = 'job queue shut down by user') {
+      q_stop(self, private, reason)
     }
   ),
 
@@ -414,7 +414,7 @@ q_submit <- function (self, private, job) {
 
 
 # Stop all jobs and prevent more from being added.
-q_shutdown <- function (self, private, reason) {
+q_stop <- function (self, private, reason) {
   private$finalize(reason)
   private$set_state('stopped')
   self$workers <- list()
@@ -461,7 +461,7 @@ q__poll_startup <- function (self, private) {
   
   if (any(states == 'stopped')) {
     
-    self$shutdown('worker process did not start cleanly')
+    self$stop('worker process did not start cleanly')
     private$set_state('error')
   }
   

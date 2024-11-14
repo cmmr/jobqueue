@@ -271,18 +271,18 @@ j_output <- function (self, private, value) {
 # Reformat and/or signal `<Job>$output`.
 j_result <- function (self, private) {
   
-  reformat <- self$reformat # NULL/function (job)
+  reformat <- private$.reformat # NULL/function (job)
   
   if (is_null(reformat)) { result <- self$output    }
   else                   { result <- reformat(self) }
   
-  signal <- self$signal # TRUE/FALSE/c('interrupt', 'error')
+  signal <- private$.signal # TRUE/FALSE/c('interrupt', 'error')
   if (!is_false(signal) && inherits(result, 'condition'))
     if (is_true(signal) || any(signal %in% class(result)))
       cli_abort(
         .envir  = self$caller_env, 
         parent  = result,
-        message = deparse1(self$expr) )
+        message = deparse1(private$.expr) )
   
   return (result)
 }
@@ -308,7 +308,7 @@ j_proxy <- function (self, private, value) {
 }
 
 
-# Typically 'created', 'submitted', 'queued', 'dispatched', 
+# Typically 'created', 'submitted', 'queued', 
 # 'starting', 'running', or 'done'.
 j_state <- function (self, private, value) {
   
@@ -329,6 +329,7 @@ j_state <- function (self, private, value) {
     cli_abort("Job$state can't be set to 'done' until Job$output is set.")
   
   u__set_state(self, private, state = new_state)
+  if (private$.state == 'done') return (NULL)
   
   # Start the 'total' timeout when we enter the 'submitted' state.
   if (new_state == 'submitted')

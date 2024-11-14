@@ -7,7 +7,7 @@ test_that('job', {
   job <- expect_silent( q$run(
     expr     = quote(2 + 3), 
     cpus     = NULL,
-    timeout  = list('queued' = 1),
+    timeout  = list('queued' = 10),
     reformat = ~{ .$output * 2 }) )
   
   expect_true(is.function(job$reformat))
@@ -35,6 +35,6 @@ test_that('job', {
   expect_silent(    job1$output <- 'custom'    )
   expect_identical( job1$result , job2$result  )
   
-  expect_silent( q$shutdown() )
+  expect_silent( q$stop() )
 })
 

@@ -45,19 +45,24 @@ u__set_state <- function (self, private, state) {
   
   if (private$.state != state) {
     
+    private$.state <- state
     hooks          <- private$.hooks
     private$.hooks <- hooks[names(hooks) != '.next']
     hooks          <- hooks[names(hooks) %in% c('*', '.next', state)]
     
-    private$.state <- state
-    for (i in seq_along(hooks)) {
-      func <- hooks[[i]]
-      if (!is_null(formals(func))) { func(self) }
-      else if (is.primitive(func)) { func(self) }
-      else                         { func()     }
-    }
-    
+    # cnd <- catch_cnd({
+      for (i in seq_along(hooks)) {
+        func <- hooks[[i]]
+        
+        if (!is_null(formals(func))) { func(self) }
+        else if (is.primitive(func)) { func(self) }
+        else                         { func()     }
+      }
+    # })
+    # 
+    # if (!is_null(cnd)) self$stop(cnd)
   }
+  
   return (invisible(NULL))
 }
 
@@ -81,6 +86,31 @@ working_dir <- function (uid) {
   dir.create(path, recursive = TRUE)
   normalizePath(path, winslash = '/')
 }
+
+
+# Two-step save.
+save_rds <- function (wd, ...) {
+  
+  dots <- list(...)
+  for (i in seq_along(dots)) {
+    
+    # save_rds(wd, output = output)
+    key <- names(dots)[[i]] %||% ''
+    val <- dots[[i]]
+    
+    # save_rds(wd, 'output')
+    if (nchar(key) == 0) {
+      key <- dots[[i]]
+      val <- get(key, pos = parent.frame())
+    }
+    temp <- file.path(wd, paste0('_', key, '.rds'))
+    dest <- file.path(wd, paste0(     key, '.rds'))
+    
+    saveRDS(val, temp)
+    file.rename(temp, dest)
+  }
+}
+
 
 read_logs <- function (wd) {
   

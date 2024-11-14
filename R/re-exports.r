@@ -6,6 +6,9 @@ magrittr::`%<>%`
 magrittr::`%>%`
 
 #' @export
+later::later
+
+#' @export
 later::run_now
 
 #' @export

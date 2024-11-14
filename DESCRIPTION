@@ -1,8 +1,8 @@
 Package: jobqueue
 Type: Package
-Title: Queue and Run Asynchronous Interruptible R Tasks on Background Processes
-Version: 0.1.0.9000
-Date: 2024-11-06
+Title: Run Interruptible Code Asynchronously
+Version: 0.1.0.9001
+Date: 2024-11-13
 Authors@R: c(
     person(
       "Daniel P.", "Smith",
@@ -18,7 +18,7 @@ Description:
     and other mechanisms for automatically terminating a background job. The 
     result of the expression is available synchronously via '$result' or 
     asynchronously with callbacks or the 'promises' package framework.
-URL: https://cmmr.github.io/jobqueue/
+URL: https://cmmr.github.io/jobqueue/, https://github.com/cmmr/jobqueue
 BugReports: https://github.com/cmmr/jobqueue/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
