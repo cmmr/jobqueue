@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,7 +85,7 @@
 <li><p><a href="#method-Queue-submit"><code>Queue$submit()</code></a></p></li>
 <li><p><a href="#method-Queue-wait"><code>Queue$wait()</code></a></p></li>
 <li><p><a href="#method-Queue-on"><code>Queue$on()</code></a></p></li>
-<li><p><a href="#method-Queue-shutdown"><code>Queue$shutdown()</code></a></p></li>
+<li><p><a href="#method-Queue-stop"><code>Queue$stop()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-Queue-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Creates n <code>workers</code> background processes for handling <code>$run()</code> and
@@ -106,8 +106,7 @@ properly set for each Job.</p><div class="section">
 <span>  signal <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cpus <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  stop_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  copy_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  lazy <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  copy_id <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -141,7 +140,7 @@ than <code>max_cpus</code> to enable interrupted workers to be quickly swapped
 out with standby Workers while a replacement Worker boots up.</p></dd>
 
 
-<dt><code>timeout, hooks, reformat, signal, cpus, stop_id, copy_id, lazy</code></dt>
+<dt><code>timeout, hooks, reformat, signal, cpus, stop_id, copy_id</code></dt>
 <dd><p>Defaults for this Queue's <code>$run()</code> method. Here only, <code>stop_id</code> and
 <code>copy_id</code> must be either a <code>function (job)</code> or <code>NULL</code>, and <code>hooks</code>
 can take on an alternate format as described in the Callback Hooks
@@ -187,7 +186,6 @@ by <code>Queue$new()</code>.</p><div class="section">
 <span>  cpus <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  stop_id <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  copy_id <span class="op">=</span> <span class="cn">NA</span>,</span>
-<span>  lazy <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
@@ -255,13 +253,6 @@ returning whatever result the earlier Job returns. <code>copy_id</code> can also
 be a <code>function (job)</code> that returns the <code>copy_id</code> to assign to a given
 Job. A <code>copy_id</code> of <code>NULL</code> disables this feature.
 See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd>
-
-
-<dt><code>lazy</code></dt>
-<dd><p>When <code>lazy = FALSE</code> (the default), the job is submitted for
-evaluation immediately. Otherwise it is lazily evaluated - that is,
-only once <code>&lt;Job&gt;$result</code>, <code>&lt;Job&gt;$output</code>, or <code>&lt;Queue&gt;$submit(&lt;Job&gt;)</code>
-is called.</p></dd>
 
 
 <dt><code>...</code></dt>
@@ -384,11 +375,11 @@ is ignored.</p></dd>
 <p>A function that when called removes this callback from the Queue.</p>
 </div>
 
-</div><p></p><hr><a id="method-Queue-shutdown"></a><div class="section">
-<h3 id="method-shutdown-">Method <code>shutdown()</code><a class="anchor" aria-label="anchor" href="#method-shutdown-"></a></h3>
+</div><p></p><hr><a id="method-Queue-stop"></a><div class="section">
+<h3 id="method-stop-">Method <code><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop()</a></code><a class="anchor" aria-label="anchor" href="#method-stop-"></a></h3>
 <p>Stop all jobs and workers.</p><div class="section">
 <h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="fu">shutdown</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"job queue shut down by user"</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"job queue shut down by user"</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
