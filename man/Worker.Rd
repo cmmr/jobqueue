@@ -22,6 +22,8 @@ A Background Process
 \item{\code{uid}}{A short string, e.g. 'W11', that uniquely identifies this Worker.}
 
 \item{\code{wd}}{The Worker's working directory.}
+
+\item{\code{reason}}{Why the Worker was stopped.}
 }
 \if{html}{\out{</div>}}
 }
@@ -42,7 +44,7 @@ A Background Process
 \if{html}{\out{<a id="method-Worker-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-new}{}}}
 \subsection{Method \code{new()}}{
-Creates a background Rscript process for running \link{Job}s.
+Creates a background R process for running \link{Job}s.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$new(globals = NULL, packages = NULL, init = NULL, hooks = NULL)}\if{html}{\out{</div>}}
 }

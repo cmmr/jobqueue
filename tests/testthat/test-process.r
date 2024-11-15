@@ -11,7 +11,7 @@ test_that('process', {
 
   # Successful setup and evaluation
   config  <- list(packages = 'base')
-  request <- list(expr = quote(TRUE), vars = list(), cpus = 1L)
+  request <- list(expr = quote(TRUE), vars = list(ps_exe = ps::ps_exe), cpus = 1L)
   save_rds(wd, 'config', 'request')
 
   res <- expect_silent(p__start(wd = wd, testing = TRUE))

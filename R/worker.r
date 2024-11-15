@@ -52,7 +52,7 @@ Worker <- R6Class(
   public = list(
     
     #' @description
-    #' Creates a background Rscript process for running [Job]s.
+    #' Creates a background R process for running [Job]s.
     #' @return A Worker object.
     initialize = function (
         globals  = NULL, 
@@ -116,6 +116,7 @@ Worker <- R6Class(
     .job       = NULL,
     .ps        = NULL,
     .wd        = NULL,
+    .reason    = NULL,
     caller_env = NULL,
     config     = NULL,
     semaphore  = NULL,
@@ -127,9 +128,9 @@ Worker <- R6Class(
     fp           = function (...)   file.path(private$.wd, paste0(...)),
     
     finalize = function () {
-      if (!is_null(private$.ps))       ps_kill(private$.ps)
+      if (inherits(private$.ps, 'ps_handle')) ps_kill(private$.ps)
       if (!is_null(private$semaphore)) remove_semaphore(private$semaphore)
-      if (!is_null(private$.wd))       unlink(private$.wd, recursive = TRUE)
+      if (!is_null(wd <- private$.wd) && dir.exists(wd)) unlink(wd, recursive = TRUE)
     }
   ),
   
@@ -157,7 +158,11 @@ Worker <- R6Class(
     
     #' @field wd
     #' The Worker's working directory.
-    wd = function () private$.wd
+    wd = function () private$.wd,
+    
+    #' @field reason
+    #' Why the Worker was stopped.
+    reason = function () private$.reason
   )
 )
 
@@ -194,6 +199,8 @@ w_start <- function (self, private) {
     cli_abort('Worker is already {private$.state}.')
   
   private$set_state('starting')
+  
+  private$.reason   <- NULL
   private$semaphore <- create_semaphore()
   
   private$.wd <- tempdir() %>% 
@@ -204,7 +211,7 @@ w_start <- function (self, private) {
   saveRDS(private$config, private$fp('config.rds'))
   
   cnd <- catch_cnd(zero <- system2(
-    command = ps::ps_exe(),
+    command = file.path(R.home('bin'), 'R'),
     args    = shQuote(c('--vanilla', '-e', 'jobqueue:::p__start()', '--args', private$.wd)),
     stdout  = private$fp('stdout.txt'),
     stderr  = private$fp('stderr.txt'), 
@@ -221,7 +228,7 @@ w_start <- function (self, private) {
   } else {
     
     # Stop the worker if it spends too long in 'starting' state.
-    timeout <- getOption('jobqueue.worker_timeout', default = 10L)
+    timeout <- getOption('jobqueue.worker_timeout', default = 5L)
     timeout <- validate_positive_integer(timeout)
     if (!is.null(timeout)) {
       msg <- 'worker startup time exceeded {timeout} second{?s}'
@@ -240,31 +247,19 @@ w_start <- function (self, private) {
 
 w_stop <- function (self, private, reason) {
   
+  private$.reason <- reason
+  
   if (!is_null(job <- private$.job)) {
     private$.job <- NULL
     job$output   <- interruptCondition(reason)
   }
   
-  if (!is_null(ps <- private$.ps)) {
-    if (ps_is_running(ps)) ps_kill(ps)
-    private$.ps <- NULL
-  }
-  
-  if (!is_null(wd <- private$.wd)) {
-    if (dir.exists(wd))
-      unlink(wd, recursive = TRUE)
-    private$.wd <- NULL
-  }
-  
-  if (!is_null(private$semaphore)) {
-    remove_semaphore(private$semaphore)
-    private$semaphore <- NULL
-  }
+  private$finalize()
+  private$.ps       <- NULL
+  private$.wd       <- NULL
+  private$semaphore <- NULL
   
   private$set_state('stopped')
-  
-  if (inherits(reason, 'condition'))
-    cnd_signal(reason)
   
   return (invisible(self))
 }
@@ -353,42 +348,38 @@ w__poll_startup <- function (self, private) {
   
   if (private$.state != 'starting') return (NULL)
   
-  # Crashed?
-  if (file.exists(fp <- private$fp('error.rds'))) {
-    
-    self$stop(error_cnd(
-      call    = private$caller_env, 
-      parent  = if (file.exists(fp)) readRDS(fp),
-      message = c(
-        'worker startup failed: error occured',
-        read_logs(private$.wd) )))
+  # Import the PID.
+  if (is_null(private$.ps) && file.exists(private$fp('ps_info.rds'))) {
+      ps_info     <- readRDS(private$fp('ps_info.rds'))
+      private$.ps <- try(silent = TRUE, ps::ps_handle(ps_info$pid, ps_info$time))
   }
   
-  # Ready?
-  else if (file.exists(fp <- private$fp('ps_info.rds'))) {
+  # Check if alive and for indicator files.
+  if (!is_null(ps <- private$.ps)) {
     
-    cnd <- catch_cnd({
-      ps_info     <- readRDS(fp)
-      private$.ps <- ps::ps_handle(ps_info$pid, ps_info$time) })
-    
-    if (!is_null(cnd) || !ps_is_running(private$.ps)) {
+    # Crashed?
+    fp <- private$fp('error.rds')
+    if (!inherits(ps, 'ps_handle') || !ps_is_running(ps) || file.exists(fp)) {
+      
       self$stop(error_cnd(
         call    = private$caller_env, 
-        parent  = cnd,
+        parent  = if (file.exists(fp)) readRDS(fp),
         message = c(
-          'worker startup failed: process not running',
+          'worker startup failed',
           read_logs(private$.wd) )))
-      
-    } else {
+    }
+    
+    # Ready?
+    else if (file.exists(private$fp('_ready_'))) {
       private$set_state('idle')
     }
     
   }
   
-  # Booting?
-  else if (private$.state == 'starting') {
+  
+  # Still booting.
+  if (private$.state == 'starting')
     later(private$poll_startup, delay = 0.2)
-  }
   
   return (NULL)
 }

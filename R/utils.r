@@ -112,7 +112,7 @@ read_logs <- function (wd) {
   
   for (stream in c('stdout', 'stderr')) {
     fp <- file.path(wd, paste(stream, '.txt'))
-    if (file.exists(fp) && file.size(fp))
+    if (isTRUE(file.exists(fp)) && isTRUE(file.size(fp) > 0))
       logs %<>% c(sprintf('%s>  %s', stream, readLines(fp)))
   }
   
@@ -197,18 +197,5 @@ attr_ne <- function (x, attr, val) {
 # Return elements from a list where identical(x[[i]]$el, val)
 get_eq <- function (x, el, val) {
   x[unlist(sapply(seq_along(x), function (i) identical(x[[i]][[el]], val)))]
-}
-
-
-slurp <- function (wd, ...) {
-  paths <- file.path(wd, list(...))
-  sizes <- file.size(paths)
-  txt   <- ""
-  for (i in which(sizes > 0)) {
-    con    <- paths[[i]]
-    nchars <- sizes[[i]]
-    txt <- paste0(txt, readChar(con, nchars))
-  }
-  return (txt)
 }
 

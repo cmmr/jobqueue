@@ -13,9 +13,15 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
         R_BROWSER   = "false",
         R_PDFVIEWER = "false" )
       
-      ps <- ps::ps_handle()
       wd <- normalizePath(wd, winslash = '/', mustWork = TRUE)
       fp <- function (path) file.path(wd, path)
+      
+      ps <- ps::ps_handle()
+      ps_info = list(
+        pid  = ps::ps_pid(ps), 
+        time = ps::ps_create_time(ps) )
+      saveRDS(ps_info, fp('_ps_info.rds'))
+      file.rename(fp('_ps_info.rds'), fp('ps_info.rds'))
       
       env       <- new.env(parent = .GlobalEnv)
       config    <- readRDS(fp('config.rds'))
@@ -50,12 +56,8 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
     quit(save = "no")
   }
   
-  ps_info = list(
-    pid  = ps::ps_pid(ps), 
-    time = ps::ps_create_time(ps) )
-  saveRDS(ps_info, fp('_ps_info.rds'))
-  file.rename(fp('_ps_info.rds'), fp('ps_info.rds'))
   
+  file.create(fp('_ready_'))
   
   # Evaluation loop
   repeat {

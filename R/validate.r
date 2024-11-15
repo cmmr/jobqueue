@@ -127,12 +127,6 @@ validate_positive_integer <- function (value, if_null = NULL, null_ok = TRUE) {
     warning = on_error )
 }
 
-validate_logical <- function (value) {
-  if (is_scalar_logical(value) && !is_na(value)) return (value)
-  varname <- substitute(value)
-  cli_abort(must_be('a character vector'))
-}
-
 validate_character_vector <- function (value, if_null = NULL, bool_ok = FALSE) {
   if (is_null(value)) return (if_null)
   if (!anyNA(value)) {

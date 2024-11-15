@@ -4,8 +4,17 @@ test_that('job', {
   # library(jobqueue); library(testthat)
   q <- expect_silent( Queue$new(workers = 1L) )
   
-  job <- expect_silent(q$run({ TRUE }))
-  expect_true(job$result)
+  job <- expect_silent( q$run({ TRUE }) )
+  expect_true( job$result )
+  
+  job <- expect_silent( q$run({ stop('x') }, signal = FALSE) )
+  expect_s3_class( job$result, 'error' )
+  
+  job <- expect_silent( q$run({ stop('x') }, signal = TRUE) )
+  p   <- expect_silent( as.promise(job)  )
+  expect_error( job$result )
+  expect_true(  job$signal )
+  
   
   job <- expect_silent( q$run(
     expr     = quote(2 + 3),
