@@ -17,8 +17,6 @@ Jobs go in. Results come out.
 
 \item{\code{hooks}}{A named list of currently registered callback hooks.}
 
-\item{\code{loaded}}{List of global variables and attached functions on the Workers.}
-
 \item{\code{state}}{Current state: \code{'starting'}, \code{'idle'}, \code{'busy'}, \code{'stopped'}, or \code{'error.'}}
 }
 \if{html}{\out{</div>}}

@@ -209,7 +209,6 @@ Queue <- R6Class(
     .hooks       = list(),
     .jobs        = list(),
     .workers     = list(),
-    .loaded      = list(globals = c(), attached = c()),
     .state       = 'initializing',
     
     n_workers    = NULL,
@@ -242,10 +241,6 @@ Queue <- R6Class(
     #' @field hooks
     #' A named list of currently registered callback hooks.
     hooks = function () private$.hooks,
-    
-    #' @field loaded
-    #' List of global variables and attached functions on the Workers.
-    loaded = function () private$.loaded,
     
     #' @field state
     #' Current state: `'starting'`, `'idle'`, `'busy'`, `'stopped'`, or `'error.'`
@@ -404,7 +399,7 @@ q_submit <- function (self, private, job) {
       job$proxy <- copy_jobs[[1]]
   
   if (job$state == 'submitted') {
-    self$jobs %<>% c(job)
+    self$jobs <- c(self$jobs, list(job))
     job$state <- 'queued'
     private$dispatch()
   }
@@ -466,10 +461,6 @@ q__poll_startup <- function (self, private) {
   }
   
   else if (sum(states == 'idle') == private$n_workers) {
-    
-    w <- self$workers[[1]]
-    private$.loaded$globals  <- w$loaded$globals
-    private$.loaded$attached <- w$loaded$attached
     
     private$is_ready <- TRUE
     private$set_state('idle')

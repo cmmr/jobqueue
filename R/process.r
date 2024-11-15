@@ -7,13 +7,19 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
     classes = 'error', 
     expr    = {
       
+      Sys.setenv(
+        CYGWIN      = "nodosfilewarning",
+        R_TESTS     = "",
+        R_BROWSER   = "false",
+        R_PDFVIEWER = "false" )
+      
       ps <- ps::ps_handle()
       wd <- normalizePath(wd, winslash = '/', mustWork = TRUE)
       fp <- function (path) file.path(wd, path)
       
       env       <- new.env(parent = .GlobalEnv)
       config    <- readRDS(fp('config.rds'))
-      semaphore <- readRDS(fp('semaphore.rds'))
+      semaphore <- basename(wd)
       
       # Packages for Worker
       for (i in seq_along(p <- config[['packages']]))

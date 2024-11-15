@@ -1,7 +1,7 @@
 
 test_that('basic', {
 
-  q <- expect_silent(Queue$new(workers = 1L))
+  q <- expect_silent(Queue$new(workers = 1L, timeout = 5.2))
   expect_equal(q$state, 'starting')
 
   expect_no_error(suppressMessages(q$print()))
@@ -38,6 +38,7 @@ test_that('config', {
 
   q <- expect_silent(Queue$new(
     workers  = 1L,
+    timeout = 5.3,
     globals  = list(x = 42),
     packages = 'magrittr',
     init     = { y <- 37 },
@@ -66,7 +67,7 @@ test_that('config', {
 
 test_that('workers', {
 
-  q <- expect_silent(Queue$new(workers = 2L, max_cpus = 3L))
+  q <- expect_silent(Queue$new(workers = 2L, max_cpus = 3L, timeout = 5.4))
 
   q$run({ Sys.sleep(1) })
   q$run({ Sys.sleep(1) })
@@ -84,7 +85,7 @@ test_that('workers', {
 
 test_that('max_cpus', {
 
-  q <- expect_silent(Queue$new(workers = 3L, max_cpus = 2L))
+  q <- expect_silent(Queue$new(workers = 3L, max_cpus = 2L, timeout = 5.5))
 
   q$run({ Sys.sleep(1) })
   q$run({ Sys.sleep(1) })
@@ -94,7 +95,7 @@ test_that('max_cpus', {
 
   q$wait('.next')
   q$run({ Sys.sleep(1) })
-  
+
   expect_equal(map(q$jobs, 'state'), c(rep('running', 2), rep('queued', 2)))
   expect_equal(map(q$workers, 'state'), c('busy', 'busy', 'idle'))
 
@@ -104,7 +105,7 @@ test_that('max_cpus', {
 
 test_that('interrupt', {
 
-  q <- expect_silent(Queue$new(workers = 1L))
+  q <- expect_silent(Queue$new(workers = 1L, timeout = 5.6))
 
   job <- q$run({ Sys.sleep(1) })
   expect_silent(job$stop())

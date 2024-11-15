@@ -117,6 +117,7 @@ Worker <- R6Class(
     .ps        = NULL,
     .wd        = NULL,
     caller_env = NULL,
+    config     = NULL,
     semaphore  = NULL,
     
     set_state    = function (state) u__set_state(self, private, state),
@@ -166,14 +167,13 @@ w_initialize <- function (self, private, globals, packages, init, hooks) {
   init_subst <- substitute(init, env = parent.frame())
   
   private$.uid       <- increment_uid('W')
-  private$.wd        <- working_dir(private$.uid)
   private$.hooks     <- validate_hooks(hooks, 'WH')
   private$caller_env <- caller_env(2L)
   
-  saveRDS(file = private$fp('config.rds'), list(
-    globals  = validate_list(globals, if_null = NULL),
+  private$config <- list(
+    globals  = validate_list(globals),
     packages = validate_character_vector(packages),
-    init     = validate_expression(init, init_subst) ))
+    init     = validate_expression(init, init_subst) )
   
   self$start()
   
@@ -194,29 +194,45 @@ w_start <- function (self, private) {
     cli_abort('Worker is already {private$.state}.')
   
   private$set_state('starting')
-  
-  files <- list.files(private$.wd)
-  files <- setdiff(files, 'config.rds')
-  unlink(private$fp(files))
-  
   private$semaphore <- create_semaphore()
-  saveRDS(private$semaphore, private$fp('semaphore.rds'))
   
-  cnd <- catch_cnd(system2(
-    command = 'Rscript',
-    args    = shQuote(c('--vanilla', '-e', 'jobqueue:::p__start()', private$.wd)),
+  private$.wd <- tempdir() %>% 
+    normalizePath(winslash = '/', mustWork = FALSE) %>%
+    file.path('jobqueue', private$.uid, private$semaphore)
+  
+  dir.create(private$.wd, recursive = TRUE)
+  saveRDS(private$config, private$fp('config.rds'))
+  
+  cnd <- catch_cnd(zero <- system2(
+    command = ps::ps_exe(),
+    args    = shQuote(c('--vanilla', '-e', 'jobqueue:::p__start()', '--args', private$.wd)),
     stdout  = private$fp('stdout.txt'),
     stderr  = private$fp('stderr.txt'), 
     wait    = FALSE ))
   
-  if (!is_null(cnd))
+  if (!is_null(cnd) || !identical(zero, 0L)) {
+    
     self$stop(error_cnd(
       parent  = cnd,
       message = c(
         "can't start Rscript subprocess",
         read_logs(private$.wd) )))
+    
+  } else {
+    
+    # Stop the worker if it spends too long in 'starting' state.
+    timeout <- getOption('jobqueue.worker_timeout', default = 10L)
+    timeout <- validate_positive_integer(timeout)
+    if (!is.null(timeout)) {
+      msg <- 'worker startup time exceeded {timeout} second{?s}'
+      msg <- cli_fmt(cli_text(msg))
+      self$on('.next', later(~self$stop(msg), delay = timeout))
+    }
+    
+    # Keep tabs on the startup progress.
+    later(private$poll_startup)
+  }
   
-  later(private$poll_startup)
   
   return (invisible(self))
 }
@@ -232,6 +248,12 @@ w_stop <- function (self, private, reason) {
   if (!is_null(ps <- private$.ps)) {
     if (ps_is_running(ps)) ps_kill(ps)
     private$.ps <- NULL
+  }
+  
+  if (!is_null(wd <- private$.wd)) {
+    if (dir.exists(wd))
+      unlink(wd, recursive = TRUE)
+    private$.wd <- NULL
   }
   
   if (!is_null(private$semaphore)) {

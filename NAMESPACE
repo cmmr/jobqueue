@@ -10,7 +10,7 @@ importFrom("promises",
            "%...>%", "%...T>%", "as.promise", "promise", "promise_all", "promise_map", 
            "promise_race", "promise_reduce", "promise_resolve", "then" )
 importFrom("R6", "R6Class")
-importFrom("ps", "ps_handle", "ps_kill", "ps_is_running", "ps_interrupt")
+importFrom("ps", "ps_exe", "ps_is_running", "ps_handle", "ps_kill")
 importFrom("rlang", 
            "%||%", "as_environment", "as_function", "caller_env", "caller_fn", 
            "catch_cnd", "cnd", "cnd_signal", "dots_list", "env_get", "env_has", 

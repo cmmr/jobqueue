@@ -81,12 +81,6 @@ increment_uid <- function (prefix) {
   return (paste0(prefix, value))
 }
 
-working_dir <- function (uid) {
-  path <- file.path(tempdir(), 'jobqueue', uid)
-  dir.create(path, recursive = TRUE)
-  normalizePath(path, winslash = '/')
-}
-
 
 # Two-step save.
 save_rds <- function (wd, ...) {
