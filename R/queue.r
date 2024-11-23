@@ -73,8 +73,8 @@
 #'        Job. A `copy_id` of `NULL` disables this feature. 
 #'        See `vignette('stops')`.
 #'        
-#' @param reason  Passed to `<Job>$stop(reason)` for any Jobs currently 
-#'        managed by this Queue.
+#' @param reason,cls  Passed to `<Job>$stop(reason, cls)` for any Jobs 
+#'        currently managed by this Queue.
 #'        
 #' @param state  The Queue state that will trigger this function. One of:
 #'        \describe{
@@ -190,18 +190,18 @@ Queue <- R6Class(
     #' @description
     #' Stop all jobs and workers.
     #' @return This Queue, invisibly.
-    stop = function (reason = 'job queue shut down by user') {
-      q_stop(self, private, reason)
+    stop = function (reason = 'job queue shut down by user', cls = NULL) {
+      q_stop(self, private, reason, cls)
     }
   ),
 
 
   private = list(
     
-    finalize = function (reason = 'queue was garbage collected') {
+    finalize = function (reason = 'queue was garbage collected', cls = NULL) {
       private$is_ready <- FALSE
-      fmap(self$workers, 'stop', reason)
-      fmap(self$jobs,    'stop', reason)
+      fmap(self$workers, 'stop', reason, cls)
+      fmap(self$jobs,    'stop', reason, cls)
       return (invisible(NULL))
     },
     
@@ -389,7 +389,7 @@ q_submit <- function (self, private, job) {
   if (is_function(job$stop_id)) job$stop_id <- job$stop_id(job)
   if (!is_null(id <- job$stop_id))
     if (nz(stop_jobs <- get_eq(self$jobs, 'stop_id', id)))
-      fmap(stop_jobs, 'stop', 'duplicated stop_id')
+      fmap(stop_jobs, 'stop', 'duplicated stop_id', 'superseded')
   
   # Check for `copy_id` hash collision => proxy the other job.
   if (is_formula(job$copy_id))  job$copy_id <- as_function(job$copy_id)
@@ -409,8 +409,8 @@ q_submit <- function (self, private, job) {
 
 
 # Stop all jobs and prevent more from being added.
-q_stop <- function (self, private, reason) {
-  private$finalize(reason)
+q_stop <- function (self, private, reason, cls) {
+  private$finalize(reason, cls)
   private$set_state('stopped')
   self$workers <- list()
   self$jobs    <- list()

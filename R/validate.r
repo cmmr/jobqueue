@@ -137,10 +137,11 @@ validate_character_vector <- function (value, if_null = NULL, bool_ok = FALSE) {
   cli_abort(must_be('a character vector'))
 }
 
-validate_string <- function (value) {
+validate_string <- function (value, cnd_ok = FALSE) {
   varname <- substitute(value)
+  if (is_condition(value) && is_true(cnd_ok)) value <- value$message
   if (!is_scalar_character(value) || is_na(value) || !nzchar(value))
-    cli_abort(must_be('a string'))
+    cli_abort(must_be(ifelse(cnd_ok, 'a string or condition', 'a string')))
   return (value)
 }
 

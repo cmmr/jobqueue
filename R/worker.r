@@ -37,8 +37,8 @@
 #'        `<Worker>$stop()` or edit its values and the changes will be 
 #'        persisted (since Workers are reference class objects).
 #'        
-#' @param reason  Passed to `<Job>$stop(reason)` for any Jobs currently 
-#'        assigned to this Worker.
+#' @param reason,cls  Passed to `<Job>$stop(reason, cls)` for any Jobs 
+#'        currently assigned to this Worker.
 #'
 #' @export
 #' 
@@ -80,8 +80,8 @@ Worker <- R6Class(
     #' Stops a Worker by terminating the background Rscript process and calling 
     #' `<Job>$stop(reason)` on any Jobs currently assigned to this Worker.
     #' @return The Worker, invisibly.
-    stop = function (reason = 'worker stopped by user')
-      w_stop(self, private, reason),
+    stop = function (reason = 'worker stopped by user', cls = NULL)
+      w_stop(self, private, reason, cls),
     
     #' @description
     #' Restarts a Worker by calling `<Worker>$stop(reason)` and 
@@ -233,7 +233,7 @@ w_start <- function (self, private) {
     if (!is.null(timeout)) {
       msg <- 'worker startup time exceeded {timeout} second{?s}'
       msg <- cli_fmt(cli_text(msg))
-      self$on('.next', later(~self$stop(msg), delay = timeout))
+      self$on('.next', later(~self$stop(msg, 'timeout'), delay = timeout))
     }
     
     # Keep tabs on the startup progress.
@@ -245,13 +245,13 @@ w_start <- function (self, private) {
 }
 
 
-w_stop <- function (self, private, reason) {
+w_stop <- function (self, private, reason, cls) {
   
   private$.reason <- reason
   
   if (!is_null(job <- private$.job)) {
     private$.job <- NULL
-    job$output   <- interruptCondition(reason)
+    job$output   <- interrupt_cnd(reason, cls)
   }
   
   private$finalize()

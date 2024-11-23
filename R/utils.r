@@ -67,9 +67,10 @@ u__set_state <- function (self, private, state) {
 }
 
 
-interruptCondition <- function (reason = 'stopped') {
-  if (is_condition(reason)) reason <- reason$message
-  cnd('interrupt', message = as.character(reason))
+interrupt_cnd <- function (reason = 'stopped', cls = NULL) {
+  reason <- validate_string(reason, cnd_ok = TRUE)
+  cls    <- validate_character_vector(cls)
+  cnd(c(cls, 'interrupt'), message = as.character(reason))
 }
 
 

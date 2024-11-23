@@ -75,6 +75,9 @@
 #' @param reason  A message to include in the 'interrupt' condition object that 
 #'        will be returned as the Job's result.
 #'        
+#' @param cls  Character vector of additional classes to prepend to 
+#'        `c('interupt', 'condition')`.
+#'        
 #' @param ...  Arbitrary named values to add to the returned Job object.
 #'
 #' @export
@@ -125,7 +128,7 @@ Job <- R6Class(
     #' @description
     #' Stop this Job. If the Job is running, the worker process will be rebooted.
     #' @return This Job, invisibly.
-    stop = function (reason = 'job stopped by user') j_stop(self, private, reason)
+    stop = function (reason = 'job stopped by user', cls = NULL) j_stop(self, private, reason, cls)
   ),
   
   private = list(
@@ -243,8 +246,8 @@ j_print <- function (self) {
 }
 
 
-j_stop <- function (self, private, reason) {
-  self$output <- interruptCondition(reason)
+j_stop <- function (self, private, reason, cls) {
+  self$output <- interrupt_cnd(reason, cls)
   return (invisible(self))
 }
 
@@ -336,14 +339,14 @@ j_state <- function (self, private, value) {
     if (!is_null(timeout <- private$.timeout[['total']])) {
       msg <- 'total runtime exceeded {timeout} second{?s}'
       msg <- cli_fmt(cli_text(msg))
-      self$on('done', later(~self$stop(msg), delay = timeout))
+      self$on('done', later(~self$stop(msg, 'timeout'), delay = timeout))
     }
   
   # Start the timeout for this new state, if present.
   if (!is_null(timeout <- private$.timeout[[new_state]])) {
     msg <- 'exceeded {.val {timeout}} second{?s} while in {.val {new_state}} state'
     msg <- cli_fmt(cli_text(msg))
-    clear_timeout <- later(~{ self$stop(msg) }, delay = timeout)
+    clear_timeout <- later(~{ self$stop(msg, 'timeout') }, delay = timeout)
     self$on('.next', function (job) { clear_timeout() })
   }
 }
