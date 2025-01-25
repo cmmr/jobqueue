@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -126,13 +126,12 @@ result to be handled without blocking the main R process.</p>
 <span><span class="co">#&gt; &lt;interrupt: job stopped by user&gt;</span></span></code></pre></div>
 <p>If the Job’s result is no longer needed and you want to free up
 compute resources, calling <code>&lt;Job&gt;$stop()</code> will
-terminate the background process. Terminated Workers are automatically
-replaced by new ones.</p>
+terminate the background process. Terminated background process are
+automatically replaced by new ones.</p>
 </div>
 <div class="section level2">
 <h2 id="passing-data">Passing Data<a class="anchor" aria-label="anchor" href="#passing-data"></a>
 </h2>
-<p>Main article: <code>vignette('data')</code></p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Global variables.</span></span>
 <span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>globals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>MY_DATA <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span><span class="op">)</span></span>

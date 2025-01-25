@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -76,9 +76,8 @@
 <p>The “main” process environment (where you are calling
 <code>&lt;Queue&gt;$run()</code>) is isolated from the Worker
 environments. Therefore, your expression (<code>expr</code>) AND all the
-data needed for evaluating <code>expr</code> must be sent to the Worker.
-Jobqueue can manage this task automatically, but explicit variable
-definitions execute faster and improve code readability.</p>
+data needed for evaluating <code>expr</code> must be explicitly passed
+to the Worker.</p>
 </div>
 <div class="section level2">
 <h2 id="expressions">Expressions<a class="anchor" aria-label="anchor" href="#expressions"></a>
@@ -113,7 +112,7 @@ used instead of <code><a href="https://rdrr.io/r/base/substitute.html" class="ex
 <span><span class="va">q</span>       <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>globals <span class="op">=</span> <span class="va">globals</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">expr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">MY_DATA</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">expr</span><span class="op">)</span><span class="op">$</span><span class="va">result</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">expr</span><span class="op">)</span><span class="op">$</span><span class="va">result</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span></span>
 <span><span class="co">#&gt; [1] "mpg"  "cyl"  "disp" "hp"   "drat" "wt"</span></span></code></pre></div>
 <p>Additional variables for a Job can be defined with
 <code>vars</code>.</p>
@@ -130,12 +129,16 @@ used instead of <code><a href="https://rdrr.io/r/base/substitute.html" class="ex
 <div class="section level2">
 <h2 id="behind-the-scenes">Behind the Scenes<a class="anchor" aria-label="anchor" href="#behind-the-scenes"></a>
 </h2>
-<p>On the Worker, your expression is evaluated with the command:</p>
+<p>On the Worker, the <code>globals</code>, <code>init</code>, and
+<code>packages</code> variables provided to <code>Queue$new()</code> are
+used to define a worker environment. Then the <code>vars</code> variable
+you pass to <code>Queue$run()</code> further define an expression
+environment. Finally, <code>expr</code> is evaluated in that scope.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">eval</a></span><span class="op">(</span>expr <span class="op">=</span> <span class="va">expr</span>, envir <span class="op">=</span> <span class="va">vars</span>, enclos <span class="op">=</span> <span class="va">.GlobalEnv</span><span class="op">)</span></span></code></pre></div>
-<p>Where <code>.GlobalEnv</code> has been configured according the
-<code>packages</code>, <code>globals</code>, and <code>init</code>
-parameters from <code>Queue$new()</code>.</p>
+<code class="sourceCode R"><span><span class="va">worker_env</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="va">.GlobalEnv</span><span class="op">)</span></span>
+<span><span class="co"># not shown: worker_env configured with globals/init</span></span>
+<span><span class="va">expr_envir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list2env.html" class="external-link">list2env</a></span><span class="op">(</span><span class="va">vars</span>, parent <span class="op">=</span> <span class="va">worker_env</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">eval</a></span><span class="op">(</span>expr <span class="op">=</span> <span class="va">expr</span>, envir <span class="op">=</span> <span class="va">expr_envir</span>, enclos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">baseenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
@@ -143,7 +146,6 @@ parameters from <code>Queue$new()</code>.</p>
 <ol style="list-style-type: decimal">
 <li>Minimize data transfer to/from Workers (it’s slow).</li>
 <li>Use UPPERCASE names for global variables.</li>
-<li>Explicitly declare the variables being passed.</li>
 </ol>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cmmr.github.io/jobqueue/">jobqueue</a></span><span class="op">)</span></span>
@@ -154,8 +156,8 @@ parameters from <code>Queue$new()</code>.</p>
 <span>  packages <span class="op">=</span> <span class="st">'jsonlite'</span> <span class="op">)</span></span>
 <span></span>
 <span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span></span>
-<span>  <span class="st">'expr'</span> <span class="op">=</span> <span class="op">{</span> <span class="fu">toJSON</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">A</span>, <span class="va">B</span>, <span class="va">x</span><span class="op">)</span><span class="op">)</span> <span class="op">}</span>, </span>
-<span>  <span class="st">'vars'</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">37</span><span class="op">)</span> <span class="op">)</span></span>
+<span>  <span class="st">'vars'</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">37</span><span class="op">)</span>, </span>
+<span>  <span class="st">'expr'</span> <span class="op">=</span> <span class="op">{</span> <span class="fu">toJSON</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">A</span>, <span class="va">B</span>, <span class="va">x</span><span class="op">)</span><span class="op">)</span> <span class="op">}</span> <span class="op">)</span></span>
 <span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1,12,37]</span></span></code></pre></div>

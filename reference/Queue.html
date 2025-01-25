@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,11 +52,11 @@
 
 
 <dt><code>jobs</code></dt>
-<dd><p>Get or set - List of <a href="Job.html">Job</a>s currently managed by this Queue.</p></dd>
+<dd><p>Get or set - List of <a href="Job.html">Jobs</a> currently managed by this Queue.</p></dd>
 
 
 <dt><code>workers</code></dt>
-<dd><p>Get or set - List of <a href="Worker.html">Worker</a>s used for processing Jobs.</p></dd>
+<dd><p>Get or set - List of <a href="Worker.html">Workers</a> used for processing Jobs.</p></dd>
 
 
 <dt><code>hooks</code></dt>
@@ -64,7 +64,7 @@
 
 
 <dt><code>state</code></dt>
-<dd><p>Current state: <code>'starting'</code>, <code>'idle'</code>, <code>'busy'</code>, <code>'stopped'</code>, or <code>'error.'</code></p></dd>
+<dd><p>The Queue's state: <code>'starting'</code>, <code>'idle'</code>, <code>'busy'</code>, <code>'stopped'</code>, or <code>'error.'</code></p></dd>
 
 
 </dl><p></p></div>
@@ -84,11 +84,9 @@
 <li><p><a href="#method-Queue-stop"><code>Queue$stop()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-Queue-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
-<p>Creates n <code>workers</code> background processes for handling <code>$run()</code> and
+<p>Creates background processes (n = <code>workers</code>) for handling <code>$run()</code> and
 <code>$submit()</code> calls. These workers are initialized according to the
-<code>globals</code>, <code>packages</code>, and <code>init</code> arguments. The Queue will
-not use more than <code>max_cpus</code> at once, assuming the <code>cpus</code> argument is
-properly set for each Job.</p><div class="section">
+<code>globals</code>, <code>packages</code>, and <code>init</code> arguments.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  globals <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -109,8 +107,9 @@ properly set for each Job.</p><div class="section">
 <div class="section">
 <h4 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>globals</code></dt>
-<dd><p>A list or similar set of values that are added to the
-<code>.GlobalEnv</code> of workers.</p></dd>
+<dd><p>A named list of variables that all <code>&lt;Job&gt;$expr</code>s will have
+access to. Alternatively, an object that can be coerced to a named
+list with <code><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list()</a></code>, e.g. named vector, data.frame, or environment.</p></dd>
 
 
 <dt><code>packages</code></dt>
@@ -126,21 +125,21 @@ Returned value is ignored.</p></dd>
 
 <dt><code>max_cpus</code></dt>
 <dd><p>Total number of CPU cores that can be reserved by all
-running Jobs (<code>sum(cpus)</code>). Does not enforce limits on actual CPU
-utilization.</p></dd>
+running Jobs (<code>sum(&lt;Job&gt;$cpus)</code>). Does not enforce limits on actual
+CPU utilization.</p></dd>
 
 
 <dt><code>workers</code></dt>
 <dd><p>How many background <a href="Worker.html">Worker</a> processes to start. Set to more
 than <code>max_cpus</code> to enable interrupted workers to be quickly swapped
-out with standby Workers while a replacement Worker boots up.</p></dd>
+out with standby Workers while a replacement Worker starts up.</p></dd>
 
 
 <dt><code>timeout, hooks, reformat, signal, cpus, stop_id, copy_id</code></dt>
-<dd><p>Defaults for this Queue's <code>$run()</code> method. Here only, <code>stop_id</code> and
-<code>copy_id</code> must be either a <code>function (job)</code> or <code>NULL</code>, and <code>hooks</code>
-can take on an alternate format as described in the Callback Hooks
-section.</p></dd>
+<dd><p>Defaults for this Queue's <code>$run()</code> method. Here only, <code>stop_id</code>
+and <code>copy_id</code> must be either a <code>function (job)</code> or <code>NULL</code>.
+<code>hooks</code> can set queue, worker, and/or job hooks - see the
+<code><a href="../articles/hooks.html">vignette('hooks')</a></code> 'Attaching' section.</p></dd>
 
 
 </dl><p></p></div>
@@ -168,9 +167,8 @@ section.</p></dd>
 
 </div><p></p><hr><a id="method-Queue-run"></a><div class="section">
 <h3 id="method-run-">Method <code>run()</code><a class="anchor" aria-label="anchor" href="#method-run-"></a></h3>
-<p>Creates a Job object and submits it to the queue for running on a
-background process. Here, the default <code>NA</code> value will use the value set
-by <code>Queue$new()</code>.</p><div class="section">
+<p>Creates a Job object and submits it to the queue for running.
+Any <code>NA</code> arguments will be replaced with their value in <code>Queue$new()</code>.</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span></span>
 <span>  <span class="va">expr</span>,</span>
@@ -196,8 +194,9 @@ See <code><a href="../articles/eval.html">vignette('eval')</a></code>.</p></dd>
 
 
 <dt><code>vars</code></dt>
-<dd><p>A list of named variables to make available to <code>expr</code> during
-evaluation.</p></dd>
+<dd><p>A named list of variables to make available to <code>expr</code> during
+evaluation. Alternatively, an object that can be coerced to a named
+list with <code><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list()</a></code>, e.g. named vector, data.frame, or environment.</p></dd>
 
 
 <dt><code>timeout</code></dt>
@@ -215,8 +214,9 @@ See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd
 
 <dt><code>reformat</code></dt>
 <dd><p>Set <code>reformat = function (job)</code> to define what
-<code>&lt;Job&gt;$result</code> should return. The default, <code>reformat = NULL</code> returns
-<code>&lt;Job&gt;$output</code> as <code>&lt;Job&gt;$result</code>. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
+<code>&lt;Job&gt;$result</code> should return. The default, <code>reformat = NULL</code> passes
+<code>&lt;Job&gt;$output</code> to <code>&lt;Job&gt;$result</code> unchanged.
+See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
 
 
 <dt><code>signal</code></dt>
@@ -230,7 +230,7 @@ conditions are produced. See <code><a href="../articles/results.html">vignette('
 
 <dt><code>cpus</code></dt>
 <dd><p>How many CPU cores to reserve for this Job. The Queue uses
-this number to limit the number of simultaneously running Jobs; it
+this number to limit the number of Jobs running simultaneously; it
 does not prevent a Job from using more CPUs than reserved.</p></dd>
 
 
@@ -292,29 +292,14 @@ See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd
 <div class="section">
 <h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>state</code></dt>
-<dd><p>The Queue state that will trigger this function. One of:</p><dl><dt><code>'*'</code> -        </dt>
-<dd><p>Every time the state changes.</p></dd>
-
-<dt><code>'.next'</code> -    </dt>
-<dd><p>Only one time, the next time the state changes.</p></dd>
-
-<dt><code>'starting'</code> - </dt>
-<dd><p>Workers are starting.</p></dd>
-
-<dt><code>'idle'</code> -     </dt>
-<dd><p>All workers are ready/idle.</p></dd>
-
-<dt><code>'busy'</code> -     </dt>
-<dd><p>At least one worker is busy.</p></dd>
-
-<dt><code>'stopped'</code> -  </dt>
-<dd><p>Shutdown is complete.</p></dd>
-
-<dt><code>'error'</code> -    </dt>
-<dd><p>Workers did not start cleanly.</p></dd>
-
-
-</dl></dd>
+<dd><p>The name of a Queue state. Typically one of:</p><ul><li><p><code>'*'</code> -        Every time the state changes.</p></li>
+<li><p><code>'.next'</code> -    Only one time, the next time the state changes.</p></li>
+<li><p><code>'starting'</code> - Workers are starting.</p></li>
+<li><p><code>'idle'</code> -     All workers are ready/idle.</p></li>
+<li><p><code>'busy'</code> -     At least one worker is busy.</p></li>
+<li><p><code>'stopped'</code> -  Shutdown is complete.</p></li>
+<li><p><code>'error'</code> -    Workers did not start cleanly.</p></li>
+</ul></dd>
 
 
 </dl><p></p></div>
@@ -326,7 +311,7 @@ See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd
 
 </div><p></p><hr><a id="method-Queue-on"></a><div class="section">
 <h3 id="method-on-">Method <code>on()</code><a class="anchor" aria-label="anchor" href="#method-on-"></a></h3>
-<p>Attach a callback function.</p><div class="section">
+<p>Attach a callback function to execute when the Queue enters <code>state</code>.</p><div class="section">
 <h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="va">state</span>, <span class="va">func</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
@@ -334,29 +319,14 @@ See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd
 <div class="section">
 <h4 id="arguments-5">Arguments<a class="anchor" aria-label="anchor" href="#arguments-5"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>state</code></dt>
-<dd><p>The Queue state that will trigger this function. One of:</p><dl><dt><code>'*'</code> -        </dt>
-<dd><p>Every time the state changes.</p></dd>
-
-<dt><code>'.next'</code> -    </dt>
-<dd><p>Only one time, the next time the state changes.</p></dd>
-
-<dt><code>'starting'</code> - </dt>
-<dd><p>Workers are starting.</p></dd>
-
-<dt><code>'idle'</code> -     </dt>
-<dd><p>All workers are ready/idle.</p></dd>
-
-<dt><code>'busy'</code> -     </dt>
-<dd><p>At least one worker is busy.</p></dd>
-
-<dt><code>'stopped'</code> -  </dt>
-<dd><p>Shutdown is complete.</p></dd>
-
-<dt><code>'error'</code> -    </dt>
-<dd><p>Workers did not start cleanly.</p></dd>
-
-
-</dl></dd>
+<dd><p>The name of a Queue state. Typically one of:</p><ul><li><p><code>'*'</code> -        Every time the state changes.</p></li>
+<li><p><code>'.next'</code> -    Only one time, the next time the state changes.</p></li>
+<li><p><code>'starting'</code> - Workers are starting.</p></li>
+<li><p><code>'idle'</code> -     All workers are ready/idle.</p></li>
+<li><p><code>'busy'</code> -     At least one worker is busy.</p></li>
+<li><p><code>'stopped'</code> -  Shutdown is complete.</p></li>
+<li><p><code>'error'</code> -    Workers did not start cleanly.</p></li>
+</ul></dd>
 
 
 <dt><code>func</code></dt>
@@ -375,14 +345,19 @@ is ignored.</p></dd>
 <h3 id="method-stop-">Method <code><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop()</a></code><a class="anchor" aria-label="anchor" href="#method-stop-"></a></h3>
 <p>Stop all jobs and workers.</p><div class="section">
 <h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"job queue shut down by user"</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"job queue shut down by user"</span>, cls <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments-6">Arguments<a class="anchor" aria-label="anchor" href="#arguments-6"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>reason</code></dt>
-<dd><p>Passed to <code>&lt;Job&gt;$stop(reason)</code> for any Jobs currently
-managed by this Queue.</p></dd>
+<dd><p>Passed to <code>&lt;Job&gt;$stop()</code> for any Jobs currently managed by
+this Queue.</p></dd>
+
+
+<dt><code>cls</code></dt>
+<dd><p>Passed to <code>&lt;Job&gt;$stop()</code> for any Jobs currently managed by
+this Queue.</p></dd>
 
 
 </dl><p></p></div>

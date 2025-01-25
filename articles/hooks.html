@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -205,6 +205,10 @@ trigger regardless of the present state name.</p>
 <h3 id="worker-states">Worker States<a class="anchor" aria-label="anchor" href="#worker-states"></a>
 </h3>
 <table class="table">
+<colgroup>
+<col width="21%">
+<col width="78%">
+</colgroup>
 <thead><tr class="header">
 <th>State</th>
 <th>Triggers</th>
@@ -212,7 +216,7 @@ trigger regardless of the present state name.</p>
 <tbody>
 <tr class="odd">
 <td><code>'starting'</code></td>
-<td>After starting a new Rscript process.</td>
+<td>Background process is being configured.</td>
 </tr>
 <tr class="even">
 <td><code>'idle'</code></td>
@@ -401,7 +405,7 @@ state.</p>
 <span>    <span class="st">'Job {.$uid} (priority {.$priority}) finished in {tdiff()}'</span> <span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="co"># A single worker to best illustrate processing order.</span></span>
+<span><span class="co"># A single worker best illustrates processing order.</span></span>
 <span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  <span class="st">'workers'</span> <span class="op">=</span> <span class="fl">1</span>, </span>
 <span>  <span class="st">'hooks'</span>   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span> <span class="op">)</span></span>
@@ -439,6 +443,8 @@ state.</p>
 <span>  <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co">#                                        vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>replications <span class="op">=</span> <span class="va">reps</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Or, define the custom <code>&lt;Job&gt;$priority</code> field in
 <code>&lt;Queue&gt;$run()</code>.</p>
@@ -449,6 +455,8 @@ state.</p>
 <span>  <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co">#                                        vvvvvvvvvvvvvvv</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, priority <span class="op">=</span> <span class="va">reps</span><span class="op">)</span></span></code></pre></div>
 <p>Or, set <code>&lt;Job&gt;$priority</code> in a hook that triggers
 before <code>prioritize()</code> is triggered.</p>
@@ -462,6 +470,8 @@ before <code>prioritize()</code> is triggered.</p>
 <span>  <span class="va">priorities</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
 <span>  <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="op">}</span></span>
+<span></span>
+<span><span class="co">#                           vvvvvvvvvvvvvvvvvvvvvv</span></span>
 <span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="va">set_priority</span>, queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>replications <span class="op">=</span> <span class="va">reps</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -518,7 +528,7 @@ callbacks. In the latter example, we attached a hook to
 <code>'created'</code> instead because we didn’t need
 <code>&lt;Job&gt;$queue</code> for that solution. Check the trigger
 order listed in the “Callback Triggers” section above, and attach
-callbacks as early on as possible to expedite Job handling.</p>
+callbacks as early as possible to expedite Job handling.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
