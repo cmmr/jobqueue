@@ -11,13 +11,13 @@ Jobs go in. Results come out.
 \describe{
 \item{\code{uid}}{Get or set - Unique identifier, e.g. \code{'Q1'}.}
 
-\item{\code{jobs}}{Get or set - List of \link{Job}s currently managed by this Queue.}
+\item{\code{jobs}}{Get or set - List of \link[=Job]{Jobs} currently managed by this Queue.}
 
-\item{\code{workers}}{Get or set - List of \link{Worker}s used for processing Jobs.}
+\item{\code{workers}}{Get or set - List of \link[=Worker]{Workers} used for processing Jobs.}
 
 \item{\code{hooks}}{A named list of currently registered callback hooks.}
 
-\item{\code{state}}{Current state: \code{'starting'}, \code{'idle'}, \code{'busy'}, \code{'stopped'}, or \code{'error.'}}
+\item{\code{state}}{The Queue's state: \code{'starting'}, \code{'idle'}, \code{'busy'}, \code{'stopped'}, or \code{'error.'}}
 }
 \if{html}{\out{</div>}}
 }
@@ -37,11 +37,9 @@ Jobs go in. Results come out.
 \if{html}{\out{<a id="method-Queue-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Queue-new}{}}}
 \subsection{Method \code{new()}}{
-Creates n \code{workers} background processes for handling \verb{$run()} and
+Creates background processes (n = \code{workers}) for handling \verb{$run()} and
 \verb{$submit()} calls. These workers are initialized according to the
-\code{globals}, \code{packages}, and \code{init} arguments. The Queue will
-not use more than \code{max_cpus} at once, assuming the \code{cpus} argument is
-properly set for each Job.
+\code{globals}, \code{packages}, and \code{init} arguments.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Queue$new(
   globals = NULL,
@@ -62,8 +60,9 @@ properly set for each Job.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{globals}}{A list or similar set of values that are added to the
-\code{.GlobalEnv} of workers.}
+\item{\code{globals}}{A named list of variables that all \verb{<Job>$expr}s will have
+access to. Alternatively, an object that can be coerced to a named
+list with \code{as.list()}, e.g. named vector, data.frame, or environment.}
 
 \item{\code{packages}}{Character vector of package names to load on workers.}
 
@@ -73,17 +72,17 @@ to variables defined by \code{globals} and assets from \code{packages}.
 Returned value is ignored.}
 
 \item{\code{max_cpus}}{Total number of CPU cores that can be reserved by all
-running Jobs (\code{sum(cpus)}). Does not enforce limits on actual CPU
-utilization.}
+running Jobs (\verb{sum(<Job>$cpus)}). Does not enforce limits on actual
+CPU utilization.}
 
 \item{\code{workers}}{How many background \link{Worker} processes to start. Set to more
 than \code{max_cpus} to enable interrupted workers to be quickly swapped
-out with standby Workers while a replacement Worker boots up.}
+out with standby Workers while a replacement Worker starts up.}
 
-\item{\code{timeout, hooks, reformat, signal, cpus, stop_id, copy_id}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id} and
-\code{copy_id} must be either a \verb{function (job)} or \code{NULL}, and \code{hooks}
-can take on an alternate format as described in the Callback Hooks
-section.}
+\item{\code{timeout, hooks, reformat, signal, cpus, stop_id, copy_id}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id}
+and \code{copy_id} must be either a \verb{function (job)} or \code{NULL}.
+\code{hooks} can set queue, worker, and/or job hooks - see the
+\code{vignette('hooks')} 'Attaching' section.}
 }
 \if{html}{\out{</div>}}
 }
@@ -112,9 +111,8 @@ Print method for a \code{Queue}.
 \if{html}{\out{<a id="method-Queue-run"></a>}}
 \if{latex}{\out{\hypertarget{method-Queue-run}{}}}
 \subsection{Method \code{run()}}{
-Creates a Job object and submits it to the queue for running on a
-background process. Here, the default \code{NA} value will use the value set
-by \code{Queue$new()}.
+Creates a Job object and submits it to the queue for running.
+Any \code{NA} arguments will be replaced with their value in \code{Queue$new()}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Queue$run(
   expr,
@@ -138,8 +136,9 @@ worker. Will have access to any variables defined by \code{vars}, as well
 as the Worker's \code{globals}, \code{packages}, and \code{init} configuration.
 See \code{vignette('eval')}.}
 
-\item{\code{vars}}{A list of named variables to make available to \code{expr} during
-evaluation.}
+\item{\code{vars}}{A named list of variables to make available to \code{expr} during
+evaluation. Alternatively, an object that can be coerced to a named
+list with \code{as.list()}, e.g. named vector, data.frame, or environment.}
 
 \item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
@@ -151,8 +150,9 @@ form \code{hooks = list(created = function (job) {...}, done = ~{...})}.
 See \code{vignette('hooks')}.}
 
 \item{\code{reformat}}{Set \verb{reformat = function (job)} to define what
-\verb{<Job>$result} should return. The default, \code{reformat = NULL} returns
-\verb{<Job>$output} as \verb{<Job>$result}. See \code{vignette('results')}.}
+\verb{<Job>$result} should return. The default, \code{reformat = NULL} passes
+\verb{<Job>$output} to \verb{<Job>$result} unchanged.
+See \code{vignette('results')}.}
 
 \item{\code{signal}}{Should calling \verb{<Job>$result} signal on condition objects?
 When \code{FALSE}, \verb{<Job>$result} will return the object without
@@ -162,7 +162,7 @@ cause the equivalent of \verb{stop(<condition>)} to be called when those
 conditions are produced. See \code{vignette('results')}.}
 
 \item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
-this number to limit the number of simultaneously running Jobs; it
+this number to limit the number of Jobs running simultaneously; it
 does not prevent a Job from using more CPUs than reserved.}
 
 \item{\code{stop_id}}{If an existing \link{Job} in the Queue has the same \code{stop_id},
@@ -218,15 +218,15 @@ Blocks until the Queue enters the given state.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{state}}{The Queue state that will trigger this function. One of:
-\describe{
-\item{\code{'*'} -        }{ Every time the state changes. }
-\item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
-\item{\code{'starting'} - }{ Workers are starting. }
-\item{\code{'idle'} -     }{ All workers are ready/idle. }
-\item{\code{'busy'} -     }{ At least one worker is busy. }
-\item{\code{'stopped'} -  }{ Shutdown is complete. }
-\item{\code{'error'} -    }{ Workers did not start cleanly. }
+\item{\code{state}}{The name of a Queue state. Typically one of:
+\itemize{
+\item \code{'*'} -        Every time the state changes.
+\item \code{'.next'} -    Only one time, the next time the state changes.
+\item \code{'starting'} - Workers are starting.
+\item \code{'idle'} -     All workers are ready/idle.
+\item \code{'busy'} -     At least one worker is busy.
+\item \code{'stopped'} -  Shutdown is complete.
+\item \code{'error'} -    Workers did not start cleanly.
 }}
 }
 \if{html}{\out{</div>}}
@@ -239,7 +239,7 @@ This Queue, invisibly.
 \if{html}{\out{<a id="method-Queue-on"></a>}}
 \if{latex}{\out{\hypertarget{method-Queue-on}{}}}
 \subsection{Method \code{on()}}{
-Attach a callback function.
+Attach a callback function to execute when the Queue enters \code{state}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Queue$on(state, func)}\if{html}{\out{</div>}}
 }
@@ -247,15 +247,15 @@ Attach a callback function.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{state}}{The Queue state that will trigger this function. One of:
-\describe{
-\item{\code{'*'} -        }{ Every time the state changes. }
-\item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
-\item{\code{'starting'} - }{ Workers are starting. }
-\item{\code{'idle'} -     }{ All workers are ready/idle. }
-\item{\code{'busy'} -     }{ At least one worker is busy. }
-\item{\code{'stopped'} -  }{ Shutdown is complete. }
-\item{\code{'error'} -    }{ Workers did not start cleanly. }
+\item{\code{state}}{The name of a Queue state. Typically one of:
+\itemize{
+\item \code{'*'} -        Every time the state changes.
+\item \code{'.next'} -    Only one time, the next time the state changes.
+\item \code{'starting'} - Workers are starting.
+\item \code{'idle'} -     All workers are ready/idle.
+\item \code{'busy'} -     At least one worker is busy.
+\item \code{'stopped'} -  Shutdown is complete.
+\item \code{'error'} -    Workers did not start cleanly.
 }}
 
 \item{\code{func}}{A function that accepts a Queue object as input. Return value
@@ -273,14 +273,17 @@ A function that when called removes this callback from the Queue.
 \subsection{Method \code{stop()}}{
 Stop all jobs and workers.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Queue$stop(reason = "job queue shut down by user")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Queue$stop(reason = "job queue shut down by user", cls = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{reason}}{Passed to \verb{<Job>$stop(reason)} for any Jobs currently
-managed by this Queue.}
+\item{\code{reason}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
+this Queue.}
+
+\item{\code{cls}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
+this Queue.}
 }
 \if{html}{\out{</div>}}
 }

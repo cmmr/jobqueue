@@ -23,9 +23,9 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
       saveRDS(ps_info, fp('_ps_info.rds'))
       file.rename(fp('_ps_info.rds'), fp('ps_info.rds'))
       
-      env       <- new.env(parent = .GlobalEnv)
-      config    <- readRDS(fp('config.rds'))
-      semaphore <- basename(wd)
+      worker_env <- new.env(parent = .GlobalEnv)
+      config     <- readRDS(fp('config.rds'))
+      semaphore  <- basename(wd)
       
       # Packages for Worker
       for (i in seq_along(p <- config[['packages']]))
@@ -35,13 +35,13 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
       for (i in seq_along(g <- config[['globals']])) {
         if (is.function(g[[i]]))
           if (!rlang::is_namespace(environment(g[[i]])))
-            environment(g[[i]]) <- env
-        assign(x = names(g)[[i]], value = g[[i]], pos = env)
+            environment(g[[i]]) <- worker_env
+        assign(x = names(g)[[i]], value = g[[i]], pos = worker_env)
       }
       
       # Init Expression for Worker
       if (!is.null(i <- config[['init']]))
-        eval(expr = i, envir = env, enclos = env)
+        eval(expr = i, envir = worker_env, enclos = worker_env)
       
     }
   )
@@ -80,7 +80,7 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
         
         output <- eval(
           expr   = request$expr, 
-          envir  = list2env(request$vars, parent = env), 
+          envir  = list2env(request$vars, parent = worker_env), 
           enclos = baseenv() )
       })
     

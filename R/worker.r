@@ -2,10 +2,15 @@
 #' A Background Process
 #'
 #' @name Worker
+#'
+#' @description
+#' 
+#' Where [Job] expressions are evaluated.
 #' 
 #' 
-#' @param globals  A list or similar set of values that are added to the 
-#'        `.GlobalEnv` of workers.
+#' @param globals  A named list of variables that all `<Job>$expr`s will have 
+#'        access to. Alternatively, an object that can be coerced to a named 
+#'        list with `as.list()`, e.g. named vector, data.frame, or environment.
 #' 
 #' @param packages  Character vector of package names to load on workers.
 #' 
@@ -23,22 +28,25 @@
 #'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
-#' @param state  The Worker state that will trigger this function. Typically one of:
-#'        \describe{
-#'            \item{`'*'` -        }{ Every time the state changes. }
-#'            \item{`'.next'` -    }{ Only one time, the next time the state changes. }
-#'            \item{`'starting'` - }{ Waiting for the background process to load. }
-#'            \item{`'idle'` -     }{ Waiting for Jobs to be `$run()`. }
-#'            \item{`'busy'` -     }{ While a Job is running. }
-#'            \item{`'stopped'` -  }{ After `<Worker>$stop()` is called. }
-#'        }
+#' @param state
+#' The name of a Worker state. Typically one of:
+#' 
+#' * `'*'` -        Every time the state changes.
+#' * `'.next'` -    Only one time, the next time the state changes.
+#' * `'starting'` - Waiting for the background process to load.
+#' * `'idle'` -     Waiting for Jobs to be `$run()`.
+#' * `'busy'` -     While a Job is running.
+#' * `'stopped'` -  After `<Worker>$stop()` is called.
+#' 
 #'        
 #' @param func  A function that accepts a Worker object as input. You can call 
-#'        `<Worker>$stop()` or edit its values and the changes will be 
-#'        persisted (since Workers are reference class objects).
+#'        `<Worker>$stop()` and other `<Worker>$` methods.
 #'        
-#' @param reason,cls  Passed to `<Job>$stop(reason, cls)` for any Jobs 
-#'        currently assigned to this Worker.
+#' @param reason  Passed to `<Job>$stop()` for any Jobs currently managed by 
+#'         this Worker.
+#'        
+#' @param cls  Passed to `<Job>$stop()` for any Jobs currently managed by 
+#'         this Worker.
 #'
 #' @export
 #' 
@@ -91,7 +99,7 @@ Worker <- R6Class(
       w_restart(self, private, reason),
     
     #' @description
-    #' Attach a callback function.
+    #' Attach a callback function to execute when the Worker enters `state`.
     #' @return A function that when called removes this callback from the Worker.
     on = function (state, func) u_on(self, private, 'WH', state, func),
     
@@ -101,8 +109,8 @@ Worker <- R6Class(
     wait = function (state = 'idle') u_wait(self, private, state),
     
     #' @description
-    #' Assigns a Job to this Worker for evaluation on its background 
-    #' Rscript process. Worker must be in `'idle'` state.
+    #' Assigns a Job to this Worker for evaluation on the background 
+    #' process. *Worker must be in `'idle'` state.*
     #' @return This Worker, invisibly.
     run = function (job) w_run(self, private, job)
   ),
@@ -115,6 +123,7 @@ Worker <- R6Class(
     .uid       = NULL,
     .job       = NULL,
     .ps        = NULL,
+    .temp      = NULL,
     .wd        = NULL,
     .reason    = NULL,
     caller_env = NULL,

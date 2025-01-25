@@ -101,9 +101,8 @@ See also https://rstudio.github.io/promises/articles/promises_06_shiny.html
 
 ## Stopping Jobs
 
-When a running job is stopped, the background process for it is
-terminated. A replacement background process is automatically spun up to
-take its place.
+When a running job is stopped, the background process for it is terminated. 
+Terminated background process are automatically replaced by new ones.
 
 Stopped jobs will return a condition object of class 'interrupt' as
 their result.
@@ -165,8 +164,6 @@ job2$result
 
 
 ## Variables
-
-Main article: `vignette('data')`
 
 ``` r
 q    <- Queue$new(globals = list(G = 8))

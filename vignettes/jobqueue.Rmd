@@ -76,13 +76,11 @@ job$result
 
 If the Job's result is no longer needed and you want to free up compute 
 resources, calling `<Job>$stop()` will terminate the background process.
-Terminated Workers are automatically replaced by new ones.
+Terminated background process are automatically replaced by new ones.
 
 
 
 ## Passing Data
-
-Main article: `vignette('data')`
 
 ```r
 # Global variables.

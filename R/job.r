@@ -5,26 +5,18 @@
 #'
 #' @description
 #' 
-#' The Job object defines several things:
+#' The Job object encapsulates an expression and its evaluation parameters. It 
+#' also provides a way to check for and retrieve the result.
 #' 
-#'   * The expression to run on a Worker process (`expr`).
-#'   * What variables to make available during evaluation (`vars`).
-#'   * How much time this task is allowed to take (`timeout`).
-#'   * User-defined functions to run and when (`hooks`).
-#'   * Result formatting (`reformat`).
-#'   * Number of CPU cores to reserve (`cpus`).
 #' 
-#' *Typically you won't need to call `Job$new()`. Instead, create a [Queue] and use 
-#' `<Queue>$run()` to generate Job objects.*
-#'
-#'
 #' @param expr  A call or R expression wrapped in curly braces to evaluate on a 
 #'        worker. Will have access to any variables defined by `vars`, as well 
 #'        as the Worker's `globals`, `packages`, and `init` configuration.
 #'        See `vignette('eval')`.
 #' 
-#' @param vars  A list of named variables to make available to `expr` during 
-#'        evaluation.
+#' @param vars  A named list of variables to make available to `expr` during 
+#'        evaluation. Alternatively, an object that can be coerced to a named 
+#'        list with `as.list()`, e.g. named vector, data.frame, or environment.
 #' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
@@ -37,7 +29,7 @@
 #'        
 #' @param reformat  Set `reformat = function (job)` to define what 
 #'        `<Job>$result` should return. The default, `reformat = NULL` passes 
-#'        `<Job>$output` unchanged to `<Job>$result`.
+#'        `<Job>$output` to `<Job>$result` unchanged. 
 #'        See `vignette('results')`.
 #'        
 #' @param signal  Should calling `<Job>$result` signal on condition objects?
@@ -48,11 +40,12 @@
 #'        conditions are produced. See `vignette('results')`.
 #'        
 #' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
-#'        this number to limit the number of simultaneously running Jobs; it 
-#'        does not prevent a Job from using more CPUs than reserved.
+#'        this number to limit the number of Jobs running simultaneously to 
+#'        respect `<Queue>$max_cpus`; it does not prevent a Job from using more 
+#'        CPUs than reserved.
 #'        
 #' @param state
-#' The Job state that will trigger this function. Typically one of:
+#' The name of a Job state. Typically one of:
 #'        
 #' * `'*'` -          Every time the state changes.
 #' * `'.next'` -      Only one time, the next time the state changes.
@@ -64,19 +57,19 @@
 #' * `'running'` -    After evaluation begins.
 #' * `'done'` -       After `<Job>$output` is assigned.
 #' 
-#' Custom states can also be set/used.
+#' Custom states can also be specified.
 #' 
 #' @param func  A function that accepts a Job object as input. You can call 
-#'        `<Job>$stop()` or edit its values and the changes will be persisted 
-#'        (since Jobs are reference class objects). You can also edit/stop 
-#'        other queued jobs by modifying the Jobs in `<Job>$queue$jobs`. 
-#'        Return value is ignored.
+#'        `<Job>$stop()` or edit `<Job>$` values and the changes will be 
+#'        persisted (since Jobs are reference class objects). You can also 
+#'        edit/stop other queued jobs by modifying the Jobs in 
+#'        `<Job>$queue$jobs`. Return value is ignored.
 #'        
 #' @param reason  A message to include in the 'interrupt' condition object that 
 #'        will be returned as the Job's result.
 #'        
 #' @param cls  Character vector of additional classes to prepend to 
-#'        `c('interupt', 'condition')`.
+#'        `c('interrupt', 'condition')`.
 #'        
 #' @param ...  Arbitrary named values to add to the returned Job object.
 #'
@@ -92,6 +85,10 @@ Job <- R6Class(
     
     #' @description
     #' Creates a Job object defining how to run an expression on a background worker process.
+    #' 
+    #' *Typically you won't need to call `Job$new()`. Instead, create a [Queue] and use 
+    #' `<Queue>$run()` to generate Job objects.*
+    #' 
     #' @return A Job object.
     initialize = function (
         expr, 
@@ -116,7 +113,7 @@ Job <- R6Class(
     print = function (...) j_print(self),
     
     #' @description
-    #' Attach a callback function.
+    #' Attach a callback function to execute when the Job enters `state`.
     #' @return A function that when called removes this callback from the Job.
     on = function (state, func) u_on(self, private, 'JH', state, func),
     
@@ -126,7 +123,8 @@ Job <- R6Class(
     wait = function (state = 'done') u_wait(self, private, state),
     
     #' @description
-    #' Stop this Job. If the Job is running, the worker process will be rebooted.
+    #' Stop this Job. *If the Job is running, its Worker will be temporarily 
+    #' unavailable for new Jobs while the Worker restarts.*
     #' @return This Job, invisibly.
     stop = function (reason = 'job stopped by user', cls = NULL) j_stop(self, private, reason, cls)
   ),
@@ -157,42 +155,43 @@ Job <- R6Class(
   active = list(
     
     #' @field expr
-    #' Get the expression that will be run by this Job.
+    #' R expression that will be run by this Job.
     expr = function () private$.expr,
     
     #' @field vars
-    #' Get or set the variables that will be placed into the expression's 
+    #' Get or set - List of variables that will be placed into the expression's 
     #' environment before evaluation.
     vars = function (value) j_vars(private, value),
     
     #' @field reformat
-    #' Get or set the `function (job)` for defining `<Job>$result`.
+    #' Get or set - `function (job)` for defining `<Job>$result`.
     reformat = function (value) j_reformat(private, value),
     
     #' @field signal
-    #' Get or set the conditions to signal. 
-    #' output to the Job's result.
+    #' Get or set - Conditions to signal.
     signal = function (value) j_signal(private, value),
     
     #' @field cpus
-    #' Get or set the number of CPUs to reserve for evaluating `expr`.
+    #' Get or set - Number of CPUs to reserve for evaluating `expr`.
     cpus = function (value) j_cpus(private, value),
     
     #' @field timeout
-    #' Get or set the time limits to apply to this Job.
+    #' Get or set - Time limits to apply to this Job.
     timeout = function (value) j_timeout(self, private, value),
     
     #' @field proxy
-    #' Get or set the Job to proxy in place of running `expr`.
+    #' Get or set - Job to proxy in place of running `expr`.
     proxy = function (value) j_proxy(self, private, value),
     
     #' @field state
-    #' Get or set the Job's state (setting will trigger callbacks).
+    #' Get or set - The Job's state: 'created', 'submitted', 'queued', 
+    #' 'dispatched', 'starting', 'running', or 'done'.
+    #' *Assigning to `<Job>$state` will trigger callback hooks.*
     state = function (value) j_state(self, private, value),
     
     #' @field output
-    #' Get or set the Job's raw output (assigning to `$output` will 
-    #' change the Job's state to `'done'`).
+    #' Get or set - Job's raw output.
+    #' *Assigning to `<Job>$output` will change the Job's state to `'done'`.*
     output = function (value) j_output(self, private, value),
     
     #' @field result
@@ -201,14 +200,15 @@ Job <- R6Class(
     
     #' @field hooks
     #' Currently registered callback hooks as a named list of functions.
+    #' Set new hooks with `<Job>$on()`.
     hooks = function () private$.hooks,
     
     #' @field is_done
-    #' Returns TRUE or FALSE depending on if the Job's result is ready.
+    #' `TRUE` or `FALSE` depending on if the Job's result is ready.
     is_done = function () private$.is_done,
     
     #' @field uid
-    #' A short string, e.g. 'J16', that uniquely identifies this Job.
+    #' A short string, e.g. `'J16'`, that uniquely identifies this Job.
     uid = function () private$.uid
   )
 )

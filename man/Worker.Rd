@@ -4,9 +4,7 @@
 \alias{Worker}
 \title{A Background Process}
 \description{
-A Background Process
-
-A Background Process
+Where \link{Job} expressions are evaluated.
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
@@ -52,8 +50,9 @@ Creates a background R process for running \link{Job}s.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{globals}}{A list or similar set of values that are added to the
-\code{.GlobalEnv} of workers.}
+\item{\code{globals}}{A named list of variables that all \verb{<Job>$expr}s will have
+access to. Alternatively, an object that can be coerced to a named
+list with \code{as.list()}, e.g. named vector, data.frame, or environment.}
 
 \item{\code{packages}}{Character vector of package names to load on workers.}
 
@@ -116,14 +115,17 @@ The Worker, invisibly.
 Stops a Worker by terminating the background Rscript process and calling
 \verb{<Job>$stop(reason)} on any Jobs currently assigned to this Worker.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$stop(reason = "worker stopped by user")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$stop(reason = "worker stopped by user", cls = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{reason}}{Passed to \verb{<Job>$stop(reason)} for any Jobs currently
-assigned to this Worker.}
+\item{\code{reason}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
+this Worker.}
+
+\item{\code{cls}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
+this Worker.}
 }
 \if{html}{\out{</div>}}
 }
@@ -144,8 +146,8 @@ Restarts a Worker by calling \verb{<Worker>$stop(reason)} and
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{reason}}{Passed to \verb{<Job>$stop(reason)} for any Jobs currently
-assigned to this Worker.}
+\item{\code{reason}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
+this Worker.}
 }
 \if{html}{\out{</div>}}
 }
@@ -157,7 +159,7 @@ The Worker, invisibly.
 \if{html}{\out{<a id="method-Worker-on"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-on}{}}}
 \subsection{Method \code{on()}}{
-Attach a callback function.
+Attach a callback function to execute when the Worker enters \code{state}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$on(state, func)}\if{html}{\out{</div>}}
 }
@@ -165,19 +167,18 @@ Attach a callback function.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{state}}{The Worker state that will trigger this function. Typically one of:
-\describe{
-\item{\code{'*'} -        }{ Every time the state changes. }
-\item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
-\item{\code{'starting'} - }{ Waiting for the background process to load. }
-\item{\code{'idle'} -     }{ Waiting for Jobs to be \verb{$run()}. }
-\item{\code{'busy'} -     }{ While a Job is running. }
-\item{\code{'stopped'} -  }{ After \verb{<Worker>$stop()} is called. }
+\item{\code{state}}{The name of a Worker state. Typically one of:
+\itemize{
+\item \code{'*'} -        Every time the state changes.
+\item \code{'.next'} -    Only one time, the next time the state changes.
+\item \code{'starting'} - Waiting for the background process to load.
+\item \code{'idle'} -     Waiting for Jobs to be \verb{$run()}.
+\item \code{'busy'} -     While a Job is running.
+\item \code{'stopped'} -  After \verb{<Worker>$stop()} is called.
 }}
 
 \item{\code{func}}{A function that accepts a Worker object as input. You can call
-\verb{<Worker>$stop()} or edit its values and the changes will be
-persisted (since Workers are reference class objects).}
+\verb{<Worker>$stop()} and other \verb{<Worker>$} methods.}
 }
 \if{html}{\out{</div>}}
 }
@@ -197,14 +198,14 @@ Blocks until the Worker enters the given state.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{state}}{The Worker state that will trigger this function. Typically one of:
-\describe{
-\item{\code{'*'} -        }{ Every time the state changes. }
-\item{\code{'.next'} -    }{ Only one time, the next time the state changes. }
-\item{\code{'starting'} - }{ Waiting for the background process to load. }
-\item{\code{'idle'} -     }{ Waiting for Jobs to be \verb{$run()}. }
-\item{\code{'busy'} -     }{ While a Job is running. }
-\item{\code{'stopped'} -  }{ After \verb{<Worker>$stop()} is called. }
+\item{\code{state}}{The name of a Worker state. Typically one of:
+\itemize{
+\item \code{'*'} -        Every time the state changes.
+\item \code{'.next'} -    Only one time, the next time the state changes.
+\item \code{'starting'} - Waiting for the background process to load.
+\item \code{'idle'} -     Waiting for Jobs to be \verb{$run()}.
+\item \code{'busy'} -     While a Job is running.
+\item \code{'stopped'} -  After \verb{<Worker>$stop()} is called.
 }}
 }
 \if{html}{\out{</div>}}
@@ -217,8 +218,8 @@ This Worker, invisibly.
 \if{html}{\out{<a id="method-Worker-run"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-run}{}}}
 \subsection{Method \code{run()}}{
-Assigns a Job to this Worker for evaluation on its background
-Rscript process. Worker must be in \code{'idle'} state.
+Assigns a Job to this Worker for evaluation on the background
+process. \emph{Worker must be in \code{'idle'} state.}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$run(job)}\if{html}{\out{</div>}}
 }

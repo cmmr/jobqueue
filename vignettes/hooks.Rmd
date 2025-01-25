@@ -98,12 +98,12 @@ Queue, Worker, and Job objects update their `$state` as described in the tables 
 
 ### Worker States
 
-| State          | Triggers                                     |
-|----------------|----------------------------------------------|
-| `'starting'`   | After starting a new Rscript process.        |
-| `'idle'`       | Waiting on Jobs to be submitted.             |
-| `'busy'`       | After a Job starts running.                  |
-| `'stopped'`    | After `<Worker>$stop()` is called.           |
+| State          | Triggers                                                |
+|----------------|---------------------------------------------------------|
+| `'starting'`   | Background process is being configured.                 |
+| `'idle'`       | Waiting on Jobs to be submitted.                        |
+| `'busy'`       | After a Job starts running.                             |
+| `'stopped'`    | After `<Worker>$stop()` is called.                      |
 
 
 ### Job States
@@ -242,7 +242,7 @@ prioritize <- function (job) {
     'Job {.$uid} (priority {.$priority}) finished in {tdiff()}' )))
 }
 
-# A single worker to best illustrate processing order.
+# A single worker best illustrates processing order.
 q <- Queue$new(
   'workers' = 1, 
   'hooks'   = list(queued = prioritize) )
@@ -281,6 +281,8 @@ prioritize <- function (job) {
   job$queue$jobs <- queue_jobs[order(priorities)]
 }
 q <- Queue$new(hooks = list(queued = prioritize))
+
+#                                        vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 for (reps in 5:1) job <- q$run({ 3.14 }, vars = list(replications = reps))
 ```
 
@@ -293,6 +295,8 @@ prioritize <- function (job) {
   job$queue$jobs <- queue_jobs[order(priorities)]
 }
 q <- Queue$new(hooks = list(queued = prioritize))
+
+#                                        vvvvvvvvvvvvvvv
 for (reps in 5:1) job <- q$run({ 3.14 }, priority = reps)
 ```
 
@@ -308,6 +312,8 @@ prioritize <- function (job) {
   priorities     <- sapply(queue_jobs, `[[`, 'priority')
   job$queue$jobs <- queue_jobs[order(priorities)]
 }
+
+#                           vvvvvvvvvvvvvvvvvvvvvv
 q <- Queue$new(hooks = list(created = set_priority, queued = prioritize))
 for (reps in 5:1) job <- q$run({ 3.14 }, vars = list(replications = reps))
 ```
@@ -358,4 +364,4 @@ rate_limit <- function (job) {
 q <- Queue$new(hooks = list(created = rate_limit))
 ```
 
-In the first example, we attached a hook to `'submitted'` because that's when `<Job>$queue` becomes available in callbacks. In the latter example, we attached a hook to `'created'` instead because we didn't need `<Job>$queue` for that solution. Check the trigger order listed in the "Callback Triggers" section above, and attach callbacks as early on as possible to expedite Job handling.
+In the first example, we attached a hook to `'submitted'` because that's when `<Job>$queue` becomes available in callbacks. In the latter example, we attached a hook to `'created'` instead because we didn't need `<Job>$queue` for that solution. Check the trigger order listed in the "Callback Triggers" section above, and attach callbacks as early as possible to expedite Job handling.

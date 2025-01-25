@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+jobqueue.Rproj
 paper.md
 docs
 inst/doc

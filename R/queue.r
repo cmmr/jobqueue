@@ -8,8 +8,9 @@
 #' Jobs go in. Results come out.
 #' 
 #' 
-#' @param globals  A list or similar set of values that are added to the 
-#'        `.GlobalEnv` of workers.
+#' @param globals  A named list of variables that all `<Job>$expr`s will have 
+#'        access to. Alternatively, an object that can be coerced to a named 
+#'        list with `as.list()`, e.g. named vector, data.frame, or environment.
 #' 
 #' @param packages  Character vector of package names to load on workers.
 #' 
@@ -23,8 +24,9 @@
 #'        as the Worker's `globals`, `packages`, and `init` configuration.
 #'        See `vignette('eval')`.
 #' 
-#' @param vars  A list of named variables to make available to `expr` during 
-#'        evaluation.
+#' @param vars  A named list of variables to make available to `expr` during 
+#'        evaluation. Alternatively, an object that can be coerced to a named 
+#'        list with `as.list()`, e.g. named vector, data.frame, or environment.
 #' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
@@ -36,8 +38,9 @@
 #'        See `vignette('hooks')`.
 #'        
 #' @param reformat  Set `reformat = function (job)` to define what 
-#'        `<Job>$result` should return. The default, `reformat = NULL` returns 
-#'        `<Job>$output` as `<Job>$result`. See `vignette('results')`.
+#'        `<Job>$result` should return. The default, `reformat = NULL` passes 
+#'        `<Job>$output` to `<Job>$result` unchanged.
+#'        See `vignette('results')`.
 #'        
 #' @param signal  Should calling `<Job>$result` signal on condition objects?
 #'        When `FALSE`, `<Job>$result` will return the object without 
@@ -47,16 +50,16 @@
 #'        conditions are produced. See `vignette('results')`.
 #'        
 #' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
-#'        this number to limit the number of simultaneously running Jobs; it 
+#'        this number to limit the number of Jobs running simultaneously; it 
 #'        does not prevent a Job from using more CPUs than reserved.
 #' 
 #' @param max_cpus  Total number of CPU cores that can be reserved by all 
-#'        running Jobs (`sum(cpus)`). Does not enforce limits on actual CPU 
-#'        utilization.
+#'        running Jobs (`sum(<Job>$cpus)`). Does not enforce limits on actual 
+#'        CPU utilization.
 #'        
 #' @param workers  How many background [Worker] processes to start. Set to more 
 #'        than `max_cpus` to enable interrupted workers to be quickly swapped 
-#'        out with standby Workers while a replacement Worker boots up.
+#'        out with standby Workers while a replacement Worker starts up.
 #'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
@@ -73,19 +76,22 @@
 #'        Job. A `copy_id` of `NULL` disables this feature. 
 #'        See `vignette('stops')`.
 #'        
-#' @param reason,cls  Passed to `<Job>$stop(reason, cls)` for any Jobs 
-#'        currently managed by this Queue.
+#' @param reason  Passed to `<Job>$stop()` for any Jobs currently managed by 
+#'         this Queue.
 #'        
-#' @param state  The Queue state that will trigger this function. One of:
-#'        \describe{
-#'            \item{`'*'` -        }{ Every time the state changes. }
-#'            \item{`'.next'` -    }{ Only one time, the next time the state changes. }
-#'            \item{`'starting'` - }{ Workers are starting. }
-#'            \item{`'idle'` -     }{ All workers are ready/idle. }
-#'            \item{`'busy'` -     }{ At least one worker is busy. }
-#'            \item{`'stopped'` -  }{ Shutdown is complete. }
-#'            \item{`'error'` -    }{ Workers did not start cleanly. }
-#'        }
+#' @param cls  Passed to `<Job>$stop()` for any Jobs currently managed by 
+#'         this Queue.
+#'        
+#' @param state
+#' The name of a Queue state. Typically one of:
+#' 
+#' * `'*'` -        Every time the state changes.
+#' * `'.next'` -    Only one time, the next time the state changes.
+#' * `'starting'` - Workers are starting.
+#' * `'idle'` -     All workers are ready/idle.
+#' * `'busy'` -     At least one worker is busy.
+#' * `'stopped'` -  Shutdown is complete.
+#' * `'error'` -    Workers did not start cleanly.
 #'        
 #' @param func  A function that accepts a Queue object as input. Return value 
 #'        is ignored.
@@ -104,17 +110,15 @@ Queue <- R6Class(
 
     
     #' @description
-    #' Creates n `workers` background processes for handling `$run()` and 
+    #' Creates background processes (n = `workers`) for handling `$run()` and 
     #' `$submit()` calls. These workers are initialized according to the 
-    #' `globals`, `packages`, and `init` arguments. The Queue will 
-    #' not use more than `max_cpus` at once, assuming the `cpus` argument is 
-    #' properly set for each Job.
+    #' `globals`, `packages`, and `init` arguments.
     #'
     #' @param timeout,hooks,reformat,signal,cpus,stop_id,copy_id
-    #'        Defaults for this Queue's `$run()` method. Here only, `stop_id` and 
-    #'        `copy_id` must be either a `function (job)` or `NULL`, and `hooks`
-    #'        can take on an alternate format as described in the Callback Hooks
-    #'        section.
+    #'        Defaults for this Queue's `$run()` method. Here only, `stop_id` 
+    #'        and `copy_id` must be either a `function (job)` or `NULL`. 
+    #'        `hooks` can set queue, worker, and/or job hooks - see the 
+    #'        `vignette('hooks')` 'Attaching' section.
     #'
     #' @return A `Queue` object.
     initialize = function (
@@ -146,9 +150,8 @@ Queue <- R6Class(
     
     
     #' @description
-    #' Creates a Job object and submits it to the queue for running on a 
-    #' background process. Here, the default `NA` value will use the value set 
-    #' by `Queue$new()`.
+    #' Creates a Job object and submits it to the queue for running. 
+    #' Any `NA` arguments will be replaced with their value in `Queue$new()`.
     #'
     #' @return The new [Job] object.
     run = function (
@@ -183,7 +186,7 @@ Queue <- R6Class(
     wait = function (state = 'idle') u_wait(self, private, state),
     
     #' @description
-    #' Attach a callback function.
+    #' Attach a callback function to execute when the Queue enters `state`.
     #' @return A function that when called removes this callback from the Queue.
     on = function (state, func) u_on(self, private, 'QH', state, func),
     
@@ -231,11 +234,11 @@ Queue <- R6Class(
     uid = function (value) q_uid(private, value),
     
     #' @field jobs
-    #' Get or set - List of [Job]s currently managed by this Queue.
+    #' Get or set - List of [Jobs][Job] currently managed by this Queue.
     jobs = function (value) q_jobs(private, value),
     
     #' @field workers
-    #' Get or set - List of [Worker]s used for processing Jobs.
+    #' Get or set - List of [Workers][Worker] used for processing Jobs.
     workers = function (value) q_workers(private, value),
     
     #' @field hooks
@@ -243,7 +246,7 @@ Queue <- R6Class(
     hooks = function () private$.hooks,
     
     #' @field state
-    #' Current state: `'starting'`, `'idle'`, `'busy'`, `'stopped'`, or `'error.'`
+    #' The Queue's state: `'starting'`, `'idle'`, `'busy'`, `'stopped'`, or `'error.'`
     state = function () private$.state
   )
 )

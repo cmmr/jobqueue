@@ -13,8 +13,7 @@ vignette: >
 
 The "main" process environment (where you are calling `<Queue>$run()`) is isolated from the 
 Worker environments. Therefore, your expression (`expr`) AND all the data needed for evaluating 
-`expr` must be sent to the Worker. Jobqueue can manage this task automatically, but explicit
-variable definitions execute faster and improve code readability.
+`expr` must be explicitly passed to the Worker.
 
 
 ## Expressions
@@ -50,7 +49,7 @@ globals <- list(MY_DATA = mtcars)
 q       <- Queue$new(globals = globals)
 
 expr <- quote(colnames(MY_DATA))
-q$run(expr)$result %>% head()
+q$run(expr)$result[1:6]
 #> [1] "mpg"  "cyl"  "disp" "hp"   "drat" "wt"
 ```
 
@@ -71,13 +70,17 @@ q$run(expr = expr, vars = vars)$result
 
 ## Behind the Scenes
 
-On the Worker, your expression is evaluated with the command:
+On the Worker, the `globals`, `init`, and `packages` variables provided to 
+`Queue$new()` are used to define a worker environment. Then the `vars` 
+variable you pass to `Queue$run()` further define an expression environment.
+Finally, `expr` is evaluated in that scope.
 
 ```r
-eval(expr = expr, envir = vars, enclos = .GlobalEnv)
+worker_env <- new.env(parent = .GlobalEnv)
+# not shown: worker_env configured with globals/init
+expr_envir <- list2env(vars, parent = worker_env)
+eval(expr = expr, envir = expr_envir, enclos = baseenv())
 ```
-
-Where `.GlobalEnv` has been configured according the `packages`, `globals`, and `init` parameters from `Queue$new()`.
 
 
 
@@ -85,7 +88,6 @@ Where `.GlobalEnv` has been configured according the `packages`, `globals`, and 
 
 1. Minimize data transfer to/from Workers (it's slow).
 2. Use UPPERCASE names for global variables.
-3. Explicitly declare the variables being passed.
 
 ```r
 library(jobqueue)
@@ -96,8 +98,8 @@ q <- Queue$new(
   packages = 'jsonlite' )
 
 job <- q$run(
-  'expr' = { toJSON(c(A, B, x)) }, 
-  'vars' = list(x = 37) )
+  'vars' = list(x = 37), 
+  'expr' = { toJSON(c(A, B, x)) } )
 
 job$result
 #> [1,12,37]

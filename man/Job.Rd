@@ -4,50 +4,42 @@
 \alias{Job}
 \title{How to Evaluate an R Expression}
 \description{
-The Job object defines several things:
-\itemize{
-\item The expression to run on a Worker process (\code{expr}).
-\item What variables to make available during evaluation (\code{vars}).
-\item How much time this task is allowed to take (\code{timeout}).
-\item User-defined functions to run and when (\code{hooks}).
-\item Result formatting (\code{reformat}).
-\item Number of CPU cores to reserve (\code{cpus}).
-}
-
-\emph{Typically you won't need to call \code{Job$new()}. Instead, create a \link{Queue} and use
-\verb{<Queue>$run()} to generate Job objects.}
+The Job object encapsulates an expression and its evaluation parameters. It
+also provides a way to check for and retrieve the result.
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{expr}}{Get the expression that will be run by this Job.}
+\item{\code{expr}}{R expression that will be run by this Job.}
 
-\item{\code{vars}}{Get or set the variables that will be placed into the expression's
+\item{\code{vars}}{Get or set - List of variables that will be placed into the expression's
 environment before evaluation.}
 
-\item{\code{reformat}}{Get or set the \verb{function (job)} for defining \verb{<Job>$result}.}
+\item{\code{reformat}}{Get or set - \verb{function (job)} for defining \verb{<Job>$result}.}
 
-\item{\code{signal}}{Get or set the conditions to signal.
-output to the Job's result.}
+\item{\code{signal}}{Get or set - Conditions to signal.}
 
-\item{\code{cpus}}{Get or set the number of CPUs to reserve for evaluating \code{expr}.}
+\item{\code{cpus}}{Get or set - Number of CPUs to reserve for evaluating \code{expr}.}
 
-\item{\code{timeout}}{Get or set the time limits to apply to this Job.}
+\item{\code{timeout}}{Get or set - Time limits to apply to this Job.}
 
-\item{\code{proxy}}{Get or set the Job to proxy in place of running \code{expr}.}
+\item{\code{proxy}}{Get or set - Job to proxy in place of running \code{expr}.}
 
-\item{\code{state}}{Get or set the Job's state (setting will trigger callbacks).}
+\item{\code{state}}{Get or set - The Job's state: 'created', 'submitted', 'queued',
+'dispatched', 'starting', 'running', or 'done'.
+\emph{Assigning to \verb{<Job>$state} will trigger callback hooks.}}
 
-\item{\code{output}}{Get or set the Job's raw output (assigning to \verb{$output} will
-change the Job's state to \code{'done'}).}
+\item{\code{output}}{Get or set - Job's raw output.
+\emph{Assigning to \verb{<Job>$output} will change the Job's state to \code{'done'}.}}
 
 \item{\code{result}}{Result of \code{expr}. Will block until Job is finished.}
 
-\item{\code{hooks}}{Currently registered callback hooks as a named list of functions.}
+\item{\code{hooks}}{Currently registered callback hooks as a named list of functions.
+Set new hooks with \verb{<Job>$on()}.}
 
-\item{\code{is_done}}{Returns TRUE or FALSE depending on if the Job's result is ready.}
+\item{\code{is_done}}{\code{TRUE} or \code{FALSE} depending on if the Job's result is ready.}
 
-\item{\code{uid}}{A short string, e.g. 'J16', that uniquely identifies this Job.}
+\item{\code{uid}}{A short string, e.g. \code{'J16'}, that uniquely identifies this Job.}
 }
 \if{html}{\out{</div>}}
 }
@@ -66,6 +58,9 @@ change the Job's state to \code{'done'}).}
 \if{latex}{\out{\hypertarget{method-Job-new}{}}}
 \subsection{Method \code{new()}}{
 Creates a Job object defining how to run an expression on a background worker process.
+
+\emph{Typically you won't need to call \code{Job$new()}. Instead, create a \link{Queue} and use
+\verb{<Queue>$run()} to generate Job objects.}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Job$new(
   expr,
@@ -87,8 +82,9 @@ worker. Will have access to any variables defined by \code{vars}, as well
 as the Worker's \code{globals}, \code{packages}, and \code{init} configuration.
 See \code{vignette('eval')}.}
 
-\item{\code{vars}}{A list of named variables to make available to \code{expr} during
-evaluation.}
+\item{\code{vars}}{A named list of variables to make available to \code{expr} during
+evaluation. Alternatively, an object that can be coerced to a named
+list with \code{as.list()}, e.g. named vector, data.frame, or environment.}
 
 \item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
@@ -101,7 +97,7 @@ See \code{vignette('hooks')}.}
 
 \item{\code{reformat}}{Set \verb{reformat = function (job)} to define what
 \verb{<Job>$result} should return. The default, \code{reformat = NULL} passes
-\verb{<Job>$output} unchanged to \verb{<Job>$result}.
+\verb{<Job>$output} to \verb{<Job>$result} unchanged.
 See \code{vignette('results')}.}
 
 \item{\code{signal}}{Should calling \verb{<Job>$result} signal on condition objects?
@@ -112,8 +108,9 @@ cause the equivalent of \verb{stop(<condition>)} to be called when those
 conditions are produced. See \code{vignette('results')}.}
 
 \item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
-this number to limit the number of simultaneously running Jobs; it
-does not prevent a Job from using more CPUs than reserved.}
+this number to limit the number of Jobs running simultaneously to
+respect \verb{<Queue>$max_cpus}; it does not prevent a Job from using more
+CPUs than reserved.}
 
 \item{\code{...}}{Arbitrary named values to add to the returned Job object.}
 }
@@ -147,7 +144,7 @@ This Job, invisibly.
 \if{html}{\out{<a id="method-Job-on"></a>}}
 \if{latex}{\out{\hypertarget{method-Job-on}{}}}
 \subsection{Method \code{on()}}{
-Attach a callback function.
+Attach a callback function to execute when the Job enters \code{state}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Job$on(state, func)}\if{html}{\out{</div>}}
 }
@@ -155,7 +152,7 @@ Attach a callback function.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{state}}{The Job state that will trigger this function. Typically one of:
+\item{\code{state}}{The name of a Job state. Typically one of:
 \itemize{
 \item \code{'*'} -          Every time the state changes.
 \item \code{'.next'} -      Only one time, the next time the state changes.
@@ -168,13 +165,13 @@ Attach a callback function.
 \item \code{'done'} -       After \verb{<Job>$output} is assigned.
 }
 
-Custom states can also be set/used.}
+Custom states can also be specified.}
 
 \item{\code{func}}{A function that accepts a Job object as input. You can call
-\verb{<Job>$stop()} or edit its values and the changes will be persisted
-(since Jobs are reference class objects). You can also edit/stop
-other queued jobs by modifying the Jobs in \verb{<Job>$queue$jobs}.
-Return value is ignored.}
+\verb{<Job>$stop()} or edit \verb{<Job>$} values and the changes will be
+persisted (since Jobs are reference class objects). You can also
+edit/stop other queued jobs by modifying the Jobs in
+\verb{<Job>$queue$jobs}. Return value is ignored.}
 }
 \if{html}{\out{</div>}}
 }
@@ -194,7 +191,7 @@ Blocks until the Job enters the given state.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{state}}{The Job state that will trigger this function. Typically one of:
+\item{\code{state}}{The name of a Job state. Typically one of:
 \itemize{
 \item \code{'*'} -          Every time the state changes.
 \item \code{'.next'} -      Only one time, the next time the state changes.
@@ -207,7 +204,7 @@ Blocks until the Job enters the given state.
 \item \code{'done'} -       After \verb{<Job>$output} is assigned.
 }
 
-Custom states can also be set/used.}
+Custom states can also be specified.}
 }
 \if{html}{\out{</div>}}
 }
@@ -219,9 +216,10 @@ This Job, invisibly.
 \if{html}{\out{<a id="method-Job-stop"></a>}}
 \if{latex}{\out{\hypertarget{method-Job-stop}{}}}
 \subsection{Method \code{stop()}}{
-Stop this Job. If the Job is running, the worker process will be rebooted.
+Stop this Job. \emph{If the Job is running, its Worker will be temporarily
+unavailable for new Jobs while the Worker restarts.}
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Job$stop(reason = "job stopped by user")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Job$stop(reason = "job stopped by user", cls = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -229,6 +227,9 @@ Stop this Job. If the Job is running, the worker process will be rebooted.
 \describe{
 \item{\code{reason}}{A message to include in the 'interrupt' condition object that
 will be returned as the Job's result.}
+
+\item{\code{cls}}{Character vector of additional classes to prepend to
+\code{c('interrupt', 'condition')}.}
 }
 \if{html}{\out{</div>}}
 }

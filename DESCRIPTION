@@ -1,8 +1,8 @@
 Package: jobqueue
 Type: Package
 Title: Run Interruptible Code Asynchronously
-Version: 0.1.0.9004
-Date: 2024-11-22
+Version: 1.0.0
+Date: 2025-01-24
 Authors@R: c(
     person(
       "Daniel P.", "Smith",
@@ -22,8 +22,9 @@ URL: https://cmmr.github.io/jobqueue/, https://github.com/cmmr/jobqueue
 BugReports: https://github.com/cmmr/jobqueue/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
-Roxygen: list(markdown = TRUE, r6 = TRUE)
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+VignetteBuilder: knitr
 Config/Needs/website: rmarkdown
 Config/testthat/edition: 3
 Config/testthat/parallel: false
@@ -45,4 +46,3 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
-VignetteBuilder: knitr
