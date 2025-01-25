@@ -19,7 +19,8 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
       ps <- ps::ps_handle()
       ps_info = list(
         pid  = ps::ps_pid(ps), 
-        time = ps::ps_create_time(ps) )
+        time = ps::ps_create_time(ps), 
+        temp = tempdir() )
       saveRDS(ps_info, fp('_ps_info.rds'))
       file.rename(fp('_ps_info.rds'), fp('ps_info.rds'))
       

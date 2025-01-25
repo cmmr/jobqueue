@@ -139,7 +139,8 @@ Worker <- R6Class(
     finalize = function () {
       if (inherits(private$.ps, 'ps_handle')) ps_kill(private$.ps)
       if (!is_null(private$semaphore)) remove_semaphore(private$semaphore)
-      if (!is_null(wd <- private$.wd) && dir.exists(wd)) unlink(wd, recursive = TRUE)
+      if (!is_null(wd   <- private$.wd)   && dir.exists(wd))   unlink(wd,   recursive = TRUE)
+      if (!is_null(temp <- private$.temp) && dir.exists(temp)) unlink(temp, recursive = TRUE)
     }
   ),
   
@@ -359,8 +360,9 @@ w__poll_startup <- function (self, private) {
   
   # Import the PID.
   if (is_null(private$.ps) && file.exists(private$fp('ps_info.rds'))) {
-      ps_info     <- readRDS(private$fp('ps_info.rds'))
-      private$.ps <- try(silent = TRUE, ps::ps_handle(ps_info$pid, ps_info$time))
+      ps_info       <- readRDS(private$fp('ps_info.rds'))
+      private$.temp <- ps_info$temp
+      private$.ps   <- try(silent = TRUE, ps::ps_handle(ps_info$pid, ps_info$time))
   }
   
   # Check if alive and for indicator files.
