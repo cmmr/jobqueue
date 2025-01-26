@@ -31,5 +31,8 @@ test_that('worker', {
   
   expect_s3_class( Worker$new(init = { stop() })$wait('.next')$reason, 'error' )
   expect_s3_class( Worker$new(init = { q()    })$wait('.next')$reason, 'error' )
+  
+  rm(list = ls())
+  
 })
 

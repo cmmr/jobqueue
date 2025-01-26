@@ -9,15 +9,17 @@ Jobs go in. Results come out.
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{uid}}{Get or set - Unique identifier, e.g. \code{'Q1'}.}
+\item{\code{hooks}}{A named list of currently registered callback hooks.}
 
 \item{\code{jobs}}{Get or set - List of \link[=Job]{Jobs} currently managed by this Queue.}
 
-\item{\code{workers}}{Get or set - List of \link[=Worker]{Workers} used for processing Jobs.}
-
-\item{\code{hooks}}{A named list of currently registered callback hooks.}
-
 \item{\code{state}}{The Queue's state: \code{'starting'}, \code{'idle'}, \code{'busy'}, \code{'stopped'}, or \code{'error.'}}
+
+\item{\code{uid}}{Get or set - Unique identifier, e.g. \code{'Q1'}.}
+
+\item{\code{wd}}{The Queue's working directory.}
+
+\item{\code{workers}}{Get or set - List of \link[=Worker]{Workers} used for processing Jobs.}
 }
 \if{html}{\out{</div>}}
 }

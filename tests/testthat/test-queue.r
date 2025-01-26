@@ -27,6 +27,8 @@ test_that('basic', {
 
   expect_equal(q$state, 'stopped')
   expect_equal(length(q$workers), 0)
+  
+  rm(list = ls())
 })
 
 
@@ -62,6 +64,8 @@ test_that('config', {
   expect_equal(e$state, 'stopped')
   expect_equal(e$.next, 'starting')
   expect_equal(e$.star, 'stopped')
+  
+  rm(list = ls())
 })
 
 
@@ -80,6 +84,8 @@ test_that('workers', {
   expect_equal(map(q$workers, 'state'), rep('busy', 2))
 
   expect_silent(q$stop())
+  
+  rm(list = ls())
 })
 
 
@@ -100,6 +106,8 @@ test_that('max_cpus', {
   expect_equal(map(q$workers, 'state'), c('busy', 'busy', 'idle'))
 
   expect_silent(q$stop())
+  
+  rm(list = ls())
 })
 
 
@@ -126,5 +134,7 @@ test_that('interrupt', {
   expect_equal(job2$result, 'A')
 
   expect_silent(q$stop())
+  
+  rm(list = ls())
 })
 

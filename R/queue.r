@@ -202,13 +202,25 @@ Queue <- R6Class(
   private = list(
     
     finalize = function (reason = 'queue was garbage collected', cls = NULL) {
+      
       private$is_ready <- FALSE
-      fmap(self$workers, 'stop', reason, cls)
-      fmap(self$jobs,    'stop', reason, cls)
+      
+      fmap(private$.workers, 'stop', reason, cls, wait = FALSE)
+      fmap(private$.jobs,    'stop', reason, cls)
+      
+      # Wait up to 10 seconds for all file locks to be released
+      wd <- private$.wd
+      for (i in 1:10) {
+        unlink(wd, recursive = TRUE, expand = FALSE)
+        if (dir.exists(wd)) Sys.sleep(1) else break
+      }
+      if (dir.exists(wd)) cli_warn('Unable to delete dir: {wd}')
+      
       return (invisible(NULL))
     },
     
     .uid         = NULL,
+    .wd          = NULL,
     .hooks       = list(),
     .jobs        = list(),
     .workers     = list(),
@@ -229,25 +241,29 @@ Queue <- R6Class(
   
   active = list(
     
-    #' @field uid
-    #' Get or set - Unique identifier, e.g. `'Q1'`.
-    uid = function (value) q_uid(private, value),
+    #' @field hooks
+    #' A named list of currently registered callback hooks.
+    hooks = function () private$.hooks,
     
     #' @field jobs
     #' Get or set - List of [Jobs][Job] currently managed by this Queue.
     jobs = function (value) q_jobs(private, value),
     
-    #' @field workers
-    #' Get or set - List of [Workers][Worker] used for processing Jobs.
-    workers = function (value) q_workers(private, value),
-    
-    #' @field hooks
-    #' A named list of currently registered callback hooks.
-    hooks = function () private$.hooks,
-    
     #' @field state
     #' The Queue's state: `'starting'`, `'idle'`, `'busy'`, `'stopped'`, or `'error.'`
-    state = function () private$.state
+    state = function () private$.state,
+    
+    #' @field uid
+    #' Get or set - Unique identifier, e.g. `'Q1'`.
+    uid = function (value) q_uid(private, value),
+    
+    #' @field wd
+    #' The Queue's working directory.
+    wd = function () private$.wd,
+    
+    #' @field workers
+    #' Get or set - List of [Workers][Worker] used for processing Jobs.
+    workers = function (value) q_workers(private, value)
   )
 )
 
@@ -261,6 +277,11 @@ q_initialize <- function (
   init_subst       <- substitute(init, env = parent.frame())
   private$up_since <- Sys.time()
   
+  td <- normalizePath(tempdir(), winslash = '/')
+  Sys.chmod(td, mode = "0777")
+  wd <- file.path(td, basename(tempfile('jqq')))
+  dir.create(wd)
+  
   # Assign hooks by q_ and w_ prefixes
   hooks <- validate_list(hooks)
   if (!all(names(hooks) %in% c('queue', 'worker', 'job')))
@@ -272,15 +293,21 @@ q_initialize <- function (
   
   # Queue configuration
   self$uid          <- increment_uid('Q')
+  private$.wd       <- wd
   private$.hooks    <- validate_hooks(hooks[['queue']], 'QH')
   private$max_cpus  <- validate_positive_integer(max_cpus, if_null = detectCores())
   private$n_workers <- validate_positive_integer(workers,  if_null = ceiling(private$max_cpus * 1.2))
   
   # Worker configuration
-  private$w_conf[['globals']]  <- validate_list(globals, if_null = NULL)
-  private$w_conf[['packages']] <- validate_character_vector(packages)
-  private$w_conf[['init']]     <- validate_expression(init, init_subst)
-  private$w_conf[['hooks']]    <- validate_hooks(hooks[['worker']], 'WH')
+  config_rds_file            <- file.path(private$.wd, 'config.rds')
+  private$w_conf[['.tmp']]   <- basename(private$.wd)
+  private$w_conf[['hooks']]  <- validate_hooks(hooks[['worker']], 'WH')
+  saveRDS(file = config_rds_file, list(
+    'globals'  = validate_list(globals, if_null = NULL),
+    'packages' = validate_character_vector(packages),
+    'init'     = validate_expression(init, init_subst)
+  ))
+  
   
   # Job configuration defaults
   private$j_conf[['timeout']]  <- validate_timeout(timeout)
@@ -470,7 +497,7 @@ q__poll_startup <- function (self, private) {
     private$dispatch()
   }
   
-  else {
+  else {  # Start more workers
     
     n <- min(
       private$n_workers - length(states), 
@@ -479,10 +506,8 @@ q__poll_startup <- function (self, private) {
     for (i in integer(n)) {
       
       worker <- Worker$new(
-        globals  = private$w_conf[['globals']], 
-        packages = private$w_conf[['packages']], 
-        init     = private$w_conf[['init']], 
-        hooks    = private$w_conf[['hooks']] )
+        'hooks' = private$w_conf[['hooks']],
+        '.tmp'  = private$w_conf[['.tmp']] )
       
       self$workers %<>% c(worker)
     }

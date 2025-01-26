@@ -19,5 +19,7 @@ test_that('validate', {
   
   expect_true(validate_function(TRUE, bool_ok = TRUE))
   expect_null(validate_environment(NULL))
+  
+  rm(list = ls())
 })
 

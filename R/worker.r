@@ -43,10 +43,15 @@
 #'        `<Worker>$stop()` and other `<Worker>$` methods.
 #'        
 #' @param reason  Passed to `<Job>$stop()` for any Jobs currently managed by 
-#'         this Worker.
+#'        this Worker.
 #'        
-#' @param cls  Passed to `<Job>$stop()` for any Jobs currently managed by 
-#'         this Worker.
+#' @param cls  Passed to `<Job>$stop()` for any Jobs currently managed by this 
+#'        Worker.
+#'        
+#' @param wait  If `TRUE`, the function will block until the current background
+#'        process is completely cleaned up.
+#'        
+#' @param .tmp  Internal use only.
 #'
 #' @export
 #' 
@@ -66,9 +71,10 @@ Worker <- R6Class(
         globals  = NULL, 
         packages = NULL, 
         init     = NULL,
-        hooks    = NULL ) {
+        hooks    = NULL,
+        .tmp     = NULL ) {
       
-      w_initialize(self, private, globals, packages, init, hooks)
+      w_initialize(self, private, globals, packages, init, hooks, .tmp)
     },
     
     
@@ -88,15 +94,15 @@ Worker <- R6Class(
     #' Stops a Worker by terminating the background Rscript process and calling 
     #' `<Job>$stop(reason)` on any Jobs currently assigned to this Worker.
     #' @return The Worker, invisibly.
-    stop = function (reason = 'worker stopped by user', cls = NULL)
-      w_stop(self, private, reason, cls),
+    stop = function (reason = 'worker stopped by user', cls = NULL, wait = TRUE)
+      w_stop(self, private, reason, cls, wait),
     
     #' @description
     #' Restarts a Worker by calling `<Worker>$stop(reason)` and 
     #' `<Worker>$start()` in succession.
     #' @return The Worker, invisibly.
-    restart = function (reason = 'restarting worker') 
-      w_restart(self, private, reason),
+    restart = function (reason = 'restarting worker', wait = FALSE) 
+      w_restart(self, private, reason, wait),
     
     #' @description
     #' Attach a callback function to execute when the Worker enters `state`.
@@ -122,25 +128,34 @@ Worker <- R6Class(
     .loaded    = NULL,
     .uid       = NULL,
     .job       = NULL,
-    .ps        = NULL,
-    .temp      = NULL,
-    .wd        = NULL,
+    .ps        = NULL, # ps::ps_handle object
     .reason    = NULL,
+    tmp_dir    = NULL, # worker's temp directory
+    sem_dir    = NULL, # background process directory
+    semaphore  = NULL,
     caller_env = NULL,
     config     = NULL,
-    semaphore  = NULL,
     
     set_state    = function (state) u__set_state(self, private, state),
     poll_job     = function ()      w__poll_job(self, private),
     poll_startup = function ()      w__poll_startup(self, private),
     job_done     = function (job)   w__job_done(self, private, job),
-    fp           = function (...)   file.path(private$.wd, paste0(...)),
+    fp           = function (...)   file.path(private$sem_dir, paste0(...)),
     
-    finalize = function () {
-      if (inherits(private$.ps, 'ps_handle')) ps_kill(private$.ps)
-      if (!is_null(private$semaphore)) remove_semaphore(private$semaphore)
-      if (!is_null(wd   <- private$.wd)   && dir.exists(wd))   unlink(wd,   recursive = TRUE)
-      if (!is_null(temp <- private$.temp) && dir.exists(temp)) unlink(temp, recursive = TRUE)
+    finalize = function (wait = TRUE) {
+      
+      if (!is_null(ps <- private$.ps))       ps_kill(ps)
+      if (!is_null(sm <- private$semaphore)) remove_semaphore(sm)
+      
+      # Wait up to 10 seconds for all file locks to be released
+      wait    <- isTRUE(wait)
+      tmp_dir <- private$tmp_dir
+      for (i in 1:10) {
+        unlink(tmp_dir, recursive = TRUE, expand = FALSE)
+        if (wait && dir.exists(tmp_dir)) Sys.sleep(1) else break
+      }
+      if (wait && dir.exists(tmp_dir)) cli_warn('Unable to delete dir: {tmp_dir}')
+      
     }
   ),
   
@@ -158,6 +173,10 @@ Worker <- R6Class(
     #' The `ps::ps_handle()` object for the background process.
     ps = function () private$.ps,
     
+    #' @field reason
+    #' Why the Worker was stopped.
+    reason = function () private$.reason,
+    
     #' @field state
     #' The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.
     state = function () private$.state,
@@ -168,16 +187,12 @@ Worker <- R6Class(
     
     #' @field wd
     #' The Worker's working directory.
-    wd = function () private$.wd,
-    
-    #' @field reason
-    #' Why the Worker was stopped.
-    reason = function () private$.reason
+    wd = function () private$sem_dir
   )
 )
 
 
-w_initialize <- function (self, private, globals, packages, init, hooks) {
+w_initialize <- function (self, private, globals, packages, init, hooks, .tmp) {
   
   init_subst <- substitute(init, env = parent.frame())
   
@@ -185,10 +200,23 @@ w_initialize <- function (self, private, globals, packages, init, hooks) {
   private$.hooks     <- validate_hooks(hooks, 'WH')
   private$caller_env <- caller_env(2L)
   
-  private$config <- list(
-    globals  = validate_list(globals),
-    packages = validate_character_vector(packages),
-    init     = validate_expression(init, init_subst) )
+  td <- normalizePath(tempdir(), winslash = '/')
+  
+  if (is.null(.tmp)) { # standalone worker
+    
+    private$tmp_dir <- file.path(td, basename(tempfile('jqw')))
+    private$config  <- list(
+      globals  = validate_list(globals),
+      packages = validate_character_vector(packages),
+      init     = validate_expression(init, init_subst) )
+    
+  } else { # worker for a queue
+    
+    stopifnot(isTRUE(.tmp %in% dir(td)))
+    private$tmp_dir <- file.path(td, .tmp, private$.uid)
+    private$config  <- file.path(td, .tmp, 'config.rds')
+    
+  }
   
   self$start()
   
@@ -202,7 +230,7 @@ w_print <- function (self) {
 }
 
 
-# Create a new Rscript background process.
+# Create a new R background process.
 w_start <- function (self, private) {
   
   if (private$.state != 'stopped')
@@ -210,22 +238,34 @@ w_start <- function (self, private) {
   
   private$set_state('starting')
   
+  tmp_dir <- private$tmp_dir
+  config  <- private$config
+  
+  semaphore <- create_semaphore()
+  sem_dir   <- file.path(tmp_dir, semaphore)
+  dir.create(sem_dir, recursive = TRUE)
+  
   private$.reason   <- NULL
-  private$semaphore <- create_semaphore()
+  private$semaphore <- semaphore
+  private$sem_dir   <- sem_dir
   
-  private$.wd <- tempdir() %>% 
-    normalizePath(winslash = '/', mustWork = FALSE) %>%
-    file.path('jobqueue', private$.uid, private$semaphore)
+  saveRDS(config, file.path(sem_dir, 'config.rds'))
   
-  dir.create(private$.wd, recursive = TRUE)
-  saveRDS(private$config, private$fp('config.rds'))
+  # On windows, `R -e 'command'` will generate an 'Rscript' temp file.
+  cat(file = file.path(sem_dir, 'command.r'), 'jobqueue:::p__start()\n')
   
   cnd <- catch_cnd(zero <- system2(
     command = file.path(R.home('bin'), 'R'),
-    args    = shQuote(c('--vanilla', '-e', 'jobqueue:::p__start()', '--args', private$.wd)),
-    stdout  = private$fp('stdout.txt'),
-    stderr  = private$fp('stderr.txt'), 
+    args    = shQuote(c(
+      '--vanilla', 
+      '--slave', 
+      '-f', file.path(sem_dir, 'command.r'), 
+      '--args', sem_dir)),
+    env     = c(TMPDIR = sem_dir, TMP = sem_dir, TEMP = sem_dir),
+    stdout  = file.path(sem_dir, 'stdout.txt'),
+    stderr  = file.path(sem_dir, 'stderr.txt'), 
     wait    = FALSE ))
+  
   
   if (!is_null(cnd) || !identical(zero, 0L)) {
     
@@ -233,7 +273,7 @@ w_start <- function (self, private) {
       parent  = cnd,
       message = c(
         "can't start Rscript subprocess",
-        read_logs(private$.wd) )))
+        read_logs(sem_dir) )))
     
   } else {
     
@@ -255,7 +295,7 @@ w_start <- function (self, private) {
 }
 
 
-w_stop <- function (self, private, reason, cls) {
+w_stop <- function (self, private, reason, cls, wait) {
   
   private$.reason <- reason
   
@@ -264,9 +304,9 @@ w_stop <- function (self, private, reason, cls) {
     job$output   <- interrupt_cnd(reason, cls)
   }
   
-  private$finalize()
+  private$finalize(wait = wait)
   private$.ps       <- NULL
-  private$.wd       <- NULL
+  private$sem_dir   <- NULL
   private$semaphore <- NULL
   
   private$set_state('stopped')
@@ -275,8 +315,8 @@ w_stop <- function (self, private, reason, cls) {
 }
 
 
-w_restart <- function (self, private, reason) {
-  self$stop(reason)
+w_restart <- function (self, private, reason, wait) {
+  self$stop(reason = reason, wait = wait)
   self$start()
   return (invisible(self))
 }
@@ -331,7 +371,7 @@ w__poll_job <- function (self, private) {
       call    = job$caller_env, 
       message = c(
         'worker subprocess terminated unexpectedly',
-        read_logs(private$.wd) ))
+        read_logs(private$sem_dir) ))
     
     private$.job <- NULL
     job$output   <- output
@@ -360,9 +400,8 @@ w__poll_startup <- function (self, private) {
   
   # Import the PID.
   if (is_null(private$.ps) && file.exists(private$fp('ps_info.rds'))) {
-      ps_info       <- readRDS(private$fp('ps_info.rds'))
-      private$.temp <- ps_info$temp
-      private$.ps   <- try(silent = TRUE, ps::ps_handle(ps_info$pid, ps_info$time))
+      ps_info     <- readRDS(private$fp('ps_info.rds'))
+      private$.ps <- try(silent = TRUE, ps::ps_handle(ps_info$pid, ps_info$time))
   }
   
   # Check if alive and for indicator files.
@@ -377,7 +416,7 @@ w__poll_startup <- function (self, private) {
         parent  = if (file.exists(fp)) readRDS(fp),
         message = c(
           'worker startup failed',
-          read_logs(private$.wd) )))
+          read_logs(private$sem_dir) )))
     }
     
     # Ready?
