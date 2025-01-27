@@ -88,7 +88,6 @@ See also https://rstudio.github.io/promises/
 
 ```r
 function(input, output, session) {
-  
   output$plot <- renderPlot({
     q$run({ read.table(url) }, list(url = input$url)) %...>%
       head(input$n) %...>%

@@ -68,22 +68,6 @@ q$run(expr = expr, vars = vars)$result
 
 
 
-## Behind the Scenes
-
-On the Worker, the `globals`, `init`, and `packages` variables provided to 
-`Queue$new()` are used to define a worker environment. Then the `vars` 
-variable you pass to `Queue$run()` further define an expression environment.
-Finally, `expr` is evaluated in that scope.
-
-```r
-worker_env <- new.env(parent = .GlobalEnv)
-# not shown: worker_env configured with globals/init
-expr_envir <- list2env(vars, parent = worker_env)
-eval(expr = expr, envir = expr_envir, enclos = baseenv())
-```
-
-
-
 ## Best Practices
 
 1. Minimize data transfer to/from Workers (it's slow).
