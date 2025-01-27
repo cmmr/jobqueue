@@ -1,5 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://cmmr.github.io/jobqueue/404.html</loc></url>
+<url><loc>https://cmmr.github.io/jobqueue/CODE_OF_CONDUCT.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/LICENSE-text.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/LICENSE.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/articles/eval.html</loc></url>
@@ -10,6 +11,7 @@
 <url><loc>https://cmmr.github.io/jobqueue/articles/stops.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/authors.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/index.html</loc></url>
+<url><loc>https://cmmr.github.io/jobqueue/news/index.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/reference/Job.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/reference/Queue.html</loc></url>
 <url><loc>https://cmmr.github.io/jobqueue/reference/Worker.html</loc></url>

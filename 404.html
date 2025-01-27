@@ -32,7 +32,14 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="https://cmmr.github.io/jobqueue/articles/jobqueue.html">Get started</a></li>
-<li class="nav-item"><a class="nav-link" href="https://cmmr.github.io/jobqueue/reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
+<li><a class="dropdown-item" href="https://cmmr.github.io/jobqueue/reference/Job.html">Job</a></li>
+    <li><a class="dropdown-item" href="https://cmmr.github.io/jobqueue/reference/Queue.html">Queue</a></li>
+    <li><a class="dropdown-item" href="https://cmmr.github.io/jobqueue/reference/Worker.html">Worker</a></li>
+  </ul>
+</li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
@@ -42,6 +49,7 @@
     <li><a class="dropdown-item" href="https://cmmr.github.io/jobqueue/articles/stops.html">Stopping Jobs</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="https://cmmr.github.io/jobqueue/news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">

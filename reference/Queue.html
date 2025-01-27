@@ -16,7 +16,12 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/jobqueue.html">Get started</a></li>
-<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-reference"><li><a class="dropdown-item" href="../reference/Job.html">Job</a></li>
+    <li><a class="dropdown-item" href="../reference/Queue.html">Queue</a></li>
+    <li><a class="dropdown-item" href="../reference/Worker.html">Worker</a></li>
+  </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/eval.html">Expressions and Variables</a></li>
@@ -24,6 +29,7 @@
     <li><a class="dropdown-item" href="../articles/results.html">Result and Error Handling</a></li>
     <li><a class="dropdown-item" href="../articles/stops.html">Stopping Jobs</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/cmmr/jobqueue/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -96,7 +102,7 @@
 <span>  globals <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  packages <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  init <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  max_cpus <span class="op">=</span> <span class="fu">detectCores</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  max_cpus <span class="op">=</span> <span class="fu">parallelly</span><span class="fu">::</span><span class="fu"><a href="https://parallelly.futureverse.org/reference/availableCores.html" class="external-link">availableCores</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  workers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">ceiling</a></span><span class="op">(</span><span class="va">max_cpus</span> <span class="op">*</span> <span class="fl">1.2</span><span class="op">)</span>,</span>
 <span>  timeout <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  hooks <span class="op">=</span> <span class="cn">NULL</span>,</span>

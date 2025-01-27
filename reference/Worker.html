@@ -16,7 +16,12 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/jobqueue.html">Get started</a></li>
-<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-reference"><li><a class="dropdown-item" href="../reference/Job.html">Job</a></li>
+    <li><a class="dropdown-item" href="../reference/Queue.html">Queue</a></li>
+    <li><a class="dropdown-item" href="../reference/Worker.html">Worker</a></li>
+  </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/eval.html">Expressions and Variables</a></li>
@@ -24,6 +29,7 @@
     <li><a class="dropdown-item" href="../articles/results.html">Result and Error Handling</a></li>
     <li><a class="dropdown-item" href="../articles/stops.html">Stopping Jobs</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/cmmr/jobqueue/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -64,11 +70,11 @@
 
 
 <dt><code>state</code></dt>
-<dd><p>The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.</p></dd>
+<dd><p>The Worker's state: <code>'starting'</code>, <code>'idle'</code>, <code>'busy'</code>, or <code>'stopped'</code>.</p></dd>
 
 
 <dt><code>uid</code></dt>
-<dd><p>A short string, e.g. 'W11', that uniquely identifies this Worker.</p></dd>
+<dd><p>A short string, e.g. <code>'W11'</code>, that uniquely identifies this Worker.</p></dd>
 
 
 <dt><code>wd</code></dt>
@@ -95,13 +101,7 @@
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Creates a background R process for running <a href="Job.html">Job</a>s.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Worker.html">Worker</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
-<span>  globals <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  packages <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  init <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  hooks <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  .tmp <span class="op">=</span> <span class="cn">NULL</span></span>
-<span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Worker.html">Worker</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>globals <span class="op">=</span> <span class="cn">NULL</span>, packages <span class="op">=</span> <span class="cn">NULL</span>, init <span class="op">=</span> <span class="cn">NULL</span>, hooks <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -130,10 +130,6 @@ The names of these functions should be <code>starting</code>, <code>idle</code>,
 <code>stopped</code>, or <code>'*'</code>. <code>'*'</code> will be run every time the state changes,
 whereas the others will only be run when the Worker enters that state.
 Duplicate names are allowed.</p></dd>
-
-
-<dt><code>.tmp</code></dt>
-<dd><p>Internal use only.</p></dd>
 
 
 </dl><p></p></div>
@@ -181,7 +177,7 @@ configuration previously defined with <code>Worker$new()</code>.</p><div class="
 <p>Stops a Worker by terminating the background Rscript process and calling
 <code>&lt;Job&gt;$stop(reason)</code> on any Jobs currently assigned to this Worker.</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"worker stopped by user"</span>, cls <span class="op">=</span> <span class="cn">NULL</span>, wait <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"worker stopped by user"</span>, cls <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -196,11 +192,6 @@ this Worker.</p></dd>
 Worker.</p></dd>
 
 
-<dt><code>wait</code></dt>
-<dd><p>If <code>TRUE</code>, the function will block until the current background
-process is completely cleaned up.</p></dd>
-
-
 </dl><p></p></div>
 </div>
 <div class="section">
@@ -213,7 +204,7 @@ process is completely cleaned up.</p></dd>
 <p>Restarts a Worker by calling <code>&lt;Worker&gt;$stop(reason)</code> and
 <code>&lt;Worker&gt;$start()</code> in succession.</p><div class="section">
 <h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">restart</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"restarting worker"</span>, wait <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">restart</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"restarting worker"</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -221,11 +212,6 @@ process is completely cleaned up.</p></dd>
 <p></p><div class="arguments"><dl><dt><code>reason</code></dt>
 <dd><p>Passed to <code>&lt;Job&gt;$stop()</code> for any Jobs currently managed by
 this Worker.</p></dd>
-
-
-<dt><code>wait</code></dt>
-<dd><p>If <code>TRUE</code>, the function will block until the current background
-process is completely cleaned up.</p></dd>
 
 
 </dl><p></p></div>
