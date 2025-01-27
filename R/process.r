@@ -1,7 +1,7 @@
 
 # Function that runs on the background process
 
-p__start <- function (sem_dir = commandArgs(TRUE), testing = FALSE) {
+p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
   
   cnd <- rlang::catch_cnd(
     classes = 'error', 
@@ -13,20 +13,19 @@ p__start <- function (sem_dir = commandArgs(TRUE), testing = FALSE) {
         R_BROWSER   = "false",
         R_PDFVIEWER = "false" )
       
-      tempdir(check = TRUE) # create our temp directory
-      
-      sem_dir <- normalizePath(sem_dir, winslash = '/', mustWork = TRUE)
-      fp      <- function (path) file.path(sem_dir, path)
+      fp        <- function (path) file.path(wd, path)
+      semaphore <- semaphore::create_semaphore()
       
       ps <- ps::ps_handle()
       ps_info = list(
         pid  = ps::ps_pid(ps), 
-        time = ps::ps_create_time(ps) )
+        time = ps::ps_create_time(ps),
+        tmp  = tempdir(),
+        sem  = semaphore )
       saveRDS(ps_info, fp('_ps_info.rds'))
       file.rename(fp('_ps_info.rds'), fp('ps_info.rds'))
       
       config     <- readRDS(fp('config.rds'))
-      semaphore  <- basename(sem_dir)
       worker_env <- new.env(parent = .GlobalEnv)
       
       if (is.character(config)) config <- readRDS(config)

@@ -37,13 +37,13 @@ test_that('job', {
   expect_error( job$proxy <- 'not a Job' )
   expect_error( job$state <- 'done'      )
 
-  expect_identical(job$output, 5)
-  expect_error(    job$state <- 'not done'       )
-  expect_silent(   job$state <- 'done'           )
-  expect_no_error( suppressMessages(job$print()) )
-  expect_true(     is.list(job$hooks)            )
-  expect_true(     is.list(job$timeout)          )
-  expect_true(     startsWith(job$uid, 'J')      )
+  expect_identical( job$output, 5                 )
+  expect_error(     job$state <- 'not done'       )
+  expect_silent(    job$state <- 'done'           )
+  expect_no_error(  suppressMessages(job$print()) )
+  expect_true(      is.list(job$hooks)            )
+  expect_true(      is.list(job$timeout)          )
+  expect_true(      startsWith(job$uid, 'J')      )
 
   job1 <- expect_silent( q$run({ Sys.sleep(60) }, hooks = list('submitted' = class)) )
   job2 <- expect_silent( Job$new({4}) )
@@ -55,6 +55,5 @@ test_that('job', {
   
   expect_silent( q$stop() )
   
-  rm(list = ls())
 })
 

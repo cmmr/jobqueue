@@ -205,16 +205,10 @@ Queue <- R6Class(
       
       private$is_ready <- FALSE
       
-      fmap(private$.workers, 'stop', reason, cls, wait = FALSE)
+      fmap(private$.workers, 'stop', reason, cls)
       fmap(private$.jobs,    'stop', reason, cls)
       
-      # Wait up to 10 seconds for all file locks to be released
-      wd <- private$.wd
-      for (i in 1:10) {
-        unlink(wd, recursive = TRUE, expand = FALSE)
-        if (dir.exists(wd)) Sys.sleep(1) else break
-      }
-      if (dir.exists(wd)) cli_warn('Unable to delete dir: {wd}')
+      unlink(private$.wd, recursive = TRUE, expand = FALSE)
       
       return (invisible(NULL))
     },
@@ -507,7 +501,7 @@ q__poll_startup <- function (self, private) {
       
       worker <- Worker$new(
         'hooks' = private$w_conf[['hooks']],
-        '.tmp'  = private$w_conf[['.tmp']] )
+        '.jqq'  = private$.wd )
       
       self$workers %<>% c(worker)
     }
