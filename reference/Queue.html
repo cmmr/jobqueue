@@ -141,15 +141,15 @@ CPU utilization.</p></dd>
 
 <dt><code>workers</code></dt>
 <dd><p>How many background <a href="Worker.html">Worker</a> processes to start. Set to more
-than <code>max_cpus</code> to enable interrupted workers to be quickly swapped
-out with standby Workers while a replacement Worker starts up.</p></dd>
+than <code>max_cpus</code> to enable standby Workers to quickly swap out with
+Workers that need to restart.</p></dd>
 
 
 <dt><code>timeout, hooks, reformat, signal, cpus, stop_id, copy_id</code></dt>
 <dd><p>Defaults for this Queue's <code>$run()</code> method. Here only, <code>stop_id</code>
 and <code>copy_id</code> must be either a <code>function (job)</code> or <code>NULL</code>.
 <code>hooks</code> can set queue, worker, and/or job hooks - see the
-<code><a href="../articles/hooks.html">vignette('hooks')</a></code> 'Attaching' section.</p></dd>
+"Attaching" section in <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
 
 
 </dl><p></p></div>
@@ -178,7 +178,7 @@ and <code>copy_id</code> must be either a <code>function (job)</code> or <code>N
 </div><p></p><hr><a id="method-Queue-run"></a><div class="section">
 <h3 id="method-run-">Method <code>run()</code><a class="anchor" aria-label="anchor" href="#method-run-"></a></h3>
 <p>Creates a Job object and submits it to the queue for running.
-Any <code>NA</code> arguments will be replaced with their value in <code>Queue$new()</code>.</p><div class="section">
+Any <code>NA</code> arguments will be replaced with their value from <code>Queue$new()</code>.</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span></span>
 <span>  <span class="va">expr</span>,</span>
@@ -217,9 +217,11 @@ apply a single timeout from 'submitted' to 'done'. Example:
 
 
 <dt><code>hooks</code></dt>
-<dd><p>A list of functions to run when the Job state changes, of the
-form <code>hooks = list(created = function (job) {...}, done = ~{...})</code>.
-See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
+<dd><p>A named list of functions to run when the Job state changes,
+of the form <code>hooks = list(created = function (worker) {...})</code>.
+Names of worker hooks are typically <code>'created'</code>, <code>'submitted'</code>,
+<code>'queued'</code>, <code>'dispatched'</code>, <code>'starting'</code>, <code>'running'</code>, <code>'done'</code>, or
+<code>'*'</code> (duplicates okay). See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
 
 
 <dt><code>reformat</code></dt>
@@ -239,9 +241,9 @@ conditions are produced. See <code><a href="../articles/results.html">vignette('
 
 
 <dt><code>cpus</code></dt>
-<dd><p>How many CPU cores to reserve for this Job. The Queue uses
-this number to limit the number of Jobs running simultaneously; it
-does not prevent a Job from using more CPUs than reserved.</p></dd>
+<dd><p>How many CPU cores to reserve for this Job. Used to limit the
+number of Jobs running simultaneously to respect <code>&lt;Queue&gt;$max_cpus</code>.
+Does not prevent a Job from using more CPUs than reserved.</p></dd>
 
 
 <dt><code>stop_id</code></dt>

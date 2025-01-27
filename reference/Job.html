@@ -167,9 +167,11 @@ apply a single timeout from 'submitted' to 'done'. Example:
 
 
 <dt><code>hooks</code></dt>
-<dd><p>A list of functions to run when the Job state changes, of the
-form <code>hooks = list(created = function (job) {...}, done = ~{...})</code>.
-See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
+<dd><p>A named list of functions to run when the Job state changes,
+of the form <code>hooks = list(created = function (worker) {...})</code>.
+Names of worker hooks are typically <code>'created'</code>, <code>'submitted'</code>,
+<code>'queued'</code>, <code>'dispatched'</code>, <code>'starting'</code>, <code>'running'</code>, <code>'done'</code>, or
+<code>'*'</code> (duplicates okay). See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
 
 
 <dt><code>reformat</code></dt>
@@ -189,10 +191,9 @@ conditions are produced. See <code><a href="../articles/results.html">vignette('
 
 
 <dt><code>cpus</code></dt>
-<dd><p>How many CPU cores to reserve for this Job. The <a href="Queue.html">Queue</a> uses
-this number to limit the number of Jobs running simultaneously to
-respect <code>&lt;Queue&gt;$max_cpus</code>; it does not prevent a Job from using more
-CPUs than reserved.</p></dd>
+<dd><p>How many CPU cores to reserve for this Job. Used to limit the
+number of Jobs running simultaneously to respect <code>&lt;Queue&gt;$max_cpus</code>.
+Does not prevent a Job from using more CPUs than reserved.</p></dd>
 
 
 <dt><code>...</code></dt>
@@ -294,8 +295,7 @@ edit/stop other queued jobs by modifying the Jobs in
 
 </div><p></p><hr><a id="method-Job-stop"></a><div class="section">
 <h3 id="method-stop-">Method <code><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop()</a></code><a class="anchor" aria-label="anchor" href="#method-stop-"></a></h3>
-<p>Stop this Job. <em>If the Job is running, its Worker will be temporarily
-unavailable for new Jobs while the Worker restarts.</em></p><div class="section">
+<p>Stop this Job. If the Job is running, its Worker will be restarted.</p><div class="section">
 <h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Job</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"job stopped by user"</span>, cls <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>

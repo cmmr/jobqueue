@@ -124,12 +124,10 @@ Returned value is ignored.</p></dd>
 
 
 <dt><code>hooks</code></dt>
-<dd><p>A list of functions to run when the Worker state changes, of
-the form <code>hooks = list(idle = function (worker) {...}, busy = ~{...})</code>.
-The names of these functions should be <code>starting</code>, <code>idle</code>, <code>busy</code>,
-<code>stopped</code>, or <code>'*'</code>. <code>'*'</code> will be run every time the state changes,
-whereas the others will only be run when the Worker enters that state.
-Duplicate names are allowed.</p></dd>
+<dd><p>A named list of functions to run when the Worker state
+changes, of the form <code>hooks = list(idle = function (worker) {...})</code>.
+Names of worker hooks are typically <code>starting</code>, <code>idle</code>, <code>busy</code>,
+<code>stopped</code>, or <code>'*'</code> (duplicates okay). See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
 
 
 </dl><p></p></div>
@@ -161,8 +159,7 @@ Duplicate names are allowed.</p></dd>
 
 </div><p></p><hr><a id="method-Worker-start"></a><div class="section">
 <h3 id="method-start-">Method <code><a href="https://rdrr.io/r/stats/start.html" class="external-link">start()</a></code><a class="anchor" aria-label="anchor" href="#method-start-"></a></h3>
-<p>Starts a new background Rscript process using the
-configuration previously defined with <code>Worker$new()</code>.</p><div class="section">
+<p>Restarts a stopped Worker.</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">start</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
@@ -174,7 +171,7 @@ configuration previously defined with <code>Worker$new()</code>.</p><div class="
 
 </div><p></p><hr><a id="method-Worker-stop"></a><div class="section">
 <h3 id="method-stop-">Method <code><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop()</a></code><a class="anchor" aria-label="anchor" href="#method-stop-"></a></h3>
-<p>Stops a Worker by terminating the background Rscript process and calling
+<p>Stops a Worker by terminating the background process and calling
 <code>&lt;Job&gt;$stop(reason)</code> on any Jobs currently assigned to this Worker.</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span>reason <span class="op">=</span> <span class="st">"worker stopped by user"</span>, cls <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
@@ -281,7 +278,7 @@ this Worker.</p></dd>
 </div><p></p><hr><a id="method-Worker-run"></a><div class="section">
 <h3 id="method-run-">Method <code>run()</code><a class="anchor" aria-label="anchor" href="#method-run-"></a></h3>
 <p>Assigns a Job to this Worker for evaluation on the background
-process. <em>Worker must be in <code>'idle'</code> state.</em></p><div class="section">
+process. <em>Worker must be in the <code>'idle'</code> state.</em></p><div class="section">
 <h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">job</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
