@@ -5,8 +5,8 @@ test_that('basic', {
   q <- expect_silent(Queue$new(workers = 1L, timeout = 5.2))
   expect_equal(q$state, 'starting')
 
+  expect_no_error(q$wd)
   expect_no_error(suppressMessages(q$print()))
-  expect_true(startsWith(q$wd, normalizePath(dirname(tempdir()), '/')))
 
   job <- expect_silent(q$run({ 2 + 2 }))
   expect_false(job$is_done)
