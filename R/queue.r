@@ -125,7 +125,7 @@ Queue <- R6Class(
         globals   = NULL,
         packages  = NULL,
         init      = NULL,
-        max_cpus  = detectCores(),
+        max_cpus  = parallelly::availableCores(),
         workers   = ceiling(max_cpus * 1.2),
         timeout   = NULL,
         hooks     = NULL,
@@ -271,11 +271,6 @@ q_initialize <- function (
   init_subst       <- substitute(init, env = parent.frame())
   private$up_since <- Sys.time()
   
-  td <- normalizePath(tempdir(), winslash = '/')
-  Sys.chmod(td, mode = "0777")
-  wd <- file.path(td, basename(tempfile('jqq')))
-  dir.create(wd)
-  
   # Assign hooks by q_ and w_ prefixes
   hooks <- validate_list(hooks)
   if (!all(names(hooks) %in% c('queue', 'worker', 'job')))
@@ -287,21 +282,20 @@ q_initialize <- function (
   
   # Queue configuration
   self$uid          <- increment_uid('Q')
-  private$.wd       <- wd
+  private$.wd       <- normalizePath(tempfile('jqq'), winslash = '/', mustWork = FALSE)
   private$.hooks    <- validate_hooks(hooks[['queue']], 'QH')
-  private$max_cpus  <- validate_positive_integer(max_cpus, if_null = detectCores())
+  private$max_cpus  <- validate_positive_integer(max_cpus, if_null = parallelly::availableCores())
   private$n_workers <- validate_positive_integer(workers,  if_null = ceiling(private$max_cpus * 1.2))
+  dir.create(private$.wd)
   
   # Worker configuration
   config_rds_file            <- file.path(private$.wd, 'config.rds')
-  private$w_conf[['.tmp']]   <- basename(private$.wd)
+  private$w_conf[['config']] <- structure(NA, .jqw_config = config_rds_file)
   private$w_conf[['hooks']]  <- validate_hooks(hooks[['worker']], 'WH')
   saveRDS(file = config_rds_file, list(
     'globals'  = validate_list(globals, if_null = NULL),
     'packages' = validate_character_vector(packages),
-    'init'     = validate_expression(init, init_subst)
-  ))
-  
+    'init'     = validate_expression(init, init_subst) ))
   
   # Job configuration defaults
   private$j_conf[['timeout']]  <- validate_timeout(timeout)
@@ -500,8 +494,8 @@ q__poll_startup <- function (self, private) {
     for (i in integer(n)) {
       
       worker <- Worker$new(
-        'hooks' = private$w_conf[['hooks']],
-        '.jqq'  = private$.wd )
+        'hooks'   = private$w_conf[['hooks']],
+        'globals' = private$w_conf[['config']] )
       
       self$workers %<>% c(worker)
     }

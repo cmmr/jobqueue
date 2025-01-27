@@ -184,8 +184,8 @@ Job <- R6Class(
     proxy = function (value) j_proxy(self, private, value),
     
     #' @field state
-    #' Get or set - The Job's state: 'created', 'submitted', 'queued', 
-    #' 'dispatched', 'starting', 'running', or 'done'.
+    #' Get or set - The Job's state: `'created'`, `'submitted'`, `'queued'`, 
+    #' `'dispatched'`, `'starting'`, `'running'`, or `'done'`.
     #' *Assigning to `<Job>$state` will trigger callback hooks.*
     state = function (value) j_state(self, private, value),
     
@@ -383,6 +383,10 @@ j_cpus <- function (private, value) {
 
 
 
+#' Converts a Job to a Promise
+#' 
+#' @noRd
+#' @keywords internal
 #' @export
 as.promise.Job <- function (x) {
   

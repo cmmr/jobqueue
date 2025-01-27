@@ -9,3 +9,14 @@ template:
     base_font: {google: "Noto Sans"}
     heading_font: {google: "Noto Sans"}
   
+navbar:
+ components:
+   reference:
+    text: Reference
+    menu:
+    - text: Job
+      href: reference/Job.html
+    - text: Queue
+      href: reference/Queue.html
+    - text: Worker
+      href: reference/Worker.html

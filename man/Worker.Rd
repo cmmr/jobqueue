@@ -17,9 +17,9 @@ Where \link{Job} expressions are evaluated.
 
 \item{\code{reason}}{Why the Worker was stopped.}
 
-\item{\code{state}}{The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.}
+\item{\code{state}}{The Worker's state: \code{'starting'}, \code{'idle'}, \code{'busy'}, or \code{'stopped'}.}
 
-\item{\code{uid}}{A short string, e.g. 'W11', that uniquely identifies this Worker.}
+\item{\code{uid}}{A short string, e.g. \code{'W11'}, that uniquely identifies this Worker.}
 
 \item{\code{wd}}{The Worker's working directory.}
 }
@@ -44,13 +44,7 @@ Where \link{Job} expressions are evaluated.
 \subsection{Method \code{new()}}{
 Creates a background R process for running \link{Job}s.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$new(
-  globals = NULL,
-  packages = NULL,
-  init = NULL,
-  hooks = NULL,
-  .tmp = NULL
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$new(globals = NULL, packages = NULL, init = NULL, hooks = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -73,8 +67,6 @@ The names of these functions should be \code{starting}, \code{idle}, \code{busy}
 \code{stopped}, or \code{'*'}. \code{'*'} will be run every time the state changes,
 whereas the others will only be run when the Worker enters that state.
 Duplicate names are allowed.}
-
-\item{\code{.tmp}}{Internal use only.}
 }
 \if{html}{\out{</div>}}
 }
@@ -123,7 +115,7 @@ The Worker, invisibly.
 Stops a Worker by terminating the background Rscript process and calling
 \verb{<Job>$stop(reason)} on any Jobs currently assigned to this Worker.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$stop(reason = "worker stopped by user", cls = NULL, wait = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$stop(reason = "worker stopped by user", cls = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -134,9 +126,6 @@ this Worker.}
 
 \item{\code{cls}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by this
 Worker.}
-
-\item{\code{wait}}{If \code{TRUE}, the function will block until the current background
-process is completely cleaned up.}
 }
 \if{html}{\out{</div>}}
 }
@@ -151,7 +140,7 @@ The Worker, invisibly.
 Restarts a Worker by calling \verb{<Worker>$stop(reason)} and
 \verb{<Worker>$start()} in succession.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$restart(reason = "restarting worker", wait = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$restart(reason = "restarting worker")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -159,9 +148,6 @@ Restarts a Worker by calling \verb{<Worker>$stop(reason)} and
 \describe{
 \item{\code{reason}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
 this Worker.}
-
-\item{\code{wait}}{If \code{TRUE}, the function will block until the current background
-process is completely cleaned up.}
 }
 \if{html}{\out{</div>}}
 }

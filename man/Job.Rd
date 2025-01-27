@@ -25,8 +25,8 @@ environment before evaluation.}
 
 \item{\code{proxy}}{Get or set - Job to proxy in place of running \code{expr}.}
 
-\item{\code{state}}{Get or set - The Job's state: 'created', 'submitted', 'queued',
-'dispatched', 'starting', 'running', or 'done'.
+\item{\code{state}}{Get or set - The Job's state: \code{'created'}, \code{'submitted'}, \code{'queued'},
+\code{'dispatched'}, \code{'starting'}, \code{'running'}, or \code{'done'}.
 \emph{Assigning to \verb{<Job>$state} will trigger callback hooks.}}
 
 \item{\code{output}}{Get or set - Job's raw output.

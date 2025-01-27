@@ -5,7 +5,7 @@ importFrom("cli",
            "col_grey", "col_green", "col_red", "col_yellow" )
 importFrom("later", "later", "run_now")
 importFrom("magrittr", "%>%", "%<>%")
-importFrom("parallel", "detectCores")
+importFrom("parallelly", "availableCores")
 importFrom("promises", 
            "%...>%", "%...T>%", "as.promise", "promise", "promise_all", "promise_map", 
            "promise_race", "promise_reduce", "promise_resolve", "then" )

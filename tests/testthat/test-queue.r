@@ -5,6 +5,7 @@ test_that('basic', {
   expect_equal(q$state, 'starting')
 
   expect_no_error(suppressMessages(q$print()))
+  expect_true(startsWith(q$wd, normalizePath(tempdir(), '/')))
 
   job <- expect_silent(q$run({ 2 + 2 }))
   expect_false(job$is_done)
@@ -22,7 +23,7 @@ test_that('basic', {
   expect_true(startsWith(q$uid, 'Q'))
 
   expect_error(q$submit('not a Job'))
-
+  
   expect_silent(q$stop())
 
   expect_equal(q$state, 'stopped')

@@ -1,7 +1,4 @@
 
-.jobqueue_env <- new_environment()
-
-
 
 u_wait <- function (self, private, state) {
   
@@ -75,10 +72,11 @@ interrupt_cnd <- function (reason = 'stopped', cls = NULL) {
 
 
 
+last_uid <- new_environment()
+
 increment_uid <- function (prefix) {
-  nm    <- paste0('uid_', prefix)
-  value <- env_get(.jobqueue_env, nm, 1L)
-  assign(nm, value + 1L, .jobqueue_env)
+  value <- env_get(last_uid, prefix, 1L)
+  assign(prefix, value + 1L, last_uid)
   return (paste0(prefix, value))
 }
 

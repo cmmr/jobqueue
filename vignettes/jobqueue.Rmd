@@ -83,14 +83,14 @@ Terminated background process are automatically replaced by new ones.
 ## Passing Data
 
 ```r
-# Global variables.
+# Variables to permanently store on the Worker.
 q <- Queue$new(globals = list(MY_DATA = mtcars))
 
-# A call to evaluate on the Worker.
-expr <- quote(head(MY_DATA, n)[,fields])
-
-# Non-global variables.
+# Variables to temporary add to the Worker.
 vars <- list(n = 2, fields = c('mpg', 'cyl', 'disp'))
+
+# The expression to evaluate on the Worker.
+expr <- quote(head(MY_DATA, n)[,fields])
 
 job <- q$run(expr = expr, vars = vars)
 

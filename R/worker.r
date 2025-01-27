@@ -47,8 +47,6 @@
 #'        
 #' @param cls  Passed to `<Job>$stop()` for any Jobs currently managed by this 
 #'        Worker.
-#'        
-#' @param .jqq  Internal use only.
 #'
 #' @export
 #' 
@@ -68,10 +66,9 @@ Worker <- R6Class(
         globals  = NULL, 
         packages = NULL, 
         init     = NULL,
-        hooks    = NULL,
-        .jqq     = NULL ) {
+        hooks    = NULL ) {
       
-      w_initialize(self, private, globals, packages, init, hooks, .jqq)
+      w_initialize(self, private, globals, packages, init, hooks)
     },
     
     
@@ -168,11 +165,11 @@ Worker <- R6Class(
     reason = function () private$.reason,
     
     #' @field state
-    #' The Worker's state: 'starting', 'idle', 'busy', or 'stopped'.
+    #' The Worker's state: `'starting'`, `'idle'`, `'busy'`, or `'stopped'`.
     state = function () private$.state,
     
     #' @field uid
-    #' A short string, e.g. 'W11', that uniquely identifies this Worker.
+    #' A short string, e.g. `'W11'`, that uniquely identifies this Worker.
     uid = function () private$.uid,
     
     #' @field wd
@@ -182,7 +179,7 @@ Worker <- R6Class(
 )
 
 
-w_initialize <- function (self, private, globals, packages, init, hooks, .jqq) {
+w_initialize <- function (self, private, globals, packages, init, hooks) {
   
   init_subst <- substitute(init, env = parent.frame())
   
@@ -190,19 +187,13 @@ w_initialize <- function (self, private, globals, packages, init, hooks, .jqq) {
   private$.hooks     <- validate_hooks(hooks, 'WH')
   private$caller_env <- caller_env(2L)
   
-  if (is.null(.jqq)) { # standalone worker
-    
-    private$.wd    <- normalizePath(tempfile('jqw'), winslash = '/', mustWork = FALSE)
+  private$config <- attr(globals, '.jqw_config') # worker for a queue
+  
+  if (is.null(private$config)) # standalone worker
     private$config <- list(
       globals  = validate_list(globals),
       packages = validate_character_vector(packages),
       init     = validate_expression(init, init_subst) )
-    
-  } else { # worker for a queue
-    
-    private$.wd    <- file.path(.jqq, private$.uid)
-    private$config <- file.path(.jqq, 'config.rds')
-  }
   
   self$start()
   
@@ -226,7 +217,7 @@ w_start <- function (self, private) {
   private$.reason <- NULL
   
   private$.wd <- normalizePath(tempfile('jqw'), winslash = '/', mustWork = FALSE)
-  dir.create(private$.wd, recursive = TRUE)
+  dir.create(private$.wd)
   
   saveRDS(private$config, private$fp('config.rds'))
   cat(file = private$fp('start.r'), 'jobqueue:::p__start()\n')
