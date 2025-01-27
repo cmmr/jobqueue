@@ -173,12 +173,3 @@ job  <- q$run(expr, vars = list(x = 10, y = 2))
 dput(job$result)
 #> c(x = 10, y = 2, G = 8)
 ```
-
-----
-
-
-## Code of Conduct
-
-Please note that the jobqueue project is released with a [Contributor Code of Conduct](https://cmmr.github.io/jobqueue/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
-
-

@@ -91,9 +91,11 @@ seconds allowed for each state the job passes through, or 'total' to
 apply a single timeout from 'submitted' to 'done'. Example:
 \code{timeout = c(total = 2.5, running = 1)}. See \code{vignette('stops')}.}
 
-\item{\code{hooks}}{A list of functions to run when the Job state changes, of the
-form \code{hooks = list(created = function (job) {...}, done = ~{...})}.
-See \code{vignette('hooks')}.}
+\item{\code{hooks}}{A named list of functions to run when the Job state changes,
+of the form \code{hooks = list(created = function (worker) {...})}.
+Names of worker hooks are typically \code{'created'}, \code{'submitted'},
+\code{'queued'}, \code{'dispatched'}, \code{'starting'}, \code{'running'}, \code{'done'}, or
+\code{'*'} (duplicates okay). See \code{vignette('hooks')}.}
 
 \item{\code{reformat}}{Set \verb{reformat = function (job)} to define what
 \verb{<Job>$result} should return. The default, \code{reformat = NULL} passes
@@ -107,10 +109,9 @@ condition classes, e.g. \code{c('interrupt', 'error', 'warning')}, will
 cause the equivalent of \verb{stop(<condition>)} to be called when those
 conditions are produced. See \code{vignette('results')}.}
 
-\item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
-this number to limit the number of Jobs running simultaneously to
-respect \verb{<Queue>$max_cpus}; it does not prevent a Job from using more
-CPUs than reserved.}
+\item{\code{cpus}}{How many CPU cores to reserve for this Job. Used to limit the
+number of Jobs running simultaneously to respect \verb{<Queue>$max_cpus}.
+Does not prevent a Job from using more CPUs than reserved.}
 
 \item{\code{...}}{Arbitrary named values to add to the returned Job object.}
 }
@@ -216,8 +217,7 @@ This Job, invisibly.
 \if{html}{\out{<a id="method-Job-stop"></a>}}
 \if{latex}{\out{\hypertarget{method-Job-stop}{}}}
 \subsection{Method \code{stop()}}{
-Stop this Job. \emph{If the Job is running, its Worker will be temporarily
-unavailable for new Jobs while the Worker restarts.}
+Stop this Job. If the Job is running, its Worker will be restarted.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Job$stop(reason = "job stopped by user", cls = NULL)}\if{html}{\out{</div>}}
 }

@@ -33,9 +33,11 @@
 #'        apply a single timeout from 'submitted' to 'done'. Example:
 #'        `timeout = c(total = 2.5, running = 1)`. See `vignette('stops')`.
 #'        
-#' @param hooks  A list of functions to run when the Job state changes, of the 
-#'        form `hooks = list(created = function (job) {...}, done = ~{...})`.
-#'        See `vignette('hooks')`.
+#' @param hooks  A named list of functions to run when the Job state changes, 
+#'        of the form `hooks = list(created = function (worker) {...})`.
+#'        Names of worker hooks are typically `'created'`, `'submitted'`, 
+#'        `'queued'`, `'dispatched'`, `'starting'`, `'running'`, `'done'`, or 
+#'        `'*'` (duplicates okay). See `vignette('hooks')`.
 #'        
 #' @param reformat  Set `reformat = function (job)` to define what 
 #'        `<Job>$result` should return. The default, `reformat = NULL` passes 
@@ -49,17 +51,17 @@
 #'        cause the equivalent of `stop(<condition>)` to be called when those
 #'        conditions are produced. See `vignette('results')`.
 #'        
-#' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
-#'        this number to limit the number of Jobs running simultaneously; it 
-#'        does not prevent a Job from using more CPUs than reserved.
+#' @param cpus  How many CPU cores to reserve for this Job. Used to limit the 
+#'        number of Jobs running simultaneously to respect `<Queue>$max_cpus`. 
+#'        Does not prevent a Job from using more CPUs than reserved.
 #' 
 #' @param max_cpus  Total number of CPU cores that can be reserved by all 
 #'        running Jobs (`sum(<Job>$cpus)`). Does not enforce limits on actual 
 #'        CPU utilization.
 #'        
 #' @param workers  How many background [Worker] processes to start. Set to more 
-#'        than `max_cpus` to enable interrupted workers to be quickly swapped 
-#'        out with standby Workers while a replacement Worker starts up.
+#'        than `max_cpus` to enable standby Workers to quickly swap out with 
+#'        Workers that need to restart.
 #'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
@@ -118,7 +120,7 @@ Queue <- R6Class(
     #'        Defaults for this Queue's `$run()` method. Here only, `stop_id` 
     #'        and `copy_id` must be either a `function (job)` or `NULL`. 
     #'        `hooks` can set queue, worker, and/or job hooks - see the 
-    #'        `vignette('hooks')` 'Attaching' section.
+    #'        "Attaching" section in `vignette('hooks')`.
     #'
     #' @return A `Queue` object.
     initialize = function (
@@ -151,7 +153,7 @@ Queue <- R6Class(
     
     #' @description
     #' Creates a Job object and submits it to the queue for running. 
-    #' Any `NA` arguments will be replaced with their value in `Queue$new()`.
+    #' Any `NA` arguments will be replaced with their value from `Queue$new()`.
     #'
     #' @return The new [Job] object.
     run = function (

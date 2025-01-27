@@ -23,9 +23,11 @@
 #'        apply a single timeout from 'submitted' to 'done'. Example:
 #'        `timeout = c(total = 2.5, running = 1)`. See `vignette('stops')`.
 #'        
-#' @param hooks  A list of functions to run when the Job state changes, of the 
-#'        form `hooks = list(created = function (job) {...}, done = ~{...})`.
-#'        See `vignette('hooks')`.
+#' @param hooks  A named list of functions to run when the Job state changes, 
+#'        of the form `hooks = list(created = function (worker) {...})`.
+#'        Names of worker hooks are typically `'created'`, `'submitted'`, 
+#'        `'queued'`, `'dispatched'`, `'starting'`, `'running'`, `'done'`, or 
+#'        `'*'` (duplicates okay). See `vignette('hooks')`.
 #'        
 #' @param reformat  Set `reformat = function (job)` to define what 
 #'        `<Job>$result` should return. The default, `reformat = NULL` passes 
@@ -39,10 +41,9 @@
 #'        cause the equivalent of `stop(<condition>)` to be called when those
 #'        conditions are produced. See `vignette('results')`.
 #'        
-#' @param cpus  How many CPU cores to reserve for this Job. The [Queue] uses 
-#'        this number to limit the number of Jobs running simultaneously to 
-#'        respect `<Queue>$max_cpus`; it does not prevent a Job from using more 
-#'        CPUs than reserved.
+#' @param cpus  How many CPU cores to reserve for this Job. Used to limit the 
+#'        number of Jobs running simultaneously to respect `<Queue>$max_cpus`. 
+#'        Does not prevent a Job from using more CPUs than reserved.
 #'        
 #' @param state
 #' The name of a Job state. Typically one of:
@@ -123,8 +124,7 @@ Job <- R6Class(
     wait = function (state = 'done') u_wait(self, private, state),
     
     #' @description
-    #' Stop this Job. *If the Job is running, its Worker will be temporarily 
-    #' unavailable for new Jobs while the Worker restarts.*
+    #' Stop this Job. If the Job is running, its Worker will be restarted.
     #' @return This Job, invisibly.
     stop = function (reason = 'job stopped by user', cls = NULL) j_stop(self, private, reason, cls)
   ),

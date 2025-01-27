@@ -78,13 +78,13 @@ running Jobs (\verb{sum(<Job>$cpus)}). Does not enforce limits on actual
 CPU utilization.}
 
 \item{\code{workers}}{How many background \link{Worker} processes to start. Set to more
-than \code{max_cpus} to enable interrupted workers to be quickly swapped
-out with standby Workers while a replacement Worker starts up.}
+than \code{max_cpus} to enable standby Workers to quickly swap out with
+Workers that need to restart.}
 
 \item{\code{timeout, hooks, reformat, signal, cpus, stop_id, copy_id}}{Defaults for this Queue's \verb{$run()} method. Here only, \code{stop_id}
 and \code{copy_id} must be either a \verb{function (job)} or \code{NULL}.
 \code{hooks} can set queue, worker, and/or job hooks - see the
-\code{vignette('hooks')} 'Attaching' section.}
+"Attaching" section in \code{vignette('hooks')}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -114,7 +114,7 @@ Print method for a \code{Queue}.
 \if{latex}{\out{\hypertarget{method-Queue-run}{}}}
 \subsection{Method \code{run()}}{
 Creates a Job object and submits it to the queue for running.
-Any \code{NA} arguments will be replaced with their value in \code{Queue$new()}.
+Any \code{NA} arguments will be replaced with their value from \code{Queue$new()}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Queue$run(
   expr,
@@ -147,9 +147,11 @@ seconds allowed for each state the job passes through, or 'total' to
 apply a single timeout from 'submitted' to 'done'. Example:
 \code{timeout = c(total = 2.5, running = 1)}. See \code{vignette('stops')}.}
 
-\item{\code{hooks}}{A list of functions to run when the Job state changes, of the
-form \code{hooks = list(created = function (job) {...}, done = ~{...})}.
-See \code{vignette('hooks')}.}
+\item{\code{hooks}}{A named list of functions to run when the Job state changes,
+of the form \code{hooks = list(created = function (worker) {...})}.
+Names of worker hooks are typically \code{'created'}, \code{'submitted'},
+\code{'queued'}, \code{'dispatched'}, \code{'starting'}, \code{'running'}, \code{'done'}, or
+\code{'*'} (duplicates okay). See \code{vignette('hooks')}.}
 
 \item{\code{reformat}}{Set \verb{reformat = function (job)} to define what
 \verb{<Job>$result} should return. The default, \code{reformat = NULL} passes
@@ -163,9 +165,9 @@ condition classes, e.g. \code{c('interrupt', 'error', 'warning')}, will
 cause the equivalent of \verb{stop(<condition>)} to be called when those
 conditions are produced. See \code{vignette('results')}.}
 
-\item{\code{cpus}}{How many CPU cores to reserve for this Job. The \link{Queue} uses
-this number to limit the number of Jobs running simultaneously; it
-does not prevent a Job from using more CPUs than reserved.}
+\item{\code{cpus}}{How many CPU cores to reserve for this Job. Used to limit the
+number of Jobs running simultaneously to respect \verb{<Queue>$max_cpus}.
+Does not prevent a Job from using more CPUs than reserved.}
 
 \item{\code{stop_id}}{If an existing \link{Job} in the Queue has the same \code{stop_id},
 that Job will be stopped and return an 'interrupt' condition object

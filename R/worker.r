@@ -19,12 +19,10 @@
 #'        to variables defined by `globals` and assets from `packages`. 
 #'        Returned value is ignored.
 #'        
-#' @param hooks  A list of functions to run when the Worker state changes, of 
-#'        the form `hooks = list(idle = function (worker) {...}, busy = ~{...})`.
-#'        The names of these functions should be `starting`, `idle`, `busy`, 
-#'        `stopped`, or `'*'`. `'*'` will be run every time the state changes, 
-#'        whereas the others will only be run when the Worker enters that state. 
-#'        Duplicate names are allowed.
+#' @param hooks  A named list of functions to run when the Worker state 
+#'        changes, of the form `hooks = list(idle = function (worker) {...})`.
+#'        Names of worker hooks are typically `starting`, `idle`, `busy`, 
+#'        `stopped`, or `'*'` (duplicates okay). See `vignette('hooks')`.
 #'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
@@ -79,13 +77,12 @@ Worker <- R6Class(
     print = function (...) w_print(self),
     
     #' @description
-    #' Starts a new background Rscript process using the 
-    #' configuration previously defined with `Worker$new()`.
+    #' Restarts a stopped Worker.
     #' @return The Worker, invisibly.
     start = function () w_start(self, private),
     
     #' @description
-    #' Stops a Worker by terminating the background Rscript process and calling 
+    #' Stops a Worker by terminating the background process and calling 
     #' `<Job>$stop(reason)` on any Jobs currently assigned to this Worker.
     #' @return The Worker, invisibly.
     stop = function (reason = 'worker stopped by user', cls = NULL)
@@ -110,7 +107,7 @@ Worker <- R6Class(
     
     #' @description
     #' Assigns a Job to this Worker for evaluation on the background 
-    #' process. *Worker must be in `'idle'` state.*
+    #' process. *Worker must be in the `'idle'` state.*
     #' @return This Worker, invisibly.
     run = function (job) w_run(self, private, job)
   ),

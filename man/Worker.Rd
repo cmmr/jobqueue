@@ -61,12 +61,10 @@ each worker just once, immediately after start-up. Will have access
 to variables defined by \code{globals} and assets from \code{packages}.
 Returned value is ignored.}
 
-\item{\code{hooks}}{A list of functions to run when the Worker state changes, of
-the form \code{hooks = list(idle = function (worker) {...}, busy = ~{...})}.
-The names of these functions should be \code{starting}, \code{idle}, \code{busy},
-\code{stopped}, or \code{'*'}. \code{'*'} will be run every time the state changes,
-whereas the others will only be run when the Worker enters that state.
-Duplicate names are allowed.}
+\item{\code{hooks}}{A named list of functions to run when the Worker state
+changes, of the form \code{hooks = list(idle = function (worker) {...})}.
+Names of worker hooks are typically \code{starting}, \code{idle}, \code{busy},
+\code{stopped}, or \code{'*'} (duplicates okay). See \code{vignette('hooks')}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -98,8 +96,7 @@ The Worker, invisibly.
 \if{html}{\out{<a id="method-Worker-start"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-start}{}}}
 \subsection{Method \code{start()}}{
-Starts a new background Rscript process using the
-configuration previously defined with \code{Worker$new()}.
+Restarts a stopped Worker.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$start()}\if{html}{\out{</div>}}
 }
@@ -112,7 +109,7 @@ The Worker, invisibly.
 \if{html}{\out{<a id="method-Worker-stop"></a>}}
 \if{latex}{\out{\hypertarget{method-Worker-stop}{}}}
 \subsection{Method \code{stop()}}{
-Stops a Worker by terminating the background Rscript process and calling
+Stops a Worker by terminating the background process and calling
 \verb{<Job>$stop(reason)} on any Jobs currently assigned to this Worker.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$stop(reason = "worker stopped by user", cls = NULL)}\if{html}{\out{</div>}}
@@ -219,7 +216,7 @@ This Worker, invisibly.
 \if{latex}{\out{\hypertarget{method-Worker-run}{}}}
 \subsection{Method \code{run()}}{
 Assigns a Job to this Worker for evaluation on the background
-process. \emph{Worker must be in \code{'idle'} state.}
+process. \emph{Worker must be in the \code{'idle'} state.}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$run(job)}\if{html}{\out{</div>}}
 }
