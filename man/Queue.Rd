@@ -39,7 +39,7 @@ Jobs go in. Results come out.
 \if{html}{\out{<a id="method-Queue-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Queue-new}{}}}
 \subsection{Method \code{new()}}{
-Creates background processes (n = \code{workers}) for handling \verb{$run()} and
+Creates a pool of background processes for handling \verb{$run()} and
 \verb{$submit()} calls. These workers are initialized according to the
 \code{globals}, \code{packages}, and \code{init} arguments.
 \subsection{Usage}{

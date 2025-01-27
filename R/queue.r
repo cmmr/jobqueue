@@ -110,7 +110,7 @@ Queue <- R6Class(
 
     
     #' @description
-    #' Creates background processes (n = `workers`) for handling `$run()` and 
+    #' Creates a pool of background processes for handling `$run()` and 
     #' `$submit()` calls. These workers are initialized according to the 
     #' `globals`, `packages`, and `init` arguments.
     #'
