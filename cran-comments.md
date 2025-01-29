@@ -1,7 +1,7 @@
 ## Resubmission
 This is a resubmission. In this version I have:
 
-* Removed extra spaces and single quotes from the DESCRIPTION description field.
+* Removed single quotes and trailing spaces from the DESCRIPTION description field.
 
 * Not added method references to DOIs, ISBN, etc as there are none to reference.
 

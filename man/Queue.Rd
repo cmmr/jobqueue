@@ -17,7 +17,7 @@ Jobs go in. Results come out.
 
 \item{\code{uid}}{Get or set - Unique identifier, e.g. \code{'Q1'}.}
 
-\item{\code{wd}}{The Queue's working directory.}
+\item{\code{tmp}}{The Queue's temporary directory.}
 
 \item{\code{workers}}{Get or set - List of \link[=Worker]{Workers} used for processing Jobs.}
 }

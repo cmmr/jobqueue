@@ -21,7 +21,7 @@ Where \link{Job} expressions are evaluated.
 
 \item{\code{uid}}{A short string, e.g. \code{'W11'}, that uniquely identifies this Worker.}
 
-\item{\code{wd}}{The Worker's working directory.}
+\item{\code{tmp}}{The Worker's temporary directory.}
 }
 \if{html}{\out{</div>}}
 }
