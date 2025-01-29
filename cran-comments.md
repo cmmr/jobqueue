@@ -1,14 +1,14 @@
 ## Resubmission
 This is a resubmission. In this version I have:
 
-* Removed single quotes and trailing spaces from the DESCRIPTION description field.
+* Removed extraneous single quotes and spaces from the description field.
 
-* Not added method references to DOIs, ISBN, etc as there are none to reference.
+* Did not add DOIs, ISBNs, etc as there are no methods to reference.
 
-* Renamed `wd` variable to `tmp` to indicate that it represents a tempdir() location.
+* Renamed `wd` variable to `tmp` to indicate it's a tempdir() location.
 
-* Ensured no files are written to non-tempdir() locations by default or in any 
-  examples/vignettes/tests.
+* Ensured no files are written to non-tempdir() locations by default or in 
+  any examples/vignettes/tests.
   
 
 
