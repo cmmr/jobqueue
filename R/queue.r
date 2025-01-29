@@ -210,13 +210,13 @@ Queue <- R6Class(
       fmap(private$.workers, 'stop', reason, cls)
       fmap(private$.jobs,    'stop', reason, cls)
       
-      unlink(private$.wd, recursive = TRUE, expand = FALSE)
+      unlink(private$.tmp, recursive = TRUE, expand = FALSE)
       
       return (invisible(NULL))
     },
     
     .uid         = NULL,
-    .wd          = NULL,
+    .tmp          = NULL,
     .hooks       = list(),
     .jobs        = list(),
     .workers     = list(),
@@ -253,9 +253,9 @@ Queue <- R6Class(
     #' Get or set - Unique identifier, e.g. `'Q1'`.
     uid = function (value) q_uid(private, value),
     
-    #' @field wd
-    #' The Queue's working directory.
-    wd = function () private$.wd,
+    #' @field tmp
+    #' The Queue's temporary directory.
+    tmp = function () private$.tmp,
     
     #' @field workers
     #' Get or set - List of [Workers][Worker] used for processing Jobs.
@@ -284,14 +284,14 @@ q_initialize <- function (
   
   # Queue configuration
   self$uid          <- increment_uid('Q')
-  private$.wd       <- normalizePath(tempfile('jqq'), winslash = '/', mustWork = FALSE)
+  private$.tmp      <- normalizePath(tempfile('jqq'), winslash = '/', mustWork = FALSE)
   private$.hooks    <- validate_hooks(hooks[['queue']], 'QH')
   private$max_cpus  <- validate_positive_integer(max_cpus, if_null = parallelly::availableCores())
   private$n_workers <- validate_positive_integer(workers,  if_null = ceiling(private$max_cpus * 1.2))
-  dir.create(private$.wd)
+  dir.create(private$.tmp)
   
   # Worker configuration
-  config_rds_file            <- file.path(private$.wd, 'config.rds')
+  config_rds_file            <- file.path(private$.tmp, 'config.rds')
   private$w_conf[['config']] <- structure(NA, .jqw_config = config_rds_file)
   private$w_conf[['hooks']]  <- validate_hooks(hooks[['worker']], 'WH')
   saveRDS(file = config_rds_file, list(

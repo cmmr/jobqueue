@@ -1,7 +1,7 @@
 
 # Function that runs on the background process
 
-p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
+p__start <- function (tmp = commandArgs(TRUE), testing = FALSE) {
   
   cnd <- rlang::catch_cnd(
     classes = 'error', 
@@ -13,14 +13,14 @@ p__start <- function (wd = commandArgs(TRUE), testing = FALSE) {
         R_BROWSER   = "false",
         R_PDFVIEWER = "false" )
       
-      fp        <- function (path) file.path(wd, path)
+      fp        <- function (path) file.path(tmp, path)
       semaphore <- semaphore::create_semaphore()
       
       ps <- ps::ps_handle()
       ps_info = list(
         pid  = ps::ps_pid(ps), 
         time = ps::ps_create_time(ps),
-        tmp  = tempdir(),
+        tmpd = tempdir(),
         sem  = semaphore )
       saveRDS(ps_info, fp('_ps_info.rds'))
       file.rename(fp('_ps_info.rds'), fp('ps_info.rds'))

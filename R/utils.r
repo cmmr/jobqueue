@@ -82,35 +82,35 @@ increment_uid <- function (prefix) {
 
 
 # Two-step save.
-save_rds <- function (wd, ...) {
+save_rds <- function (tmp, ...) {
   
   dots <- list(...)
   for (i in seq_along(dots)) {
     
-    # save_rds(wd, output = output)
+    # save_rds(tmp, output = output)
     key <- names(dots)[[i]] %||% ''
     val <- dots[[i]]
     
-    # save_rds(wd, 'output')
+    # save_rds(tmp, 'output')
     if (nchar(key) == 0) {
       key <- dots[[i]]
       val <- get(key, pos = parent.frame())
     }
-    temp <- file.path(wd, paste0('_', key, '.rds'))
-    dest <- file.path(wd, paste0(     key, '.rds'))
+    tmp_dest <- file.path(tmp, paste0('_', key, '.rds'))
+    dest     <- file.path(tmp, paste0(     key, '.rds'))
     
-    saveRDS(val, temp)
-    file.rename(temp, dest)
+    saveRDS(val, tmp_dest)
+    file.rename(tmp_dest, dest)
   }
 }
 
 
-read_logs <- function (wd) {
+read_logs <- function (tmp) {
   
   logs <- NULL
   
   for (stream in c('stdout', 'stderr')) {
-    fp <- file.path(wd, paste(stream, '.txt'))
+    fp <- file.path(tmp, paste(stream, '.txt'))
     if (isTRUE(file.exists(fp)) && isTRUE(file.size(fp) > 0))
       logs %<>% c(sprintf('%s>  %s', stream, readLines(fp)))
   }

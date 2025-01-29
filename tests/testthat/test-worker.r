@@ -12,7 +12,7 @@ test_that('worker', {
   expect_no_error(suppressMessages(w$print()))
   expect_true(is.list(w$hooks))
   expect_true(is.null(w$job))
-  expect_true(dir.exists(w$wd))
+  expect_true(dir.exists(w$tmp))
   expect_true(startsWith(w$uid, 'W'))
 
   expect_silent(w$wait())

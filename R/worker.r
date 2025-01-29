@@ -120,7 +120,7 @@ Worker <- R6Class(
     .uid       = NULL,
     .job       = NULL,
     .ps        = NULL, # ps::ps_handle object
-    .wd        = NULL, # dir for child communication
+    .tmp       = NULL, # dir for child communication
     .reason    = NULL,
     ps_tmp     = NULL, # child's tempdir()
     old_dirs   = NULL,
@@ -132,11 +132,11 @@ Worker <- R6Class(
     poll_job     = function ()      w__poll_job(self, private),
     poll_startup = function ()      w__poll_startup(self, private),
     job_done     = function (job)   w__job_done(self, private, job),
-    fp           = function (...)   file.path(private$.wd, paste0(...)),
+    fp           = function (...)   file.path(private$.tmp, paste0(...)),
     
     finalize = function () {
       if (!is_null(ps <- private$.ps)) ps_kill(ps)
-      old_dirs         <- c(private$old_dirs, private$.wd, private$ps_tmp)
+      old_dirs         <- c(private$old_dirs, private$.tmp, private$ps_tmp)
       private$old_dirs <- old_dirs[dir.exists(old_dirs)]
       lapply(private$old_dirs, unlink, recursive = TRUE, expand = FALSE)
     }
@@ -169,9 +169,9 @@ Worker <- R6Class(
     #' A short string, e.g. `'W11'`, that uniquely identifies this Worker.
     uid = function () private$.uid,
     
-    #' @field wd
-    #' The Worker's working directory.
-    wd = function () private$.wd
+    #' @field tmp
+    #' The Worker's temporary directory.
+    tmp = function () private$.tmp
   )
 )
 
@@ -213,8 +213,8 @@ w_start <- function (self, private) {
   private$set_state('starting')
   private$.reason <- NULL
   
-  private$.wd <- normalizePath(tempfile('jqw'), winslash = '/', mustWork = FALSE)
-  dir.create(private$.wd)
+  private$.tmp <- normalizePath(tempfile('jqw'), winslash = '/', mustWork = FALSE)
+  dir.create(private$.tmp)
   
   saveRDS(private$config, private$fp('config.rds'))
   cat(file = private$fp('start.r'), 'jobqueue:::p__start()\n')
@@ -225,7 +225,7 @@ w_start <- function (self, private) {
       '--vanilla', 
       '--slave', 
       '-f', private$fp('start.r'), 
-      '--args', private$.wd) ),
+      '--args', private$.tmp) ),
     stdout  = private$fp('stdout.txt'),
     stderr  = private$fp('stderr.txt'), 
     wait    = FALSE ))
@@ -237,7 +237,7 @@ w_start <- function (self, private) {
       parent  = cnd,
       message = c(
         "can't start Rscript subprocess",
-        read_logs(private$.wd) )))
+        read_logs(private$.tmp) )))
     
   } else {
     
@@ -270,7 +270,7 @@ w_stop <- function (self, private, reason, cls) {
   
   private$finalize()
   private$.ps       <- NULL
-  private$.wd       <- NULL
+  private$.tmp      <- NULL
   private$ps_tmp    <- NULL
   private$semaphore <- NULL
   
@@ -336,7 +336,7 @@ w__poll_job <- function (self, private) {
       call    = job$caller_env, 
       message = c(
         'worker subprocess terminated unexpectedly',
-        read_logs(private$.wd) ))
+        read_logs(private$.tmp) ))
     
     private$.job <- NULL
     job$output   <- output
@@ -367,7 +367,7 @@ w__poll_startup <- function (self, private) {
   if (is_null(private$.ps) && file.exists(private$fp('ps_info.rds'))) {
       ps_info     <- readRDS(private$fp('ps_info.rds'))
       private$.ps <- try(silent = TRUE, ps::ps_handle(ps_info$pid, ps_info$time))
-      private$ps_tmp    <- ps_info$tmp
+      private$ps_tmp    <- ps_info$tmpd
       private$semaphore <- ps_info$sem
   }
   
@@ -383,7 +383,7 @@ w__poll_startup <- function (self, private) {
         parent  = if (file.exists(fp)) readRDS(fp),
         message = c(
           'worker startup failed',
-          read_logs(private$.wd) )))
+          read_logs(private$.tmp) )))
     }
     
     # Ready?
