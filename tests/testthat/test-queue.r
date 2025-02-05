@@ -89,6 +89,8 @@ test_that('workers', {
 
 
 test_that('max_cpus', {
+  
+  skip_on_cran()
 
   q <- expect_silent(Queue$new(workers = 3L, max_cpus = 2L, timeout = 5.5))
 
