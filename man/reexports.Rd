@@ -7,6 +7,7 @@
 \alias{\%>\%}
 \alias{later}
 \alias{run_now}
+\alias{availableCores}
 \alias{\%...>\%}
 \alias{\%...T>\%}
 \alias{as.promise}
@@ -25,6 +26,8 @@ below to see their documentation.
   \item{later}{\code{\link[later]{later}}, \code{\link[later]{run_now}}}
 
   \item{magrittr}{\code{\link[magrittr:compound]{\%<>\%}}, \code{\link[magrittr:pipe]{\%>\%}}}
+
+  \item{parallelly}{\code{\link[parallelly]{availableCores}}}
 
   \item{promises}{\code{\link[promises:pipes]{\%...>\%}}, \code{\link[promises:pipes]{\%...T>\%}}, \code{\link[promises:is.promise]{as.promise}}, \code{\link[promises]{promise_all}}, \code{\link[promises]{promise_map}}, \code{\link[promises:promise_all]{promise_race}}, \code{\link[promises]{promise_reduce}}, \code{\link[promises]{then}}}
 }}

@@ -12,6 +12,9 @@ later::later
 later::run_now
 
 #' @export
+parallelly::availableCores
+
+#' @export
 promises::`%...>%`
 
 #' @export

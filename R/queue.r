@@ -127,7 +127,7 @@ Queue <- R6Class(
         globals   = NULL,
         packages  = NULL,
         init      = NULL,
-        max_cpus  = parallelly::availableCores(),
+        max_cpus  = availableCores(),
         workers   = ceiling(max_cpus * 1.2),
         timeout   = NULL,
         hooks     = NULL,
@@ -286,7 +286,7 @@ q_initialize <- function (
   self$uid          <- increment_uid('Q')
   private$.tmp      <- normalizePath(tempfile('jqq'), winslash = '/', mustWork = FALSE)
   private$.hooks    <- validate_hooks(hooks[['queue']], 'QH')
-  private$max_cpus  <- validate_positive_integer(max_cpus, if_null = parallelly::availableCores())
+  private$max_cpus  <- validate_positive_integer(max_cpus, if_null = availableCores())
   private$n_workers <- validate_positive_integer(workers,  if_null = ceiling(private$max_cpus * 1.2))
   dir.create(private$.tmp)
   

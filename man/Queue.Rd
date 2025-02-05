@@ -47,7 +47,7 @@ Creates a pool of background processes for handling \verb{$run()} and
   globals = NULL,
   packages = NULL,
   init = NULL,
-  max_cpus = parallelly::availableCores(),
+  max_cpus = availableCores(),
   workers = ceiling(max_cpus * 1.2),
   timeout = NULL,
   hooks = NULL,

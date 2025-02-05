@@ -26,6 +26,8 @@ export(`Job`)
 export(`Queue`)
 export(`Worker`)
 
+export(`availableCores`)
+
 export(`later`)
 export(`run_now`)
 
