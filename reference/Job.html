@@ -9,7 +9,7 @@ also provides a way to check for and retrieve the result."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -156,22 +156,25 @@ See <code><a href="../articles/eval.html">vignette('eval')</a></code>.</p></dd>
 <dt><code>vars</code></dt>
 <dd><p>A named list of variables to make available to <code>expr</code> during
 evaluation. Alternatively, an object that can be coerced to a named
-list with <code><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list()</a></code>, e.g. named vector, data.frame, or environment.</p></dd>
+list with <code><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list()</a></code>, e.g. named vector, data.frame, or environment.
+Or a <code>function (job)</code> that returns such an object.</p></dd>
 
 
 <dt><code>timeout</code></dt>
 <dd><p>A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
-apply a single timeout from 'submitted' to 'done'. Example:
+apply a single timeout from 'submitted' to 'done'. Or a
+<code>function (job)</code> that returns the same. Example:
 <code>timeout = c(total = 2.5, running = 1)</code>. See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd>
 
 
 <dt><code>hooks</code></dt>
 <dd><p>A named list of functions to run when the Job state changes,
-of the form <code>hooks = list(created = function (worker) {...})</code>.
-Names of worker hooks are typically <code>'created'</code>, <code>'submitted'</code>,
-<code>'queued'</code>, <code>'dispatched'</code>, <code>'starting'</code>, <code>'running'</code>, <code>'done'</code>, or
-<code>'*'</code> (duplicates okay). See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
+of the form <code>hooks = list(created = function (worker) {...})</code>. Or a
+<code>function (job)</code> that returns the same. Names of worker hooks are
+typically <code>'created'</code>, <code>'submitted'</code>, <code>'queued'</code>, <code>'dispatched'</code>,
+<code>'starting'</code>, <code>'running'</code>, <code>'done'</code>, or <code>'*'</code> (duplicates okay).
+See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
 
 
 <dt><code>reformat</code></dt>
@@ -187,13 +190,15 @@ When <code>FALSE</code>, <code>&lt;Job&gt;$result</code> will return the object 
 taking additional action. Setting to <code>TRUE</code> or a character vector of
 condition classes, e.g. <code>c('interrupt', 'error', 'warning')</code>, will
 cause the equivalent of <code>stop(&lt;condition&gt;)</code> to be called when those
-conditions are produced. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
+conditions are produced. Alternatively, a <code>function (job)</code> that
+returns <code>TRUE</code> or <code>FALSE</code>. See <code><a href="../articles/results.html">vignette('results')</a></code>.</p></dd>
 
 
 <dt><code>cpus</code></dt>
-<dd><p>How many CPU cores to reserve for this Job. Used to limit the
-number of Jobs running simultaneously to respect <code>&lt;Queue&gt;$max_cpus</code>.
-Does not prevent a Job from using more CPUs than reserved.</p></dd>
+<dd><p>How many CPU cores to reserve for this Job.  Or a
+<code>function (job)</code> that returns the same. Used to limit the number of
+Jobs running simultaneously to respect <code>&lt;Queue&gt;$max_cpus</code>. Does not
+prevent a Job from using more CPUs than reserved.</p></dd>
 
 
 <dt><code>...</code></dt>
