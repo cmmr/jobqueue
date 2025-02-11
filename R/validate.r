@@ -24,11 +24,17 @@ validate_expression <- function (value, subst, null_ok = TRUE) {
   cli_abort(must_be(c('a call', 'an expression in curly braces')))
 }
 
-validate_list <- function (value, null_ok = TRUE, if_null = list(), of_type = NULL, named = TRUE, default = NULL) {
+validate_list <- function (
+    value, job = NULL, 
+    func_ok = FALSE, null_ok = TRUE, if_null = list(), 
+    of_type = NULL, named = TRUE, default = NULL ) {
   
   varname <- substitute(value)
+  value   <- run_job_function(value, job)
   
-  if (is_null(value) && is_true(null_ok)) return (if_null)
+  
+  if (is_function(value) && is_true(func_ok)) return (value)
+  if (is_null(value)     && is_true(null_ok)) return (if_null)
   
   if (!is_null(default))
     if (length(value) == 1 && !is_named(value))
@@ -52,10 +58,12 @@ validate_list <- function (value, null_ok = TRUE, if_null = list(), of_type = NU
   return (value)
 }
 
-validate_hooks <- function (hooks, prefix = 'H') {
+validate_hooks <- function (hooks, prefix = 'H', job = NULL, func_ok = FALSE) {
   
-  hooks <- validate_list(hooks)
+  hooks <- validate_list(hooks, job = job, func_ok = func_ok)
+  
   if (length(hooks) == 0) return (hooks)
+  if (is_function(hooks) && is_true(func_ok)) return (hooks)
   
   names(hooks) <- sub('^[qwj]_', '', names(hooks))
   
@@ -69,9 +77,11 @@ validate_hooks <- function (hooks, prefix = 'H') {
 }
 
 
-validate_timeout <- function (timeout) {
+validate_timeout <- function (timeout, job = NULL, func_ok = FALSE) {
   
-  timeout <- validate_list(timeout, default = 'total')
+  timeout <- validate_list(timeout, job = job, default = 'total', func_ok = func_ok)
+  
+  if (is_function(timeout) && is_true(func_ok)) return (timeout)
   
   if (length(dups <- unique(names(timeout)[duplicated(names(timeout))])))
     cli_abort('`timeout` cannot have duplicate names: {.val {dups}}')
@@ -95,24 +105,16 @@ validate_timeout <- function (timeout) {
   return (timeout)
 }
 
-
-validate_environment <- function (value, null_ok = TRUE, if_null = NULL) {
+validate_positive_integer <- function (
+    value, job = NULL, 
+    if_null = NULL, null_ok = TRUE, func_ok = FALSE ) {
+  
   varname <- substitute(value)
+  value   <- run_job_function(value, job)
   
-  if (is_null(value) && is_true(null_ok)) return (if_null)
+  if (is_null(value)     && is_true(null_ok)) return (if_null)
+  if (is_function(value) && is_true(func_ok)) return (value)
   
-  errmsg   <- cant_cast('an environment')
-  on_error <- function (e) { cli_abort(c(errmsg, 'x' = as.character(e) )) }
-  
-  tryCatch(
-    expr    = as_environment(value, parent = baseenv()), 
-    error   = on_error, 
-    warning = on_error )
-}
-
-validate_positive_integer <- function (value, if_null = NULL, null_ok = TRUE) {
-  if (is_null(value) && is_true(null_ok)) return (if_null)
-  varname  <- substitute(value)
   errmsg   <- must_be('a single positive integer')
   on_error <- function (e) cli_abort(c(errmsg, 'x' = as.character(e) ))
   
@@ -127,18 +129,28 @@ validate_positive_integer <- function (value, if_null = NULL, null_ok = TRUE) {
     warning = on_error )
 }
 
-validate_character_vector <- function (value, if_null = NULL, bool_ok = FALSE) {
-  if (is_null(value)) return (if_null)
+validate_character_vector <- function (
+    value, job = NULL, 
+    if_null = NULL, bool_ok = FALSE, func_ok = FALSE) {
+  
+  varname <- substitute(value)
+  value   <- run_job_function(value, job)
+  
+  if (is_null(value))                         return (if_null)
+  if (is_function(value) && is_true(func_ok)) return (value)
+  
   if (!anyNA(value)) {
     if (is_character(value))                          return (value)
     if (is_scalar_logical(value) && is_true(bool_ok)) return (value)
   }
-  varname <- substitute(value)
   cli_abort(must_be('a character vector'))
 }
 
-validate_string <- function (value, cnd_ok = FALSE) {
+validate_string <- function (value, job = NULL, cnd_ok = FALSE) {
+  
   varname <- substitute(value)
+  value   <- run_job_function(value, job)
+  
   if (is_condition(value) && is_true(cnd_ok)) value <- value$message
   if (!is_scalar_character(value) || is_na(value) || !nzchar(value))
     cli_abort(must_be(ifelse(cnd_ok, 'a string or condition', 'a string')))

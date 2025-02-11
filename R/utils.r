@@ -64,6 +64,14 @@ u__set_state <- function (self, private, state) {
 }
 
 
+run_job_function <- function (value, job) {
+  if (is_formula(value)) value <- as_function(value)
+  if (inherits(job, 'Job'))
+    if (is_function(value)) value <- value(job)
+  return (value)
+}
+
+
 interrupt_cnd <- function (reason = 'stopped', cls = NULL) {
   reason <- validate_string(reason, cnd_ok = TRUE)
   cls    <- validate_character_vector(cls)

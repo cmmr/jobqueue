@@ -21,7 +21,7 @@ test_that('job', {
   job <- expect_silent( q$run(
     expr     = quote(2 + 3),
     cpus     = NULL,
-    timeout  = list('queued' = 10),
+    timeout  = ~{ list('queued' = 10) },
     reformat = function (j) {
       o <- j$output
       if (!is.numeric(o)) stop(o)

@@ -84,18 +84,21 @@ See \code{vignette('eval')}.}
 
 \item{\code{vars}}{A named list of variables to make available to \code{expr} during
 evaluation. Alternatively, an object that can be coerced to a named
-list with \code{as.list()}, e.g. named vector, data.frame, or environment.}
+list with \code{as.list()}, e.g. named vector, data.frame, or environment.
+Or a \verb{function (job)} that returns such an object.}
 
 \item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
-apply a single timeout from 'submitted' to 'done'. Example:
+apply a single timeout from 'submitted' to 'done'. Or a
+\verb{function (job)} that returns the same. Example:
 \code{timeout = c(total = 2.5, running = 1)}. See \code{vignette('stops')}.}
 
 \item{\code{hooks}}{A named list of functions to run when the Job state changes,
-of the form \code{hooks = list(created = function (worker) {...})}.
-Names of worker hooks are typically \code{'created'}, \code{'submitted'},
-\code{'queued'}, \code{'dispatched'}, \code{'starting'}, \code{'running'}, \code{'done'}, or
-\code{'*'} (duplicates okay). See \code{vignette('hooks')}.}
+of the form \code{hooks = list(created = function (worker) {...})}. Or a
+\verb{function (job)} that returns the same. Names of worker hooks are
+typically \code{'created'}, \code{'submitted'}, \code{'queued'}, \code{'dispatched'},
+\code{'starting'}, \code{'running'}, \code{'done'}, or \code{'*'} (duplicates okay).
+See \code{vignette('hooks')}.}
 
 \item{\code{reformat}}{Set \verb{reformat = function (job)} to define what
 \verb{<Job>$result} should return. The default, \code{reformat = NULL} passes
@@ -107,11 +110,13 @@ When \code{FALSE}, \verb{<Job>$result} will return the object without
 taking additional action. Setting to \code{TRUE} or a character vector of
 condition classes, e.g. \code{c('interrupt', 'error', 'warning')}, will
 cause the equivalent of \verb{stop(<condition>)} to be called when those
-conditions are produced. See \code{vignette('results')}.}
+conditions are produced. Alternatively, a \verb{function (job)} that
+returns \code{TRUE} or \code{FALSE}. See \code{vignette('results')}.}
 
-\item{\code{cpus}}{How many CPU cores to reserve for this Job. Used to limit the
-number of Jobs running simultaneously to respect \verb{<Queue>$max_cpus}.
-Does not prevent a Job from using more CPUs than reserved.}
+\item{\code{cpus}}{How many CPU cores to reserve for this Job.  Or a
+\verb{function (job)} that returns the same. Used to limit the number of
+Jobs running simultaneously to respect \verb{<Queue>$max_cpus}. Does not
+prevent a Job from using more CPUs than reserved.}
 
 \item{\code{...}}{Arbitrary named values to add to the returned Job object.}
 }

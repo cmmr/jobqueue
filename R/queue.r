@@ -26,18 +26,21 @@
 #' 
 #' @param vars  A named list of variables to make available to `expr` during 
 #'        evaluation. Alternatively, an object that can be coerced to a named 
-#'        list with `as.list()`, e.g. named vector, data.frame, or environment.
+#'        list with `as.list()`, e.g. named vector, data.frame, or environment. 
+#'        Or a `function (job)` that returns such an object.
 #' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
-#'        apply a single timeout from 'submitted' to 'done'. Example:
+#'        apply a single timeout from 'submitted' to 'done'. Or a 
+#'        `function (job)` that returns the same. Example:
 #'        `timeout = c(total = 2.5, running = 1)`. See `vignette('stops')`.
 #'        
 #' @param hooks  A named list of functions to run when the Job state changes, 
-#'        of the form `hooks = list(created = function (worker) {...})`.
-#'        Names of worker hooks are typically `'created'`, `'submitted'`, 
-#'        `'queued'`, `'dispatched'`, `'starting'`, `'running'`, `'done'`, or 
-#'        `'*'` (duplicates okay). See `vignette('hooks')`.
+#'        of the form `hooks = list(created = function (worker) {...})`. Or a 
+#'        `function (job)` that returns the same. Names of worker hooks are 
+#'        typically `'created'`, `'submitted'`, `'queued'`, `'dispatched'`, 
+#'        `'starting'`, `'running'`, `'done'`, or `'*'` (duplicates okay). 
+#'        See `vignette('hooks')`.
 #'        
 #' @param reformat  Set `reformat = function (job)` to define what 
 #'        `<Job>$result` should return. The default, `reformat = NULL` passes 
@@ -49,11 +52,13 @@
 #'        taking additional action. Setting to `TRUE` or a character vector of 
 #'        condition classes, e.g. `c('interrupt', 'error', 'warning')`, will
 #'        cause the equivalent of `stop(<condition>)` to be called when those
-#'        conditions are produced. See `vignette('results')`.
+#'        conditions are produced. Alternatively, a `function (job)` that 
+#'        returns `TRUE` or `FALSE`. See `vignette('results')`.
 #'        
-#' @param cpus  How many CPU cores to reserve for this Job. Used to limit the 
-#'        number of Jobs running simultaneously to respect `<Queue>$max_cpus`. 
-#'        Does not prevent a Job from using more CPUs than reserved.
+#' @param cpus  How many CPU cores to reserve for this Job.  Or a 
+#'        `function (job)` that returns the same. Used to limit the number of 
+#'        Jobs running simultaneously to respect `<Queue>$max_cpus`. Does not 
+#'        prevent a Job from using more CPUs than reserved.
 #' 
 #' @param max_cpus  Total number of CPU cores that can be reserved by all 
 #'        running Jobs (`sum(<Job>$cpus)`). Does not enforce limits on actual 
@@ -300,11 +305,11 @@ q_initialize <- function (
     'init'     = validate_expression(init, init_subst) ))
   
   # Job configuration defaults
-  private$j_conf[['timeout']]  <- validate_timeout(timeout)
-  private$j_conf[['hooks']]    <- validate_hooks(hooks[['job']], 'JH')
+  private$j_conf[['timeout']]  <- validate_timeout(timeout, func_ok = TRUE)
+  private$j_conf[['hooks']]    <- validate_hooks(hooks[['job']], 'JH', func_ok = TRUE)
+  private$j_conf[['signal']]   <- validate_character_vector(signal, func_ok = TRUE, bool_ok = TRUE)
+  private$j_conf[['cpus']]     <- validate_positive_integer(cpus, func_ok = TRUE, if_null = 1L)
   private$j_conf[['reformat']] <- validate_function(reformat)
-  private$j_conf[['signal']]   <- validate_character_vector(signal, bool_ok = TRUE)
-  private$j_conf[['cpus']]     <- validate_positive_integer(cpus, if_null = 1L)
   private$j_conf[['stop_id']]  <- validate_function(stop_id)
   private$j_conf[['copy_id']]  <- validate_function(copy_id)
   
