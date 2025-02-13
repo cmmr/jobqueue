@@ -174,3 +174,4 @@ job  <- q$run(expr, vars = list(x = 10, y = 2))
 dput(job$result)
 #> c(x = 10, y = 2, G = 8)
 ```
+
