@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -101,7 +101,13 @@
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Creates a background R process for running <a href="Job.html">Job</a>s.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Worker.html">Worker</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>globals <span class="op">=</span> <span class="cn">NULL</span>, packages <span class="op">=</span> <span class="cn">NULL</span>, init <span class="op">=</span> <span class="cn">NULL</span>, hooks <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/Worker.html">Worker</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  globals <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  packages <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  init <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  hooks <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  wait <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -128,6 +134,13 @@ Returned value is ignored.</p></dd>
 changes, of the form <code>hooks = list(idle = function (worker) {...})</code>.
 Names of worker hooks are typically <code>starting</code>, <code>idle</code>, <code>busy</code>,
 <code>stopped</code>, or <code>'*'</code> (duplicates okay). See <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
+
+
+<dt><code>wait</code></dt>
+<dd><p>If <code>TRUE</code>, blocks until the Worker is 'idle'. If <code>FALSE</code>, the
+Worker object is returned in the 'starting' state. If a number, blocks
+at most that number of seconds before returning either an 'idle' or
+'stopped' Worker.</p></dd>
 
 
 </dl><p></p></div>
@@ -253,7 +266,7 @@ this Worker.</p></dd>
 <h3 id="method-wait-">Method <code>wait()</code><a class="anchor" aria-label="anchor" href="#method-wait-"></a></h3>
 <p>Blocks until the Worker enters the given state.</p><div class="section">
 <h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">wait</span><span class="op">(</span>state <span class="op">=</span> <span class="st">"idle"</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Worker</span><span class="op">$</span><span class="fu">wait</span><span class="op">(</span>state <span class="op">=</span> <span class="st">"idle"</span>, timeout <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -266,6 +279,10 @@ this Worker.</p></dd>
 <li><p><code>'busy'</code> -     While a Job is running.</p></li>
 <li><p><code>'stopped'</code> -  After <code>&lt;Worker&gt;$stop()</code> is called.</p></li>
 </ul></dd>
+
+
+<dt><code>timeout</code></dt>
+<dd><p>Stop the Worker if it takes longer than this number of seconds, or <code>NULL</code>.</p></dd>
 
 
 </dl><p></p></div>
