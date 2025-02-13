@@ -30,6 +30,10 @@ jobs:
           extra-packages: any::covr, any::xml2
           needs: coverage
 
+      - name: Install covr from Github
+        run: |
+          Rscript -e "pak::pkg_install('r-lib/covr')"
+
       - name: Test coverage
         run: |
           Sys.setenv(NOT_CRAN = "true")

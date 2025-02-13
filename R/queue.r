@@ -83,6 +83,11 @@
 #'        Job. A `copy_id` of `NULL` disables this feature. 
 #'        See `vignette('stops')`.
 #'        
+#' @param wait  If `TRUE`, blocks until the Queue is 'idle'. If `FALSE`, the 
+#'        Queue object is returned in the 'starting' state. If a number, blocks 
+#'        at most that number of seconds before returning either an 'idle' or 
+#'        'stopped' Queue.
+#'        
 #' @param reason  Passed to `<Job>$stop()` for any Jobs currently managed by 
 #'         this Queue.
 #'        
@@ -140,13 +145,14 @@ Queue <- R6Class(
         signal    = FALSE,
         cpus      = 1L,
         stop_id   = NULL,
-        copy_id   = NULL ) {
+        copy_id   = NULL,
+        wait      = TRUE ) {
        
       q_initialize(
         self, private, 
         globals, packages, init, max_cpus, workers, 
         timeout, hooks, reformat, signal, cpus, 
-        stop_id, copy_id )
+        stop_id, copy_id, wait )
     },
     
     
@@ -189,13 +195,16 @@ Queue <- R6Class(
     
     #' @description
     #' Blocks until the Queue enters the given state.
+    #' @param timeout Stop the Queue if it takes longer than this number of seconds, or `NULL`.
     #' @return This Queue, invisibly.
-    wait = function (state = 'idle') u_wait(self, private, state),
+    wait = function (state = 'idle', timeout = NULL) 
+      u_wait(self, private, state, timeout),
     
     #' @description
     #' Attach a callback function to execute when the Queue enters `state`.
     #' @return A function that when called removes this callback from the Queue.
-    on = function (state, func) u_on(self, private, 'QH', state, func),
+    on = function (state, func) 
+      u_on(self, private, 'QH', state, func),
     
     #' @description
     #' Stop all jobs and workers.
@@ -210,8 +219,6 @@ Queue <- R6Class(
     
     finalize = function (reason = 'queue was garbage collected', cls = NULL) {
       
-      private$is_ready <- FALSE
-      
       fmap(private$.workers, 'stop', reason, cls)
       fmap(private$.jobs,    'stop', reason, cls)
       
@@ -221,11 +228,12 @@ Queue <- R6Class(
     },
     
     .uid         = NULL,
-    .tmp          = NULL,
+    .tmp         = NULL,
     .hooks       = list(),
     .jobs        = list(),
     .workers     = list(),
     .state       = 'initializing',
+    .is_done     = FALSE,
     
     n_workers    = NULL,
     up_since     = NULL,
@@ -273,7 +281,7 @@ q_initialize <- function (
     self, private, 
     globals, packages, init, max_cpus, workers, 
     timeout, hooks, reformat, signal, cpus, 
-    stop_id, copy_id ) {
+    stop_id, copy_id, wait ) {
   
   init_subst       <- substitute(init, env = parent.frame())
   private$up_since <- Sys.time()
@@ -315,6 +323,12 @@ q_initialize <- function (
   
   private$set_state('starting')
   later(private$poll_startup)
+  
+  if (is_true(wait))         self$wait()
+  else if (is.numeric(wait)) self$wait(timeout = wait)
+  
+  if (is_true(private$.is_done))
+    cli_abort('Unable to start Queue')
   
   return (invisible(self))
 }
@@ -435,10 +449,15 @@ q_submit <- function (self, private, job) {
 
 # Stop all jobs and prevent more from being added.
 q_stop <- function (self, private, reason, cls) {
+  
+  private$is_ready <- FALSE
+  private$.is_done <- TRUE
+  
   private$finalize(reason, cls)
   private$set_state('stopped')
   self$workers <- list()
   self$jobs    <- list()
+  
   return (invisible(self))
 }
 
@@ -501,8 +520,9 @@ q__poll_startup <- function (self, private) {
     for (i in integer(n)) {
       
       worker <- Worker$new(
-        'hooks'   = private$w_conf[['hooks']],
-        'globals' = private$w_conf[['config']] )
+        hooks   = private$w_conf[['hooks']],
+        globals = private$w_conf[['config']],
+        wait    = FALSE )
       
       self$workers %<>% c(worker)
     }

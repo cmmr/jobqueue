@@ -116,22 +116,27 @@ Job <- R6Class(
     #' Print method for a Job.
     #' @param ... Arguments are not used currently.
     #' @return This Job, invisibly.
-    print = function (...) j_print(self),
+    print = function (...) 
+      j_print(self),
     
     #' @description
     #' Attach a callback function to execute when the Job enters `state`.
     #' @return A function that when called removes this callback from the Job.
-    on = function (state, func) u_on(self, private, 'JH', state, func),
+    on = function (state, func) 
+      u_on(self, private, 'JH', state, func),
     
     #' @description
     #' Blocks until the Job enters the given state.
+    #' @param timeout Stop the Job if it takes longer than this number of seconds, or `NULL`.
     #' @return This Job, invisibly.
-    wait = function (state = 'done') u_wait(self, private, state),
+    wait = function (state = 'done', timeout = NULL) 
+      u_wait(self, private, state, timeout),
     
     #' @description
     #' Stop this Job. If the Job is running, its Worker will be restarted.
     #' @return This Job, invisibly.
-    stop = function (reason = 'job stopped by user', cls = NULL) j_stop(self, private, reason, cls)
+    stop = function (reason = 'job stopped by user', cls = NULL) 
+      j_stop(self, private, reason, cls)
   ),
   
   private = list(

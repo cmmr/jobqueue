@@ -24,6 +24,11 @@
 #'        Names of worker hooks are typically `starting`, `idle`, `busy`, 
 #'        `stopped`, or `'*'` (duplicates okay). See `vignette('hooks')`.
 #'        
+#' @param wait  If `TRUE`, blocks until the Worker is 'idle'. If `FALSE`, the 
+#'        Worker object is returned in the 'starting' state. If a number, blocks 
+#'        at most that number of seconds before returning either an 'idle' or 
+#'        'stopped' Worker.
+#'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
 #' @param state
@@ -64,9 +69,10 @@ Worker <- R6Class(
         globals  = NULL, 
         packages = NULL, 
         init     = NULL,
-        hooks    = NULL ) {
+        hooks    = NULL,
+        wait     = TRUE ) {
       
-      w_initialize(self, private, globals, packages, init, hooks)
+      w_initialize(self, private, globals, packages, init, hooks, wait)
     },
     
     
@@ -74,12 +80,14 @@ Worker <- R6Class(
     #' Print method for a `Worker`.
     #' @param ... Arguments are not used currently.
     #' @return The Worker, invisibly.
-    print = function (...) w_print(self),
+    print = function (...) 
+      w_print(self),
     
     #' @description
     #' Restarts a stopped Worker.
     #' @return The Worker, invisibly.
-    start = function () w_start(self, private),
+    start = function () 
+      w_start(self, private),
     
     #' @description
     #' Stops a Worker by terminating the background process and calling 
@@ -98,24 +106,29 @@ Worker <- R6Class(
     #' @description
     #' Attach a callback function to execute when the Worker enters `state`.
     #' @return A function that when called removes this callback from the Worker.
-    on = function (state, func) u_on(self, private, 'WH', state, func),
+    on = function (state, func) 
+      u_on(self, private, 'WH', state, func),
     
     #' @description
     #' Blocks until the Worker enters the given state.
+    #' @param timeout Stop the Worker if it takes longer than this number of seconds, or `NULL`.
     #' @return This Worker, invisibly.
-    wait = function (state = 'idle') u_wait(self, private, state),
+    wait = function (state = 'idle', timeout = NULL) 
+      u_wait(self, private, state, timeout),
     
     #' @description
     #' Assigns a Job to this Worker for evaluation on the background 
     #' process. *Worker must be in the `'idle'` state.*
     #' @return This Worker, invisibly.
-    run = function (job) w_run(self, private, job)
+    run = function (job) 
+      w_run(self, private, job)
   ),
   
   private = list(
     
     .hooks     = NULL,
     .state     = 'stopped',
+    .is_done   = FALSE,
     .loaded    = NULL,
     .uid       = NULL,
     .job       = NULL,
@@ -176,7 +189,7 @@ Worker <- R6Class(
 )
 
 
-w_initialize <- function (self, private, globals, packages, init, hooks) {
+w_initialize <- function (self, private, globals, packages, init, hooks, wait) {
   
   init_subst <- substitute(init, env = parent.frame())
   
@@ -194,6 +207,12 @@ w_initialize <- function (self, private, globals, packages, init, hooks) {
   
   self$start()
   
+  if (is_true(wait))         self$wait()
+  else if (is.numeric(wait)) self$wait(timeout = wait)
+  
+  if (is_true(private$.is_done))
+    cli_abort('Unable to start Worker')
+  
   return (invisible(self))
 }
 
@@ -210,6 +229,7 @@ w_start <- function (self, private) {
   if (private$.state != 'stopped')
     cli_abort('Worker is already {private$.state}.')
   
+  private$.is_done <- FALSE
   private$set_state('starting')
   private$.reason <- NULL
   
@@ -233,17 +253,17 @@ w_start <- function (self, private) {
   
   if (!is_null(cnd) || !identical(zero, 0L)) {
     
-    self$stop(error_cnd(
+    self$stop(error_cnd( # nocov start
       parent  = cnd,
       message = c(
         "can't start Rscript subprocess",
-        read_logs(private$.tmp) )))
+        read_logs(private$.tmp) ))) # nocov end
     
   } else {
     
     # Stop the worker if it spends too long in 'starting' state.
     timeout <- getOption('jobqueue.worker_timeout', default = 5L)
-    timeout <- validate_positive_integer(timeout)
+    timeout <- validate_positive_number(timeout)
     if (!is.null(timeout)) {
       msg <- 'worker startup time exceeded {timeout} second{?s}'
       msg <- cli_fmt(cli_text(msg))
@@ -261,7 +281,8 @@ w_start <- function (self, private) {
 
 w_stop <- function (self, private, reason, cls) {
   
-  private$.reason <- reason
+  private$.reason  <- reason
+  private$.is_done <- TRUE
   
   if (!is_null(job <- private$.job)) {
     private$.job <- NULL

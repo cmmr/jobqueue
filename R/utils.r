@@ -1,21 +1,35 @@
 
 
-u_wait <- function (self, private, state) {
+u_wait <- function (self, private, state, timeout) {
   
-  state <- validate_string(state)
-  curr  <- private$.state
+  state   <- validate_string(state)
+  timeout <- validate_positive_number(timeout)
   
-  if (state != curr) {
-    prev <- curr
+  if (!is.null(timeout)) {
+    msg <- '{private$.uid} took longer than {.val {timeout}} second{?s} to enter {.val {state}} state'
+    msg <- cli_fmt(cli_text(msg))
+    clear_timeout <- later(~{ self$stop(msg, 'timeout') }, delay = timeout)
+  } else {
+    clear_timeout <- invisible
+  }
+  
+  if (state %in% c('*', '.next')) {
+    curr <- private$.state
     while (TRUE) {
-      curr <- private$.state
-      if (curr != prev)
-        if (state %in% c('*', '.next', curr))
-          break
+      run_now(timeoutSecs = 0.2)
+      if (private$.state != curr) break
+      if (private$.is_done)       break
+    }
+  }
+  else {
+    while (TRUE) {
+      if (private$.state == state) break
+      if (private$.is_done)        break
       run_now(timeoutSecs = 0.2)
     }
   }
   
+  clear_timeout()
   return (invisible(self))
 }
 
@@ -119,7 +133,7 @@ read_logs <- function (tmp) {
   
   for (stream in c('stdout', 'stderr')) {
     fp <- file.path(tmp, paste(stream, '.txt'))
-    if (isTRUE(file.exists(fp)) && isTRUE(file.size(fp) > 0))
+    if (is_true(file.exists(fp)) && is_true(file.size(fp) > 0))
       logs %<>% c(sprintf('%s>  %s', stream, readLines(fp)))
   }
   

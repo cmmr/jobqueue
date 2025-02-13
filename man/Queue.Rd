@@ -55,7 +55,8 @@ Creates a pool of background processes for handling \verb{$run()} and
   signal = FALSE,
   cpus = 1L,
   stop_id = NULL,
-  copy_id = NULL
+  copy_id = NULL,
+  wait = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -85,6 +86,11 @@ Workers that need to restart.}
 and \code{copy_id} must be either a \verb{function (job)} or \code{NULL}.
 \code{hooks} can set queue, worker, and/or job hooks - see the
 "Attaching" section in \code{vignette('hooks')}.}
+
+\item{\code{wait}}{If \code{TRUE}, blocks until the Queue is 'idle'. If \code{FALSE}, the
+Queue object is returned in the 'starting' state. If a number, blocks
+at most that number of seconds before returning either an 'idle' or
+'stopped' Queue.}
 }
 \if{html}{\out{</div>}}
 }
@@ -221,7 +227,7 @@ This Queue, invisibly.
 \subsection{Method \code{wait()}}{
 Blocks until the Queue enters the given state.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Queue$wait(state = "idle")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Queue$wait(state = "idle", timeout = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -237,6 +243,8 @@ Blocks until the Queue enters the given state.
 \item \code{'stopped'} -  Shutdown is complete.
 \item \code{'error'} -    Workers did not start cleanly.
 }}
+
+\item{\code{timeout}}{Stop the Queue if it takes longer than this number of seconds, or \code{NULL}.}
 }
 \if{html}{\out{</div>}}
 }

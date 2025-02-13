@@ -44,7 +44,13 @@ Where \link{Job} expressions are evaluated.
 \subsection{Method \code{new()}}{
 Creates a background R process for running \link{Job}s.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$new(globals = NULL, packages = NULL, init = NULL, hooks = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$new(
+  globals = NULL,
+  packages = NULL,
+  init = NULL,
+  hooks = NULL,
+  wait = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -65,6 +71,11 @@ Returned value is ignored.}
 changes, of the form \code{hooks = list(idle = function (worker) {...})}.
 Names of worker hooks are typically \code{starting}, \code{idle}, \code{busy},
 \code{stopped}, or \code{'*'} (duplicates okay). See \code{vignette('hooks')}.}
+
+\item{\code{wait}}{If \code{TRUE}, blocks until the Worker is 'idle'. If \code{FALSE}, the
+Worker object is returned in the 'starting' state. If a number, blocks
+at most that number of seconds before returning either an 'idle' or
+'stopped' Worker.}
 }
 \if{html}{\out{</div>}}
 }
@@ -189,7 +200,7 @@ A function that when called removes this callback from the Worker.
 \subsection{Method \code{wait()}}{
 Blocks until the Worker enters the given state.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$wait(state = "idle")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$wait(state = "idle", timeout = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -204,6 +215,8 @@ Blocks until the Worker enters the given state.
 \item \code{'busy'} -     While a Job is running.
 \item \code{'stopped'} -  After \verb{<Worker>$stop()} is called.
 }}
+
+\item{\code{timeout}}{Stop the Worker if it takes longer than this number of seconds, or \code{NULL}.}
 }
 \if{html}{\out{</div>}}
 }

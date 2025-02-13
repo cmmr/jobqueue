@@ -191,7 +191,7 @@ A function that when called removes this callback from the Job.
 \subsection{Method \code{wait()}}{
 Blocks until the Job enters the given state.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Job$wait(state = "done")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Job$wait(state = "done", timeout = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -211,6 +211,8 @@ Blocks until the Job enters the given state.
 }
 
 Custom states can also be specified.}
+
+\item{\code{timeout}}{Stop the Job if it takes longer than this number of seconds, or \code{NULL}.}
 }
 \if{html}{\out{</div>}}
 }
