@@ -47,7 +47,7 @@ test_that('job', {
   expect_true(      is.list(job$timeout)          )
   expect_true(      startsWith(job$uid, 'J')      )
 
-  job1 <- expect_silent( q$run({ Sys.sleep(60) }, hooks = list('submitted' = class)) )
+  job1 <- expect_silent( q$run({ Sys.sleep(120) }, hooks = list('submitted' = class)) )
   job2 <- expect_silent( Job$new({4}) )
 
   expect_silent(    job2$proxy  <- job1        )

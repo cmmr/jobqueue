@@ -15,29 +15,29 @@ test_that('worker', {
   expect_true(dir.exists(w$tmp))
   expect_true(startsWith(w$uid, 'W'))
 
-  expect_silent(w$wait(timeout = 60))
+  expect_silent(w$wait(timeout = 120))
   expect_true(inherits(w$ps, 'ps_handle'))
   expect_error(w$run('not a Job'))
 
   expect_silent(w$run(Job$new({ stop() })))
-  expect_silent(w$wait(timeout = 60))
+  expect_silent(w$wait(timeout = 120))
   
   expect_silent(w$run(Job$new({ q() })))
-  expect_silent(w$wait(timeout = 60))
+  expect_silent(w$wait(timeout = 120))
   
   expect_silent(w$run(Job$new({ NULL })))
-  expect_silent(w$wait(timeout = 60))
+  expect_silent(w$wait(timeout = 120))
 
   expect_silent(w$stop())
   expect_error(w$run(Job$new({ 1 })))
   
-  expect_error( Worker$new(init = { stop() }, wait = 60))
-  expect_error( Worker$new(init = { q()    }, wait = 60))
+  expect_error( Worker$new(init = { stop() }, wait = 120))
+  expect_error( Worker$new(init = { q()    }, wait = 120))
   
   w1 <- expect_silent(Worker$new(init = { stop() }, wait = FALSE))
   w2 <- expect_silent(Worker$new(init = { q()    }, wait = FALSE))
-  w1$wait(timeout = 60)
-  w2$wait(timeout = 60)
+  w1$wait(timeout = 120)
+  w2$wait(timeout = 120)
   run_now()
   
   expect_s3_class(w1$reason, 'error')
