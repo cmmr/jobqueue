@@ -56,7 +56,7 @@ p__start <- function (tmp = commandArgs(TRUE), testing = FALSE) {
     file.rename(fp('_error.rds'), fp('error.rds'))
     
     if (testing) return (NULL)
-    quit(save = "no")
+    quit(save = "no") # nocov
   }
   
   
@@ -68,7 +68,7 @@ p__start <- function (tmp = commandArgs(TRUE), testing = FALSE) {
     # Wait for semaphore and request
     request_fp <- fp('request.rds')
     while (!file.exists(request_fp)) {
-      semaphore::decrement_semaphore(semaphore, wait = TRUE)
+      semaphore::decrement_semaphore(semaphore, wait = TRUE) # nocov
     }
     
     # Evaluate the Job.

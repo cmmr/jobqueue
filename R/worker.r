@@ -28,6 +28,7 @@
 #'        Worker object is returned in the 'starting' state.
 #'        
 #' @param timeout  How long to wait for the worker to finish starting (in seconds).
+#'        If `NA`, defaults to the `Worker$new()` argument.
 #'        
 #' @param job  A [Job] object, as created by `Job$new()`.
 #'        
@@ -87,8 +88,8 @@ Worker <- R6Class(
     #' @description
     #' Restarts a stopped Worker.
     #' @return The Worker, invisibly.
-    start = function () 
-      w_start(self, private),
+    start = function (wait = TRUE, timeout = NA) 
+      w_start(self, private, wait, timeout),
     
     #' @description
     #' Stops a Worker by terminating the background process and calling 
@@ -101,8 +102,8 @@ Worker <- R6Class(
     #' Restarts a Worker by calling `<Worker>$stop(reason)` and 
     #' `<Worker>$start()` in succession.
     #' @return The Worker, invisibly.
-    restart = function (reason = 'restarting worker', cls = NULL) 
-      w_restart(self, private, reason, cls),
+    restart = function (wait = TRUE, timeout = NA, reason = 'restarting worker', cls = NULL) 
+      w_restart(self, private, wait, timeout, reason, cls),
     
     #' @description
     #' Attach a callback function to execute when the Worker enters `state`.
@@ -112,15 +113,15 @@ Worker <- R6Class(
     
     #' @description
     #' Blocks until the Worker enters the given state.
-    #' @param timeout Stop the Worker if it takes longer than this number of seconds, or `NULL`.
+    #' @param timeout Stop the Worker if it takes longer than this number of seconds.
     #' @param signal Raise an error if encountered (will also be recorded in <Worker>$cnd).
     #' @return This Worker, invisibly.
-    wait = function (state = 'idle', timeout = NULL, signal = TRUE) 
+    wait = function (state = 'idle', timeout = Inf, signal = TRUE) 
       u_wait(self, private, state, timeout, signal),
     
     #' @description
     #' Assigns a Job to this Worker for evaluation on the background 
-    #' process. *Worker must be in the `'idle'` state.*
+    #' process.
     #' @return This Worker, invisibly.
     run = function (job) 
       w_run(self, private, job)
@@ -199,7 +200,7 @@ w_initialize <- function (self, private, globals, packages, init, hooks, wait, t
   
   private$.uid       <- increment_uid('W')
   private$.hooks     <- validate_hooks(hooks, 'WH')
-  private$timeout    <- validate_positive_number(timeout, if_null = Inf)
+  private$timeout    <- validate_positive_number(timeout, if_null = Inf, if_na = Inf)
   private$caller_env <- caller_env(2L)
   
   private$config <- attr(globals, '.jqw_config') # worker for a queue
@@ -210,9 +211,7 @@ w_initialize <- function (self, private, globals, packages, init, hooks, wait, t
       packages = validate_character_vector(packages),
       init     = validate_expression(init, init_subst) )
   
-  self$start()
-  
-  if (is_true(wait)) self$wait()
+  self$start(wait = wait)
   
   return (invisible(self))
 }
@@ -225,10 +224,13 @@ w_print <- function (self) {
 
 
 # Create a new R background process.
-w_start <- function (self, private) {
+w_start <- function (self, private, wait, timeout) {
   
   if (private$.state != 'stopped')
     cli_abort('Worker is not stopped')
+  
+  wait    <- validate_logical(wait)
+  timeout <- validate_positive_number(timeout, if_na = private$timeout)
   
   private$.cnd     <- NULL
   private$.is_done <- FALSE
@@ -263,7 +265,6 @@ w_start <- function (self, private) {
   } else {
     
     # Stop the worker if it spends too long in 'starting' state.
-    timeout <- private$timeout
     if (timeout < Inf) {
       msg <- 'worker startup time exceeded {timeout} second{?s}'
       msg <- cli_fmt(cli_text(msg))
@@ -275,14 +276,16 @@ w_start <- function (self, private) {
   }
   
   
+  if (is_true(wait)) self$wait(timeout = Inf)
+  
   return (invisible(self))
 }
 
 
 w_stop <- function (self, private, reason, cls) {
   
-  private$.is_done <- TRUE
   private$.cnd     <- as_cnd(reason, c(cls, 'interrupt'))
+  private$.is_done <- TRUE
   
   if (!is_null(job <- private$.job)) {
     private$.job <- NULL
@@ -301,9 +304,16 @@ w_stop <- function (self, private, reason, cls) {
 }
 
 
-w_restart <- function (self, private, reason, cls) {
+w_restart <- function (self, private, wait, timeout, reason, cls) {
+  
+  wait    <- validate_logical(wait)
+  timeout <- validate_positive_number(timeout, if_na = private$timeout)
+  reason  <- validate_string(reason, cnd_ok = TRUE)
+  cls     <- validate_character_vector(cls)
+  
   self$stop(reason = reason, cls = cls)
-  self$start()
+  self$start(wait = wait, timeout = timeout)
+  
   return (invisible(self))
 }
 
@@ -362,7 +372,7 @@ w__poll_job <- function (self, private) {
     
     private$.job <- NULL
     job$output   <- output
-    self$restart()
+    self$restart(wait = FALSE)
   }
   
   # Finished?
@@ -400,7 +410,7 @@ w__poll_startup <- function (self, private) {
     fp <- private$fp('error.rds')
     if (!inherits(ps, 'ps_handle') || !ps_is_running(ps) || file.exists(fp)) {
       
-      logs <- read_logs(private$.tmp)
+      logs <- read_logs(private$.tmp)  # nocov start
       cnd  <- if (file.exists(fp)) readRDS(fp)
       
       if (!is.null(cnd) && !is.null(logs)) { parent <- cnd;  message <- logs }
@@ -408,7 +418,7 @@ w__poll_startup <- function (self, private) {
       else if (!is.null(logs))             { parent <- NULL; message <- logs }
       else                                 { parent <- NULL; message <- 'worker startup failed' }
       
-      self$stop(error_cnd(call = private$caller_env, parent = parent, message = message))
+      self$stop(error_cnd(call = private$caller_env, parent = parent, message = message))  # nocov end
     }
     
     # Ready?
@@ -430,7 +440,7 @@ w__poll_startup <- function (self, private) {
 # If a running job is interrupted, restart its worker.
 w__job_done <- function (self, private, job) {
   if (identical(job$uid, private$.job$uid))
-    self$restart()
+    self$restart(wait = FALSE)
 }
 
 

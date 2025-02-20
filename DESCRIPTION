@@ -1,8 +1,8 @@
 Package: jobqueue
 Type: Package
 Title: Run Interruptible Code Asynchronously
-Version: 1.4.0.9000
-Date: 2025-02-19
+Version: 1.4.0.9001
+Date: 2025-02-20
 Authors@R: c(
     person(
       "Daniel P.", "Smith",

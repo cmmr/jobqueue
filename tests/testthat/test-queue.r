@@ -33,6 +33,9 @@ test_that('basic', {
 
   expect_error(q$submit('not a Job'))
   
+  q$workers[[1]]$restart(wait = FALSE)
+  expect_no_error(suppressMessages(q$print()))
+  
   expect_silent(q$stop())
   
   run_now()
@@ -76,10 +79,29 @@ test_that('config', {
 
   q$on('stopped', function () { e$state = 'stopped' })
   q$on('stopped', class)() # A primitive; for code coverage.
-
+  
   job <- q$run({ c(x, y) %>% sum })
-
   expect_equal(job$result, 42 + 37)
+  
+  
+  job <- expect_silent(q$submit(Job$new(
+    expr  = { 1 + 1 }, 
+    hooks = list(
+      created   = ~{ .$caller_env <- NULL },
+      submitted = ~{ .$stop_id <- ~{NULL} },
+      submitted = ~{ .$copy_id <- ~{NULL} }
+    ))))
+  expect_equal(job$result, 1 + 1)
+  
+  
+  job <- expect_silent(q$submit(Job$new(
+    expr  = { 1 + 1 }, 
+    hooks = list(
+      submitted = ~{ .$state <- 'held' }
+    ))))
+  expect_equal(job$state, 'held')
+  
+  
   run_now()
   expect_equal(e$state, 'idle')
   expect_equal(e$.next, 'starting')

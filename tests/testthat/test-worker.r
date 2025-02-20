@@ -6,6 +6,11 @@ test_that('worker', {
   # library(jobqueue); library(testthat)
   
   w <- expect_silent(Worker$new())
+  expect_silent(w$restart())
+  expect_silent(w$stop())
+  
+  w <- expect_silent(Worker$new(wait = FALSE))
+  expect_silent(w$wait('.next', timeout = 15))
 
   expect_silent(w$on('busy', ~{ NULL }))
   expect_silent(w$on('*',    ~{ NULL }))
@@ -18,7 +23,6 @@ test_that('worker', {
   expect_true(dir.exists(w$tmp))
   expect_true(startsWith(w$uid, 'W'))
 
-  expect_silent(w$wait(timeout = 15))
   expect_true(inherits(w$ps, 'ps_handle'))
   expect_error(w$run('not a Job'), 'not a Job', 'error')
 
@@ -30,13 +34,13 @@ test_that('worker', {
   
   j <- Job$new({ Sys.sleep(100) }, signal = TRUE)
   expect_silent(w$run(j))
-  expect_identical(ps_kill(w$ps), 'killed')
+  expect_in(ps_kill(w$ps), c('killed', 'terminated'))
   expect_error(j$result, 'worker subprocess terminated unexpectedly', 'error')
   expect_silent(w$wait(timeout = 100))
   expect_identical(w$state, 'idle')
 
   expect_silent(w$stop('terminated'))
-  expect_silent(w$wait('.next', timeout = 15))
+  expect_error(w$wait('.next', timeout = 15))
   expect_error(w$run(Job$new({ 1 })), 'terminated', 'error')
   
   

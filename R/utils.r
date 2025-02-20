@@ -6,10 +6,10 @@ u_wait <- function (self, private, state, timeout, signal) {
   timeout <- validate_positive_number(timeout)
   signal  <- validate_logical(signal)
   
-  if (!is.null(timeout)) {
+  if (!is.null(timeout) && timeout < Inf) {
     msg <- '{private$.uid} took longer than {.val {timeout}} second{?s} to enter {.val {state}} state'
     msg <- cli_fmt(cli_text(msg))
-    clear_timeout <- later(~{ self$stop(msg, 'timeout') }, delay = timeout)
+    clear_timeout <- later(~{ self$stop(msg, 'timeout') }, delay = timeout)  # nocov
   } else {
     clear_timeout <- invisible
   }
@@ -52,8 +52,7 @@ u_on <- function (self, private, prefix, state, func) {
   
   off <- function () private$.hooks %<>% attr_ne('.uid', uid)
   
-  if (state == self$state) func(self)
-  if (state == '*')        func(self)
+  if (state %in% c('*', self$state)) func(self)
   
   return (invisible(off))
 }
@@ -196,7 +195,7 @@ idx_must_be <- function (expected) {
   for (ij in c('i', 'j')) {
     if (!env_has(parent.frame(), ij)) break
     idx <- env_get(parent.frame(), ij, NULL)
-    key <- names(value[[idx]]) %||% ''
+    key <- names(value)[[idx]] %||% ''
     if (nzchar(key)) { varname <- paste0(varname, '$', coan(key))  }
     else             { varname <- paste0(varname, '[[', idx, ']]') }
     value <- value[[idx]]

@@ -222,26 +222,25 @@ Queue <- R6Class(
       return (invisible(NULL))
     },
     
-    .uid         = NULL,
-    .tmp         = NULL,
-    .hooks       = list(),
-    .jobs        = list(),
-    .workers     = list(),
-    .state       = 'initializing',
-    .cnd         = NULL,
-    .is_done     = FALSE,
+    .uid       = NULL,
+    .tmp       = NULL,
+    .hooks     = list(),
+    .jobs      = list(),
+    .workers   = list(),
+    .state     = 'initializing',
+    .cnd       = NULL,
+    .is_done   = FALSE,
     
-    n_workers    = NULL,
-    up_since     = NULL,
-    total_runs   = 0L,
-    is_ready     = FALSE,
-    j_conf       = list(),
-    w_conf       = list(),
-    max_cpus     = NULL,
+    n_workers  = NULL,
+    up_since   = NULL,
+    total_runs = 0L,
+    is_ready   = FALSE,
+    j_conf     = list(),
+    w_conf     = list(),
+    max_cpus   = NULL,
     
-    set_state    = function (state) u__set_state(self, private, state),
-    poll_startup = function ()      q__poll_startup(self, private),
-    dispatch     = function (...)   q__dispatch(self, private)
+    set_state  = function (state) u__set_state(self, private, state),
+    dispatch   = function (...)   q__dispatch(self, private)
   ),
   
   active = list(

@@ -36,10 +36,15 @@ test_that('process', {
 
 
   # Error during evaluation
-  config <- list(globals = list(x = 'r'))
+  config  <- list(globals = list(x = 'r', f = function () NULL))
   request <- list(expr = quote(stop(x, y)), vars = list(y = 5), cpus = 1L)
   save_rds(tmp, 'config', 'request')
-
+  
+  config_fp <- file.path(tmp, 'config.rds')
+  alt_fp    <- file.path(tmp, 'alt.rds')
+  file.rename(config_fp, alt_fp)
+  saveRDS(object = alt_fp, file = config_fp)
+  
   res <- expect_silent(p__start(tmp = tmp, testing = TRUE))
   expect_null(res)
   output <- expect_silent(readRDS(fp('output.rds')))

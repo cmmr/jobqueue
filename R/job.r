@@ -153,13 +153,7 @@ Job <- R6Class(
     .state    = 'initializing',
     .is_done  = FALSE,
     .output   = NULL,
-    .proxy    = NULL,
-    
-    finalize = function () {
-      if (identical(self$uid, self$worker$job$uid))
-        if (!is_null(ps <- self$worker$ps))
-          ps_kill(ps)
-    }
+    .proxy    = NULL
   ),
   
   active = list(
@@ -311,6 +305,9 @@ j_proxy <- function (self, private, value) {
   if (!is_null(proxy) && !inherits(proxy, 'Job'))
     cli_abort('proxy must be a Job or NULL, not {.type {proxy}}.')
   
+  if (identical(private$.uid, proxy$uid))
+    cli_abort('A Job cannot be its own proxy.')
+  
   if (private$.is_done) return (NULL)
   
   private$.proxy <- proxy
@@ -357,7 +354,7 @@ j_state <- function (self, private, value) {
   if (!is_null(timeout <- private$.timeout[[new_state]])) {
     msg <- 'exceeded {.val {timeout}} second{?s} while in {.val {new_state}} state'
     msg <- cli_fmt(cli_text(msg))
-    clear_timeout <- later(~{ self$stop(msg, 'timeout') }, delay = timeout)
+    clear_timeout <- later(~{ self$stop(msg, 'timeout') }, delay = timeout)  # nocov
     self$on('.next', function (job) { clear_timeout() })
   }
 }

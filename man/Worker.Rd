@@ -76,7 +76,8 @@ Names of worker hooks are typically \code{starting}, \code{idle}, \code{busy},
 \item{\code{wait}}{If \code{TRUE}, blocks until the Worker is 'idle'. If \code{FALSE}, the
 Worker object is returned in the 'starting' state.}
 
-\item{\code{timeout}}{How long to wait for the worker to finish starting (in seconds).}
+\item{\code{timeout}}{How long to wait for the worker to finish starting (in seconds).
+If \code{NA}, defaults to the \code{Worker$new()} argument.}
 }
 \if{html}{\out{</div>}}
 }
@@ -110,9 +111,20 @@ The Worker, invisibly.
 \subsection{Method \code{start()}}{
 Restarts a stopped Worker.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$start()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$start(wait = TRUE, timeout = NA)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{wait}}{If \code{TRUE}, blocks until the Worker is 'idle'. If \code{FALSE}, the
+Worker object is returned in the 'starting' state.}
+
+\item{\code{timeout}}{How long to wait for the worker to finish starting (in seconds).
+If \code{NA}, defaults to the \code{Worker$new()} argument.}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 The Worker, invisibly.
 }
@@ -149,12 +161,23 @@ The Worker, invisibly.
 Restarts a Worker by calling \verb{<Worker>$stop(reason)} and
 \verb{<Worker>$start()} in succession.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$restart(reason = "restarting worker", cls = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$restart(
+  wait = TRUE,
+  timeout = NA,
+  reason = "restarting worker",
+  cls = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{wait}}{If \code{TRUE}, blocks until the Worker is 'idle'. If \code{FALSE}, the
+Worker object is returned in the 'starting' state.}
+
+\item{\code{timeout}}{How long to wait for the worker to finish starting (in seconds).
+If \code{NA}, defaults to the \code{Worker$new()} argument.}
+
 \item{\code{reason}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
 this Worker.}
 
@@ -204,7 +227,7 @@ A function that when called removes this callback from the Worker.
 \subsection{Method \code{wait()}}{
 Blocks until the Worker enters the given state.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$wait(state = "idle", timeout = NULL, signal = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$wait(state = "idle", timeout = Inf, signal = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -220,7 +243,7 @@ Blocks until the Worker enters the given state.
 \item \code{'stopped'} -  After \verb{<Worker>$stop()} is called.
 }}
 
-\item{\code{timeout}}{Stop the Worker if it takes longer than this number of seconds, or \code{NULL}.}
+\item{\code{timeout}}{Stop the Worker if it takes longer than this number of seconds.}
 
 \item{\code{signal}}{Raise an error if encountered (will also be recorded in \if{html}{\out{<Worker>}}$cnd).}
 }
@@ -235,7 +258,7 @@ This Worker, invisibly.
 \if{latex}{\out{\hypertarget{method-Worker-run}{}}}
 \subsection{Method \code{run()}}{
 Assigns a Job to this Worker for evaluation on the background
-process. \emph{Worker must be in the \code{'idle'} state.}
+process.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Worker$run(job)}\if{html}{\out{</div>}}
 }

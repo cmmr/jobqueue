@@ -107,20 +107,22 @@ validate_timeout <- function (timeout, job = NULL, func_ok = FALSE) {
 
 validate_positive_number <- function (
     value, job = NULL, 
-    if_null = NULL, null_ok = TRUE, if_true = TRUE, func_ok = FALSE ) {
+    if_null = NULL, null_ok = TRUE, if_na = NA, func_ok = FALSE ) {
   
   varname <- substitute(value)
   value   <- run_job_function(value, job)
   
+  if (is_na(value)) value <- if_na
+  
   if (is_null(value)     && is_true(null_ok)) return (if_null)
   if (is_function(value) && is_true(func_ok)) return (value)
-  if (is_true(value))                         value <- if_true
   
   errmsg   <- must_be('a single positive number')
   on_error <- function (e) cli_abort(c(errmsg, 'x' = as.character(e) ))
   
   tryCatch(
     expr = {
+      if (is.logical(value)) stop()
       value <- as.numeric(value)
       stopifnot(length(value) == 1)
       stopifnot(is_true(value > 0))
@@ -176,9 +178,11 @@ validate_string <- function (value, job = NULL, cnd_ok = FALSE) {
   varname <- substitute(value)
   value   <- run_job_function(value, job)
   
-  if (is_condition(value) && is_true(cnd_ok)) value <- value$message
+  if (is_condition(value) && is_true(cnd_ok)) return (value)
+  
   if (!is_scalar_character(value) || is_na(value) || !nzchar(value))
     cli_abort(must_be(ifelse(cnd_ok, 'a string or condition', 'a string')))
+  
   return (value)
 }
 
