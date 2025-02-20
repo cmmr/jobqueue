@@ -20,6 +20,8 @@ Jobs go in. Results come out.
 \item{\code{tmp}}{The Queue's temporary directory.}
 
 \item{\code{workers}}{Get or set - List of \link[=Worker]{Workers} used for processing Jobs.}
+
+\item{\code{cnd}}{The error that caused the Queue to stop.}
 }
 \if{html}{\out{</div>}}
 }
@@ -55,8 +57,7 @@ Creates a pool of background processes for handling \verb{$run()} and
   signal = FALSE,
   cpus = 1L,
   stop_id = NULL,
-  copy_id = NULL,
-  wait = TRUE
+  copy_id = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -86,11 +87,6 @@ Workers that need to restart.}
 and \code{copy_id} must be either a \verb{function (job)} or \code{NULL}.
 \code{hooks} can set queue, worker, and/or job hooks - see the
 "Attaching" section in \code{vignette('hooks')}.}
-
-\item{\code{wait}}{If \code{TRUE}, blocks until the Queue is 'idle'. If \code{FALSE}, the
-Queue object is returned in the 'starting' state. If a number, blocks
-at most that number of seconds before returning either an 'idle' or
-'stopped' Queue.}
 }
 \if{html}{\out{</div>}}
 }
@@ -151,9 +147,10 @@ Or a \verb{function (job)} that returns such an object.}
 
 \item{\code{timeout}}{A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
-apply a single timeout from 'submitted' to 'done'. Or a
-\verb{function (job)} that returns the same. Example:
-\code{timeout = c(total = 2.5, running = 1)}. See \code{vignette('stops')}.}
+apply a single timeout from 'submitted' to 'done'. Can also limit the
+'starting' state for Workers. A \verb{function (job)} can be used in place
+of a number. Example: \code{timeout = c(total = 2.5, running = 1)}.
+See \code{vignette('stops')}.}
 
 \item{\code{hooks}}{A named list of functions to run when the Job state changes,
 of the form \code{hooks = list(created = function (worker) {...})}. Or a
@@ -227,7 +224,7 @@ This Queue, invisibly.
 \subsection{Method \code{wait()}}{
 Blocks until the Queue enters the given state.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Queue$wait(state = "idle", timeout = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Queue$wait(state = "idle", timeout = NULL, signal = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -241,10 +238,11 @@ Blocks until the Queue enters the given state.
 \item \code{'idle'} -     All workers are ready/idle.
 \item \code{'busy'} -     At least one worker is busy.
 \item \code{'stopped'} -  Shutdown is complete.
-\item \code{'error'} -    Workers did not start cleanly.
 }}
 
 \item{\code{timeout}}{Stop the Queue if it takes longer than this number of seconds, or \code{NULL}.}
+
+\item{\code{signal}}{Raise an error if encountered (will also be recorded in \if{html}{\out{<Queue>}}$cnd).}
 }
 \if{html}{\out{</div>}}
 }
@@ -272,7 +270,6 @@ Attach a callback function to execute when the Queue enters \code{state}.
 \item \code{'idle'} -     All workers are ready/idle.
 \item \code{'busy'} -     At least one worker is busy.
 \item \code{'stopped'} -  Shutdown is complete.
-\item \code{'error'} -    Workers did not start cleanly.
 }}
 
 \item{\code{func}}{A function that accepts a Queue object as input. Return value

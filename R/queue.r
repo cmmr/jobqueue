@@ -31,9 +31,10 @@
 #' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
 #'        seconds allowed for each state the job passes through, or 'total' to
-#'        apply a single timeout from 'submitted' to 'done'. Or a 
-#'        `function (job)` that returns the same. Example:
-#'        `timeout = c(total = 2.5, running = 1)`. See `vignette('stops')`.
+#'        apply a single timeout from 'submitted' to 'done'. Can also limit the 
+#'        'starting' state for Workers. A `function (job)` can be used in place 
+#'        of a number. Example: `timeout = c(total = 2.5, running = 1)`. 
+#'        See `vignette('stops')`.
 #'        
 #' @param hooks  A named list of functions to run when the Job state changes, 
 #'        of the form `hooks = list(created = function (worker) {...})`. Or a 
@@ -83,11 +84,6 @@
 #'        Job. A `copy_id` of `NULL` disables this feature. 
 #'        See `vignette('stops')`.
 #'        
-#' @param wait  If `TRUE`, blocks until the Queue is 'idle'. If `FALSE`, the 
-#'        Queue object is returned in the 'starting' state. If a number, blocks 
-#'        at most that number of seconds before returning either an 'idle' or 
-#'        'stopped' Queue.
-#'        
 #' @param reason  Passed to `<Job>$stop()` for any Jobs currently managed by 
 #'         this Queue.
 #'        
@@ -103,7 +99,6 @@
 #' * `'idle'` -     All workers are ready/idle.
 #' * `'busy'` -     At least one worker is busy.
 #' * `'stopped'` -  Shutdown is complete.
-#' * `'error'` -    Workers did not start cleanly.
 #'        
 #' @param func  A function that accepts a Queue object as input. Return value 
 #'        is ignored.
@@ -145,14 +140,13 @@ Queue <- R6Class(
         signal    = FALSE,
         cpus      = 1L,
         stop_id   = NULL,
-        copy_id   = NULL,
-        wait      = TRUE ) {
+        copy_id   = NULL ) {
        
       q_initialize(
         self, private, 
         globals, packages, init, max_cpus, workers, 
         timeout, hooks, reformat, signal, cpus, 
-        stop_id, copy_id, wait )
+        stop_id, copy_id )
     },
     
     
@@ -196,9 +190,10 @@ Queue <- R6Class(
     #' @description
     #' Blocks until the Queue enters the given state.
     #' @param timeout Stop the Queue if it takes longer than this number of seconds, or `NULL`.
+    #' @param signal Raise an error if encountered (will also be recorded in <Queue>$cnd).
     #' @return This Queue, invisibly.
-    wait = function (state = 'idle', timeout = NULL) 
-      u_wait(self, private, state, timeout),
+    wait = function (state = 'idle', timeout = NULL, signal = TRUE) 
+      u_wait(self, private, state, timeout, signal),
     
     #' @description
     #' Attach a callback function to execute when the Queue enters `state`.
@@ -233,6 +228,7 @@ Queue <- R6Class(
     .jobs        = list(),
     .workers     = list(),
     .state       = 'initializing',
+    .cnd         = NULL,
     .is_done     = FALSE,
     
     n_workers    = NULL,
@@ -272,7 +268,11 @@ Queue <- R6Class(
     
     #' @field workers
     #' Get or set - List of [Workers][Worker] used for processing Jobs.
-    workers = function (value) q_workers(private, value)
+    workers = function (value) q_workers(private, value),
+    
+    #' @field cnd
+    #' The error that caused the Queue to stop.
+    cnd = function () private$.cnd
   )
 )
 
@@ -281,10 +281,12 @@ q_initialize <- function (
     self, private, 
     globals, packages, init, max_cpus, workers, 
     timeout, hooks, reformat, signal, cpus, 
-    stop_id, copy_id, wait ) {
+    stop_id, copy_id ) {
   
   init_subst       <- substitute(init, env = parent.frame())
   private$up_since <- Sys.time()
+  
+  timeout <- validate_timeout(timeout, func_ok = TRUE)
   
   # Assign hooks by q_ and w_ prefixes
   hooks <- validate_list(hooks)
@@ -304,16 +306,17 @@ q_initialize <- function (
   dir.create(private$.tmp)
   
   # Worker configuration
-  config_rds_file            <- file.path(private$.tmp, 'config.rds')
-  private$w_conf[['config']] <- structure(NA, .jqw_config = config_rds_file)
-  private$w_conf[['hooks']]  <- validate_hooks(hooks[['worker']], 'WH')
+  config_rds_file             <- file.path(private$.tmp, 'config.rds')
+  private$w_conf[['config']]  <- structure(NA, .jqw_config = config_rds_file)
+  private$w_conf[['hooks']]   <- validate_hooks(hooks[['worker']], 'WH')
+  private$w_conf[['timeout']] <- timeout[['starting']]
   saveRDS(file = config_rds_file, list(
     'globals'  = validate_list(globals, if_null = NULL),
     'packages' = validate_character_vector(packages),
     'init'     = validate_expression(init, init_subst) ))
   
   # Job configuration defaults
-  private$j_conf[['timeout']]  <- validate_timeout(timeout, func_ok = TRUE)
+  private$j_conf[['timeout']]  <- timeout[setdiff(names(timeout), 'starting')]
   private$j_conf[['hooks']]    <- validate_hooks(hooks[['job']], 'JH', func_ok = TRUE)
   private$j_conf[['signal']]   <- validate_character_vector(signal, func_ok = TRUE, bool_ok = TRUE)
   private$j_conf[['cpus']]     <- validate_positive_integer(cpus, func_ok = TRUE, if_null = 1L)
@@ -322,13 +325,54 @@ q_initialize <- function (
   private$j_conf[['copy_id']]  <- validate_function(copy_id)
   
   private$set_state('starting')
-  later(private$poll_startup)
   
-  if (is_true(wait))         self$wait()
-  else if (is.numeric(wait)) self$wait(timeout = wait)
   
-  if (is_true(private$.is_done))
-    cli_abort('Unable to start Queue')
+  
+  # Creates `n_workers`, at most `max_cpus` starting at a time.
+  
+  repeat {
+    
+    workers <- self$workers
+    states  <- map(workers, 'state')
+    
+    if (length(i <- which(states == 'stopped'))) {
+      
+      i   <- i[[1]]
+      cnd <- workers[[i]]$cnd
+      self$stop(cnd)
+      cnd_signal(cnd)
+      stop(cnd$message)
+    }
+    
+    else if (sum(states == 'idle') == private$n_workers) {
+      
+      private$is_ready <- TRUE
+      private$set_state('idle')
+      break
+    }
+    
+    else {  # Start more workers
+      
+      n <- min(
+        private$n_workers - length(states), 
+        private$max_cpus - sum(states != 'idle') )
+      
+      for (i in integer(n)) {
+        
+        worker <- Worker$new(
+          hooks   = private$w_conf[['hooks']],
+          globals = private$w_conf[['config']],
+          wait    = FALSE,
+          timeout = private$w_conf[['timeout']] )
+        
+        self$workers %<>% c(worker)
+      }
+      
+    }
+    
+    later::run_now(timeoutSecs = 0.2)
+  }
+  
   
   return (invisible(self))
 }
@@ -452,8 +496,9 @@ q_stop <- function (self, private, reason, cls) {
   
   private$is_ready <- FALSE
   private$.is_done <- TRUE
+  private$.cnd     <- as_cnd(reason, c(cls, 'interrupt'))
   
-  private$finalize(reason, cls)
+  private$finalize(reason = private$.cnd)
   private$set_state('stopped')
   self$workers <- list()
   self$jobs    <- list()
@@ -492,45 +537,6 @@ q__dispatch <- function (self, private) {
   return (invisible(NULL))
 }
 
-
-# Creates `n_workers`, at most `max_cpus` starting at a time.
-q__poll_startup <- function (self, private) {
-  
-  states <- map(self$workers, 'state')
-  
-  if (any(states == 'stopped')) {
-    
-    self$stop('worker process did not start cleanly')
-    private$set_state('error')
-  }
-  
-  else if (sum(states == 'idle') == private$n_workers) {
-    
-    private$is_ready <- TRUE
-    private$set_state('idle')
-    private$dispatch()
-  }
-  
-  else {  # Start more workers
-    
-    n <- min(
-      private$n_workers - length(states), 
-      private$max_cpus - sum(states != 'idle') )
-    
-    for (i in integer(n)) {
-      
-      worker <- Worker$new(
-        hooks   = private$w_conf[['hooks']],
-        globals = private$w_conf[['config']],
-        wait    = FALSE )
-      
-      self$workers %<>% c(worker)
-    }
-    
-    later(private$poll_startup, delay = 0.2)
-  }
-  
-}
 
 
 # Active bindings to validate new values.

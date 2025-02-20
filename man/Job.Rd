@@ -233,7 +233,7 @@ Stop this Job. If the Job is running, its Worker will be restarted.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{reason}}{A message to include in the 'interrupt' condition object that
-will be returned as the Job's result.}
+will be returned as the Job's result. Or a condition object.}
 
 \item{\code{cls}}{Character vector of additional classes to prepend to
 \code{c('interrupt', 'condition')}.}

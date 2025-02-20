@@ -15,13 +15,13 @@ Where \link{Job} expressions are evaluated.
 
 \item{\code{ps}}{The \code{ps::ps_handle()} object for the background process.}
 
-\item{\code{reason}}{Why the Worker was stopped.}
-
 \item{\code{state}}{The Worker's state: \code{'starting'}, \code{'idle'}, \code{'busy'}, or \code{'stopped'}.}
 
 \item{\code{uid}}{A short string, e.g. \code{'W11'}, that uniquely identifies this Worker.}
 
 \item{\code{tmp}}{The Worker's temporary directory.}
+
+\item{\code{cnd}}{The error that caused the Worker to stop.}
 }
 \if{html}{\out{</div>}}
 }
@@ -49,7 +49,8 @@ Creates a background R process for running \link{Job}s.
   packages = NULL,
   init = NULL,
   hooks = NULL,
-  wait = TRUE
+  wait = TRUE,
+  timeout = Inf
 )}\if{html}{\out{</div>}}
 }
 
@@ -73,9 +74,9 @@ Names of worker hooks are typically \code{starting}, \code{idle}, \code{busy},
 \code{stopped}, or \code{'*'} (duplicates okay). See \code{vignette('hooks')}.}
 
 \item{\code{wait}}{If \code{TRUE}, blocks until the Worker is 'idle'. If \code{FALSE}, the
-Worker object is returned in the 'starting' state. If a number, blocks
-at most that number of seconds before returning either an 'idle' or
-'stopped' Worker.}
+Worker object is returned in the 'starting' state.}
+
+\item{\code{timeout}}{How long to wait for the worker to finish starting (in seconds).}
 }
 \if{html}{\out{</div>}}
 }
@@ -148,7 +149,7 @@ The Worker, invisibly.
 Restarts a Worker by calling \verb{<Worker>$stop(reason)} and
 \verb{<Worker>$start()} in succession.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$restart(reason = "restarting worker")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$restart(reason = "restarting worker", cls = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -156,6 +157,9 @@ Restarts a Worker by calling \verb{<Worker>$stop(reason)} and
 \describe{
 \item{\code{reason}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by
 this Worker.}
+
+\item{\code{cls}}{Passed to \verb{<Job>$stop()} for any Jobs currently managed by this
+Worker.}
 }
 \if{html}{\out{</div>}}
 }
@@ -200,7 +204,7 @@ A function that when called removes this callback from the Worker.
 \subsection{Method \code{wait()}}{
 Blocks until the Worker enters the given state.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Worker$wait(state = "idle", timeout = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Worker$wait(state = "idle", timeout = NULL, signal = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -217,6 +221,8 @@ Blocks until the Worker enters the given state.
 }}
 
 \item{\code{timeout}}{Stop the Worker if it takes longer than this number of seconds, or \code{NULL}.}
+
+\item{\code{signal}}{Raise an error if encountered (will also be recorded in \if{html}{\out{<Worker>}}$cnd).}
 }
 \if{html}{\out{</div>}}
 }

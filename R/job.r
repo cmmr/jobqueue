@@ -72,7 +72,7 @@
 #'        `<Job>$queue$jobs`. Return value is ignored.
 #'        
 #' @param reason  A message to include in the 'interrupt' condition object that 
-#'        will be returned as the Job's result.
+#'        will be returned as the Job's result. Or a condition object.
 #'        
 #' @param cls  Character vector of additional classes to prepend to 
 #'        `c('interrupt', 'condition')`.
@@ -130,7 +130,7 @@ Job <- R6Class(
     #' @param timeout Stop the Job if it takes longer than this number of seconds, or `NULL`.
     #' @return This Job, invisibly.
     wait = function (state = 'done', timeout = NULL) 
-      u_wait(self, private, state, timeout),
+      u_wait(self, private, state, timeout, signal = FALSE),
     
     #' @description
     #' Stop this Job. If the Job is running, its Worker will be restarted.
@@ -257,7 +257,7 @@ j_print <- function (self) {
 
 
 j_stop <- function (self, private, reason, cls) {
-  self$output <- interrupt_cnd(reason, cls)
+  self$output <- as_cnd(reason, c(cls, 'interrupt'))
   return (invisible(self))
 }
 
@@ -292,10 +292,11 @@ j_result <- function (self, private) {
   signal <- private$.signal # TRUE/FALSE/c('interrupt', 'error')
   if (!is_false(signal) && inherits(result, 'condition'))
     if (is_true(signal) || any(signal %in% class(result)))
-      cli_abort(
-        .envir  = self$caller_env, 
+      abort(
+        .frame  = self$caller_env, 
         parent  = result,
-        message = deparse1(private$.expr) )
+        message = deparse1(private$.expr),
+        use_cli_format = FALSE )
   
   return (result)
 }

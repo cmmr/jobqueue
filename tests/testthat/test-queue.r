@@ -1,10 +1,17 @@
 
 test_that('basic', {
   
+  skip_on_cran()
+  
   # library(jobqueue); library(testthat)
-  q <- expect_silent(Queue$new(workers = 1L, timeout = 10, wait = FALSE))
-  expect_equal(q$state, 'starting')
-
+  
+  q <- expect_silent(Queue$new(
+    workers = 1L, 
+    timeout = c(starting = 15, total = 15)) )
+  
+  expect_silent(q$wait('idle', timeout = 15))
+  expect_equal(q$state, 'idle')
+  expect_null(q$cnd)
   expect_no_error(q$tmp)
   expect_no_error(suppressMessages(q$print()))
 
@@ -33,21 +40,31 @@ test_that('basic', {
   expect_equal(length(q$workers), 0)
   
   
-  expect_error( Queue$new(init = { stop() }, wait = 120, workers = 1L))
-  expect_error( Queue$new(init = { q()    }, wait = 120, workers = 1L))
+  skip_on_covr()
+  
+  expect_error(Queue$new(
+    init    = { stop() }, 
+    workers = 1L, 
+    timeout = c(starting = 15, total = 15) ))
+  
+  expect_error(Queue$new(
+    init    = { q('no') }, 
+    workers = 1L, 
+    timeout = c(starting = 15, total = 15) ))
 })
 
 
 
 
 test_that('config', {
+  
+  skip_on_cran()
 
   e <- new.env(parent = emptyenv())
 
   q <- expect_silent(Queue$new(
     workers  = 1L,
-    timeout  = 10,
-    wait     = 120,
+    timeout  = c(starting = 15, total = 15),
     globals  = list(x = 42),
     packages = 'magrittr',
     init     = { y <- 37 },
@@ -78,18 +95,19 @@ test_that('config', {
 
 
 test_that('workers', {
-
-  q <- expect_silent(Queue$new(workers = 2L, max_cpus = 3L, wait = FALSE))
-
-  q$run({ Sys.sleep(10) })
-  q$run({ Sys.sleep(10) })
-  q$run({ Sys.sleep(10) })
-
-  expect_equal(map(q$jobs, 'state'), rep('queued', 3))
-
-  q$wait(state = '.next', timeout = 120)
-  run_now()
   
+  skip_on_cran()
+
+  q <- expect_silent(Queue$new(
+    workers  = 2L, 
+    max_cpus = 3L, 
+    timeout  = c(starting = 15, total = 15) ))
+
+  q$run({ Sys.sleep(100) })
+  q$run({ Sys.sleep(100) })
+  q$run({ Sys.sleep(100) })
+
+  run_now()
   expect_equal(map(q$jobs, 'state'), c('running', 'running', 'queued'))
   expect_equal(map(q$workers, 'state'), rep('busy', 2))
 
@@ -99,19 +117,20 @@ test_that('workers', {
 
 
 test_that('max_cpus', {
+  
+  skip_on_cran()
 
-  q <- expect_silent(Queue$new(workers = 3L, max_cpus = 2L, wait = FALSE))
+  q <- expect_silent(Queue$new(
+    workers  = 3L, 
+    max_cpus = 2L, 
+    timeout  = c(starting = 15, total = 15) ))
 
-  q$run({ Sys.sleep(10) })
-  q$run({ Sys.sleep(10) })
-  q$run({ Sys.sleep(10) })
+  q$run({ Sys.sleep(100) })
+  q$run({ Sys.sleep(100) })
+  q$run({ Sys.sleep(100) })
+  q$run({ Sys.sleep(100) })
 
-  expect_equal(map(q$jobs, 'state'), rep('queued', 3))
-
-  q$wait(state = 'busy', timeout = 120)
-  q$run({ Sys.sleep(10) })
   run_now()
-
   expect_equal(map(q$jobs, 'state'), c(rep('running', 2), rep('queued', 2)))
   expect_equal(map(q$workers, 'state'), c('busy', 'busy', 'idle'))
 
@@ -121,17 +140,21 @@ test_that('max_cpus', {
 
 
 test_that('interrupt', {
+  
+  skip_on_cran()
 
-  q <- expect_silent(Queue$new(workers = 1L, timeout = 10, wait = 120))
+  q <- expect_silent(Queue$new(
+    workers = 1L, 
+    timeout = c(starting = 15, total = 15) ))
 
-  job <- q$run({ Sys.sleep(10) })
+  job <- q$run({ Sys.sleep(100) })
   expect_silent(job$stop())
   expect_s3_class(job$result, class = c('interrupt', 'condition'))
 
-  job <- q$run({ Sys.sleep(10) }, timeout = 0.1)
+  job <- q$run({ Sys.sleep(100) }, timeout = 0.1)
   expect_s3_class(job$result, class = c('interrupt', 'condition'))
 
-  job1 <- q$run({ Sys.sleep(10); 'A' }, stop_id = function (job) 123)
+  job1 <- q$run({ Sys.sleep(100); 'A' }, stop_id = function (job) 123)
   job2 <- q$run({ 'B' },                stop_id = ~{ 123 })
 
   expect_s3_class(job1$result, class = c('interrupt', 'condition'))

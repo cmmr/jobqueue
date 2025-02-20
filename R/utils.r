@@ -1,9 +1,10 @@
 
 
-u_wait <- function (self, private, state, timeout) {
+u_wait <- function (self, private, state, timeout, signal) {
   
   state   <- validate_string(state)
   timeout <- validate_positive_number(timeout)
+  signal  <- validate_logical(signal)
   
   if (!is.null(timeout)) {
     msg <- '{private$.uid} took longer than {.val {timeout}} second{?s} to enter {.val {state}} state'
@@ -30,6 +31,13 @@ u_wait <- function (self, private, state, timeout) {
   }
   
   clear_timeout()
+  
+  if (is_true(signal) && !is.null(private$.cnd)) {
+    if (inherits(private$.cnd, 'error'))
+      cnd_signal(private$.cnd)
+    abort(private$.cnd$message, use_cli_format = FALSE)
+  }
+  
   return (invisible(self))
 }
 
@@ -86,10 +94,11 @@ run_job_function <- function (value, job) {
 }
 
 
-interrupt_cnd <- function (reason = 'stopped', cls = NULL) {
-  reason <- validate_string(reason, cnd_ok = TRUE)
-  cls    <- validate_character_vector(cls)
-  cnd(c(cls, 'interrupt'), message = as.character(reason))
+as_cnd <- function (reason, cls) {
+  if (inherits(reason, 'condition')) return (reason)
+  rlang::cnd(
+    class   = unique(validate_character_vector(cls)), 
+    message = validate_string(reason) )
 }
 
 
@@ -132,7 +141,7 @@ read_logs <- function (tmp) {
   logs <- NULL
   
   for (stream in c('stdout', 'stderr')) {
-    fp <- file.path(tmp, paste(stream, '.txt'))
+    fp <- file.path(tmp, paste0(stream, '.txt'))
     if (is_true(file.exists(fp)) && is_true(file.size(fp) > 0))
       logs %<>% c(sprintf('%s>  %s', stream, readLines(fp)))
   }

@@ -12,7 +12,7 @@ importFrom("promises",
 importFrom("R6", "R6Class")
 importFrom("ps", "ps_exe", "ps_is_running", "ps_handle", "ps_kill")
 importFrom("rlang", 
-           "%||%", "as_environment", "as_function", "caller_env", "caller_fn", 
+           "%||%", "abort", "as_environment", "as_function", "caller_env", "caller_fn", 
            "catch_cnd", "cnd", "cnd_signal", "dots_list", "env_get", "env_has", 
            "env_name", "error_cnd", "is_character", "is_condition", 
            "is_formula", "is_false", "is_function", "is_list", "is_named", 
