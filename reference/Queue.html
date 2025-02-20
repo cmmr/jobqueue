@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -77,6 +77,10 @@
 <dd><p>Get or set - List of <a href="Worker.html">Workers</a> used for processing Jobs.</p></dd>
 
 
+<dt><code>cnd</code></dt>
+<dd><p>The error that caused the Queue to stop.</p></dd>
+
+
 </dl><p></p></div>
     </div>
     <div class="section level2">
@@ -110,8 +114,7 @@
 <span>  signal <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cpus <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  stop_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  copy_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  wait <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  copy_id <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -151,13 +154,6 @@ Workers that need to restart.</p></dd>
 and <code>copy_id</code> must be either a <code>function (job)</code> or <code>NULL</code>.
 <code>hooks</code> can set queue, worker, and/or job hooks - see the
 "Attaching" section in <code><a href="../articles/hooks.html">vignette('hooks')</a></code>.</p></dd>
-
-
-<dt><code>wait</code></dt>
-<dd><p>If <code>TRUE</code>, blocks until the Queue is 'idle'. If <code>FALSE</code>, the
-Queue object is returned in the 'starting' state. If a number, blocks
-at most that number of seconds before returning either an 'idle' or
-'stopped' Queue.</p></dd>
 
 
 </dl><p></p></div>
@@ -221,9 +217,10 @@ Or a <code>function (job)</code> that returns such an object.</p></dd>
 <dt><code>timeout</code></dt>
 <dd><p>A named numeric vector indicating the maximum number of
 seconds allowed for each state the job passes through, or 'total' to
-apply a single timeout from 'submitted' to 'done'. Or a
-<code>function (job)</code> that returns the same. Example:
-<code>timeout = c(total = 2.5, running = 1)</code>. See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd>
+apply a single timeout from 'submitted' to 'done'. Can also limit the
+'starting' state for Workers. A <code>function (job)</code> can be used in place
+of a number. Example: <code>timeout = c(total = 2.5, running = 1)</code>.
+See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd>
 
 
 <dt><code>hooks</code></dt>
@@ -311,7 +308,7 @@ See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd
 <h3 id="method-wait-">Method <code>wait()</code><a class="anchor" aria-label="anchor" href="#method-wait-"></a></h3>
 <p>Blocks until the Queue enters the given state.</p><div class="section">
 <h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="fu">wait</span><span class="op">(</span>state <span class="op">=</span> <span class="st">"idle"</span>, timeout <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Queue</span><span class="op">$</span><span class="fu">wait</span><span class="op">(</span>state <span class="op">=</span> <span class="st">"idle"</span>, timeout <span class="op">=</span> <span class="cn">NULL</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -323,12 +320,15 @@ See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd
 <li><p><code>'idle'</code> -     All workers are ready/idle.</p></li>
 <li><p><code>'busy'</code> -     At least one worker is busy.</p></li>
 <li><p><code>'stopped'</code> -  Shutdown is complete.</p></li>
-<li><p><code>'error'</code> -    Workers did not start cleanly.</p></li>
 </ul></dd>
 
 
 <dt><code>timeout</code></dt>
 <dd><p>Stop the Queue if it takes longer than this number of seconds, or <code>NULL</code>.</p></dd>
+
+
+<dt><code>signal</code></dt>
+<dd><p>Raise an error if encountered (will also be recorded in <queue>$cnd).</queue></p></dd>
 
 
 </dl><p></p></div>
@@ -354,7 +354,6 @@ See <code><a href="../articles/stops.html">vignette('stops')</a></code>.</p></dd
 <li><p><code>'idle'</code> -     All workers are ready/idle.</p></li>
 <li><p><code>'busy'</code> -     At least one worker is busy.</p></li>
 <li><p><code>'stopped'</code> -  Shutdown is complete.</p></li>
-<li><p><code>'error'</code> -    Workers did not start cleanly.</p></li>
 </ul></dd>
 
 
