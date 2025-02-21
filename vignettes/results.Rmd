@@ -102,7 +102,7 @@ dput(job$result)
 
 ```r
 reformat <- function (job) {
-  if (job$is_done) { job$output$result          }
+  if (job$is_done) { job$output                 }
   else             { 'result not available yet' }
 }
 
@@ -130,16 +130,7 @@ inherits(x, 'condition')
 #> TRUE
 
 x
-#> Error in `q$run(expr)`:
-#> ! Error evaluating <Job>$expr on background process
-#> Caused by error in `stop("error XYZ")`:
-#> ! error XYZ
-#> ---
-#> Subprocess backtrace:
-#> 1. base::eval(expr = expr, envir = vars, enclos = .GlobalEnv)
-#> 2. base::stop("error XYZ")
-#> 3. | base::.handleSimpleError(function (e) …
-#> 4. global h(simpleError(msg, call))
+#> <simpleError in eval(expr, envir, enclos): error XYZ>
 ```
 
 If you want those errors to continue propagating, set `signal = TRUE`.
@@ -147,10 +138,11 @@ If you want those errors to continue propagating, set `signal = TRUE`.
 ```r
 job <- q$run(expr, signal = TRUE)
 x   <- job$result
-#> Error in "q$run(expr, signal = TRUE)" : 
-#>    ! Error evaluating <Job>$expr on background process
-#>  Caused by error in `stop("error XYZ")`:
-#>  ! error XYZ
+#> Error:
+#> ! stop("error XYZ")
+#> Caused by error:
+#> ! error XYZ
+#> Run `rlang::last_trace()` to see where the error occurred.
 ```
 
 These signals can be caught as usual by `try()` and `tryCatch()`.

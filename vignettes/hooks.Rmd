@@ -50,7 +50,7 @@ Callbacks are not limited to just the Job finishing. See the "State Triggers" se
 
 The callback function should accept one argument: the object that triggered the callback. Functions accepting zero or multiple arguments are also allowed.
 
-This is a great place for shorthand function definitions introduced by R 4.1.0.
+This is a great place for R's new shorthand function definitions (R >= 4.1.0).
 
 jobqueue also understands the lambda syntax for functions (see `rlang::as_function()`).
 
@@ -93,7 +93,6 @@ Queue, Worker, and Job objects update their `$state` as described in the tables 
 | `'idle'`       | When all Workers are idle. Also, after initial startup. |
 | `'busy'`       | At least one worker is busy.                            |
 | `'stopped'`    | After `<Queue>$stop()` is called.                       |
-| `'error'`      | Workers did not start cleanly.                          |
 
 
 ### Worker States

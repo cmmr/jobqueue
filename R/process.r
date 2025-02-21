@@ -81,10 +81,13 @@ p__start <- function (tmp = commandArgs(TRUE), testing = FALSE) {
         
         Sys.setenv(RCPP_PARALLEL_NUM_THREADS = request$cpus)
         
-        output <- eval(
-          expr   = request$expr, 
-          envir  = list2env(request$vars, parent = worker_env), 
-          enclos = baseenv() )
+        expr   <- request$expr
+        envir  <- list2env(request$vars, parent = worker_env)
+        enclos <- baseenv()
+        
+        options(rlang_trace_top_env = envir)
+        
+        output <- eval(expr, envir, enclos)
       })
     
     # Return a signaled error instead of output

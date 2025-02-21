@@ -287,7 +287,8 @@ j_result <- function (self, private) {
   if (!is_false(signal) && inherits(result, 'condition'))
     if (is_true(signal) || any(signal %in% class(result)))
       abort(
-        .frame  = self$caller_env, 
+        call    = self$.call,
+        trace   = self$.trace,
         parent  = result,
         message = deparse1(private$.expr),
         use_cli_format = FALSE )

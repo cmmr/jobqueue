@@ -114,7 +114,7 @@ Worker <- R6Class(
     #' @description
     #' Blocks until the Worker enters the given state.
     #' @param timeout Stop the Worker if it takes longer than this number of seconds.
-    #' @param signal Raise an error if encountered (will also be recorded in <Worker>$cnd).
+    #' @param signal Raise an error if encountered (will also be recorded in `<Worker>$cnd`).
     #' @return This Worker, invisibly.
     wait = function (state = 'idle', timeout = Inf, signal = TRUE) 
       u_wait(self, private, state, timeout, signal),
@@ -141,7 +141,8 @@ Worker <- R6Class(
     ps_tmp     = NULL, # child's tempdir()
     old_dirs   = NULL,
     semaphore  = NULL,
-    caller_env = NULL,
+    frame      = NULL,
+    trace      = NULL,
     config     = NULL,
     
     set_state    = function (state) u__set_state(self, private, state),
@@ -198,10 +199,11 @@ w_initialize <- function (self, private, globals, packages, init, hooks, wait, t
   
   wait <- validate_logical(wait)
   
-  private$.uid       <- increment_uid('W')
-  private$.hooks     <- validate_hooks(hooks, 'WH')
-  private$timeout    <- validate_positive_number(timeout, if_null = Inf, if_na = Inf)
-  private$caller_env <- caller_env(2L)
+  private$.uid    <- increment_uid('W')
+  private$.hooks  <- validate_hooks(hooks, 'WH')
+  private$timeout <- validate_positive_number(timeout, if_null = Inf, if_na = Inf)
+  private$frame   <- caller_env(2L)
+  private$trace   <- trace_back()
   
   private$config <- attr(globals, '.jqw_config') # worker for a queue
   
@@ -331,8 +333,8 @@ w_run <- function (self, private, job) {
   private$.job <- job
   job$on('done', private$job_done)
   
-  if (is_null(job$caller_env))
-    job$caller_env <- caller_env(2L)
+  if (is_null(job$.call))  job$.call  <- caller_env(n = 2L)
+  if (is_null(job$.trace)) job$.trace <- trace_back(bottom = job$.call)
   
   # Data to send to the background process.
   request <- list(expr = job$expr, vars = job$vars, cpus = job$cpus)
@@ -365,7 +367,8 @@ w__poll_job <- function (self, private) {
   if (!ps_is_running(ps)) {
     
     output <- error_cnd(
-      call    = job$caller_env, 
+      call    = job$.call,
+      trace   = job$.trace, 
       message = c(
         'worker subprocess terminated unexpectedly',
         read_logs(private$.tmp) ))

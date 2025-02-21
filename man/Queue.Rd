@@ -242,7 +242,7 @@ Blocks until the Queue enters the given state.
 
 \item{\code{timeout}}{Stop the Queue if it takes longer than this number of seconds, or \code{NULL}.}
 
-\item{\code{signal}}{Raise an error if encountered (will also be recorded in \if{html}{\out{<Queue>}}$cnd).}
+\item{\code{signal}}{Raise an error if encountered (will also be recorded in \verb{<Queue>$cnd}).}
 }
 \if{html}{\out{</div>}}
 }

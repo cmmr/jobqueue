@@ -56,8 +56,7 @@ j <- q$run(
 #>   - created
 #>   - submitted
 #>   - queued
-#>   - assigned
-#>   - dispatched
+#>   - starting
 #>   - running
 #>   - done
 

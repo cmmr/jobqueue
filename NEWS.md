@@ -1,4 +1,4 @@
-# jobqueue 1.3.1
+# jobqueue 1.4.1
 
 * Default to waiting for Queue/Worker to load.
 * Allow functions for more job arguments.

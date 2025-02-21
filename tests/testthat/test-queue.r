@@ -87,9 +87,8 @@ test_that('config', {
   job <- expect_silent(q$submit(Job$new(
     expr  = { 1 + 1 }, 
     hooks = list(
-      created   = ~{ .$caller_env <- NULL },
-      submitted = ~{ .$stop_id <- ~{NULL} },
-      submitted = ~{ .$copy_id <- ~{NULL} }
+      created   = ~{ .$.trace  <- .$.call   <-   NULL  },
+      submitted = ~{ .$stop_id <- .$copy_id <- ~{NULL} }
     ))))
   expect_equal(job$result, 1 + 1)
   

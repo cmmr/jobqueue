@@ -245,7 +245,7 @@ Blocks until the Worker enters the given state.
 
 \item{\code{timeout}}{Stop the Worker if it takes longer than this number of seconds.}
 
-\item{\code{signal}}{Raise an error if encountered (will also be recorded in \if{html}{\out{<Worker>}}$cnd).}
+\item{\code{signal}}{Raise an error if encountered (will also be recorded in \verb{<Worker>$cnd}).}
 }
 \if{html}{\out{</div>}}
 }

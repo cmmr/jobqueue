@@ -190,7 +190,7 @@ Queue <- R6Class(
     #' @description
     #' Blocks until the Queue enters the given state.
     #' @param timeout Stop the Queue if it takes longer than this number of seconds, or `NULL`.
-    #' @param signal Raise an error if encountered (will also be recorded in <Queue>$cnd).
+    #' @param signal Raise an error if encountered (will also be recorded in `<Queue>$cnd`).
     #' @return This Queue, invisibly.
     wait = function (state = 'idle', timeout = NULL, signal = TRUE) 
       u_wait(self, private, state, timeout, signal),
@@ -442,7 +442,8 @@ q_run <- function (
     copy_id  = if (is_na(copy_id))  j_conf[['copy_id']]  else copy_id,
     ... )
   
-  job$caller_env <- caller_env(2L)
+  job$.trace <- trace_back(bottom = 2L)
+  
   self$submit(job)
   
   return (invisible(job))
@@ -456,8 +457,8 @@ q_submit <- function (self, private, job) {
   
   if (job$is_done) return (invisible(job))
   
-  if (is_null(job$caller_env))
-    job$caller_env <- caller_env(2L)
+  if (is_null(job$.call))  job$.call  <- caller_env(n = 2L)
+  if (is_null(job$.trace)) job$.trace <- trace_back(bottom = job$.call)
   
   job$queue          <- self
   private$total_runs <- private$total_runs + 1L
