@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -121,8 +121,8 @@ so as to not delay Job handling.</p>
 <p>The callback function should accept one argument: the object that
 triggered the callback. Functions accepting zero or multiple arguments
 are also allowed.</p>
-<p>This is a great place for shorthand function definitions introduced
-by R 4.1.0.</p>
+<p>This is a great place for R’s new shorthand function definitions (R
+&gt;= 4.1.0).</p>
 <p>jobqueue also understands the lambda syntax for functions (see
 <code><a href="https://rlang.r-lib.org/reference/as_function.html" class="external-link">rlang::as_function()</a></code>).</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -201,10 +201,6 @@ trigger regardless of the present state name.</p>
 <tr class="even">
 <td><code>'stopped'</code></td>
 <td>After <code>&lt;Queue&gt;$stop()</code> is called.</td>
-</tr>
-<tr class="odd">
-<td><code>'error'</code></td>
-<td>Workers did not start cleanly.</td>
 </tr>
 </tbody>
 </table>

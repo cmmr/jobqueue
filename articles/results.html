@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.0.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -167,7 +167,7 @@ want <code>&lt;Job&gt;$result</code> to not block, you can return a
 placeholder value instead.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">reformat</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">is_done</span><span class="op">)</span> <span class="op">{</span> <span class="va">job</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">result</span>          <span class="op">}</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">is_done</span><span class="op">)</span> <span class="op">{</span> <span class="va">job</span><span class="op">$</span><span class="va">output</span>                 <span class="op">}</span></span>
 <span>  <span class="kw">else</span>             <span class="op">{</span> <span class="st">'result not available yet'</span> <span class="op">}</span></span>
 <span><span class="op">}</span></span>
 <span></span>
@@ -194,25 +194,17 @@ returned as a condition object from <code>&lt;Job&gt;$result</code>.</p>
 <span><span class="co">#&gt; TRUE</span></span>
 <span></span>
 <span><span class="va">x</span></span>
-<span><span class="co">#&gt; Error in `q$run(expr)`:</span></span>
-<span><span class="co">#&gt; ! Error evaluating &lt;Job&gt;$expr on background process</span></span>
-<span><span class="co">#&gt; Caused by error in `stop("error XYZ")`:</span></span>
-<span><span class="co">#&gt; ! error XYZ</span></span>
-<span><span class="co">#&gt; ---</span></span>
-<span><span class="co">#&gt; Subprocess backtrace:</span></span>
-<span><span class="co">#&gt; 1. base::eval(expr = expr, envir = vars, enclos = .GlobalEnv)</span></span>
-<span><span class="co">#&gt; 2. base::stop("error XYZ")</span></span>
-<span><span class="co">#&gt; 3. | base::.handleSimpleError(function (e) …</span></span>
-<span><span class="co">#&gt; 4. global h(simpleError(msg, call))</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;simpleError in eval(expr, envir, enclos): error XYZ&gt;</span></span></code></pre></div>
 <p>If you want those errors to continue propagating, set
 <code>signal = TRUE</code>.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">expr</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">x</span>   <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
-<span><span class="co">#&gt; Error in "q$run(expr, signal = TRUE)" : </span></span>
-<span><span class="co">#&gt;    ! Error evaluating &lt;Job&gt;$expr on background process</span></span>
-<span><span class="co">#&gt;  Caused by error in `stop("error XYZ")`:</span></span>
-<span><span class="co">#&gt;  ! error XYZ</span></span></code></pre></div>
+<span><span class="co">#&gt; Error:</span></span>
+<span><span class="co">#&gt; ! stop("error XYZ")</span></span>
+<span><span class="co">#&gt; Caused by error:</span></span>
+<span><span class="co">#&gt; ! error XYZ</span></span>
+<span><span class="co">#&gt; Run `rlang::last_trace()` to see where the error occurred.</span></span></code></pre></div>
 <p>These signals can be caught as usual by <code><a href="https://rdrr.io/r/base/try.html" class="external-link">try()</a></code> and
 <code><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch()</a></code>.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
