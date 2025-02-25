@@ -14,10 +14,13 @@
 #' 
 #' @param packages  Character vector of package names to load on workers.
 #' 
+#' @param namespace  The name of a package to attach to the worker's 
+#'        environment.
+#' 
 #' @param init  A call or R expression wrapped in curly braces to evaluate on 
 #'        each worker just once, immediately after start-up. Will have access 
-#'        to variables defined by `globals` and assets from `packages`. 
-#'        Returned value is ignored.
+#'        to variables defined by `globals` and assets from `packages` and 
+#'        `namespace`. Returned value is ignored.
 #'        
 #' @param hooks  A named list of functions to run when the Worker state 
 #'        changes, of the form `hooks = list(idle = function (worker) {...})`.
@@ -67,14 +70,15 @@ Worker <- R6Class(
     #' Creates a background R process for running [Job]s.
     #' @return A Worker object.
     initialize = function (
-        globals  = NULL, 
-        packages = NULL, 
-        init     = NULL,
-        hooks    = NULL,
-        wait     = TRUE,
-        timeout  = Inf ) {
+        globals   = NULL,
+        packages  = NULL,
+        namespace = NULL,
+        init      = NULL,
+        hooks     = NULL,
+        wait      = TRUE,
+        timeout   = Inf ) {
       
-      w_initialize(self, private, globals, packages, init, hooks, wait, timeout)
+      w_initialize(self, private, globals, packages, namespace, init, hooks, wait, timeout)
     },
     
     
@@ -193,7 +197,7 @@ Worker <- R6Class(
 )
 
 
-w_initialize <- function (self, private, globals, packages, init, hooks, wait, timeout) {
+w_initialize <- function (self, private, globals, packages, namespace, init, hooks, wait, timeout) {
   
   init_subst <- substitute(init, env = parent.frame())
   
@@ -209,9 +213,10 @@ w_initialize <- function (self, private, globals, packages, init, hooks, wait, t
   
   if (is.null(private$config)) # standalone worker
     private$config <- list(
-      globals  = validate_list(globals),
-      packages = validate_character_vector(packages),
-      init     = validate_expression(init, init_subst) )
+      globals   = validate_list(globals),
+      packages  = validate_character_vector(packages),
+      namespace = validate_string(namespace, null_ok = TRUE),
+      init      = validate_expression(init, init_subst) )
   
   self$start(wait = wait)
   

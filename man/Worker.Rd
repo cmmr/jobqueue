@@ -47,6 +47,7 @@ Creates a background R process for running \link{Job}s.
 \if{html}{\out{<div class="r">}}\preformatted{Worker$new(
   globals = NULL,
   packages = NULL,
+  namespace = NULL,
   init = NULL,
   hooks = NULL,
   wait = TRUE,
@@ -63,10 +64,13 @@ list with \code{as.list()}, e.g. named vector, data.frame, or environment.}
 
 \item{\code{packages}}{Character vector of package names to load on workers.}
 
+\item{\code{namespace}}{The name of a package to attach to the worker's
+environment.}
+
 \item{\code{init}}{A call or R expression wrapped in curly braces to evaluate on
 each worker just once, immediately after start-up. Will have access
-to variables defined by \code{globals} and assets from \code{packages}.
-Returned value is ignored.}
+to variables defined by \code{globals} and assets from \code{packages} and
+\code{namespace}. Returned value is ignored.}
 
 \item{\code{hooks}}{A named list of functions to run when the Worker state
 changes, of the form \code{hooks = list(idle = function (worker) {...})}.

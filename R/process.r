@@ -37,14 +37,17 @@ p__start <- function (tmp = commandArgs(TRUE), testing = FALSE) {
       # Globals for Worker
       for (i in seq_along(g <- config[['globals']])) {
         if (is.function(g[[i]]))
-          if (!rlang::is_namespace(environment(g[[i]])))
-            environment(g[[i]]) <- worker_env
+          environment(g[[i]]) <- worker_env
         assign(x = names(g)[[i]], value = g[[i]], pos = worker_env)
       }
       
+      # Environment namespace
+      if (!is.null(ns <- config[['namespace']]))
+        parent.env(worker_env) <- asNamespace(ns)
+      
       # Init Expression for Worker
       if (!is.null(i <- config[['init']]))
-        eval(expr = i, envir = worker_env, enclos = worker_env)
+        eval(expr = i, envir = worker_env)
       
     }
   )
@@ -83,11 +86,10 @@ p__start <- function (tmp = commandArgs(TRUE), testing = FALSE) {
         
         expr   <- request$expr
         envir  <- list2env(request$vars, parent = worker_env)
-        enclos <- baseenv()
         
         options(rlang_trace_top_env = envir)
         
-        output <- eval(expr, envir, enclos)
+        output <- eval(expr, envir)
       })
     
     # Return a signaled error instead of output

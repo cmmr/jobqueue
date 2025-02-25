@@ -14,10 +14,13 @@
 #' 
 #' @param packages  Character vector of package names to load on workers.
 #' 
+#' @param namespace  The name of a package to attach to the worker's 
+#'        environment.
+#' 
 #' @param init  A call or R expression wrapped in curly braces to evaluate on 
 #'        each worker just once, immediately after start-up. Will have access 
-#'        to variables defined by `globals` and assets from `packages`. 
-#'        Returned value is ignored.
+#'        to variables defined by `globals` and assets from `packages` and 
+#'        `namespace`. Returned value is ignored.
 #'
 #' @param expr  A call or R expression wrapped in curly braces to evaluate on a 
 #'        worker. Will have access to any variables defined by `vars`, as well 
@@ -131,6 +134,7 @@ Queue <- R6Class(
     initialize = function (
         globals   = NULL,
         packages  = NULL,
+        namespace = NULL,
         init      = NULL,
         max_cpus  = availableCores(),
         workers   = ceiling(max_cpus * 1.2),
@@ -144,7 +148,7 @@ Queue <- R6Class(
        
       q_initialize(
         self, private, 
-        globals, packages, init, max_cpus, workers, 
+        globals, packages, namespace, init, max_cpus, workers, 
         timeout, hooks, reformat, signal, cpus, 
         stop_id, copy_id )
     },
@@ -278,7 +282,7 @@ Queue <- R6Class(
 
 q_initialize <- function (
     self, private, 
-    globals, packages, init, max_cpus, workers, 
+    globals, packages, namespace, init, max_cpus, workers, 
     timeout, hooks, reformat, signal, cpus, 
     stop_id, copy_id ) {
   
@@ -310,9 +314,10 @@ q_initialize <- function (
   private$w_conf[['hooks']]   <- validate_hooks(hooks[['worker']], 'WH')
   private$w_conf[['timeout']] <- timeout[['starting']]
   saveRDS(file = config_rds_file, list(
-    'globals'  = validate_list(globals, if_null = NULL),
-    'packages' = validate_character_vector(packages),
-    'init'     = validate_expression(init, init_subst) ))
+    'globals'   = validate_list(globals, if_null = NULL),
+    'packages'  = validate_character_vector(packages),
+    'namespace' = validate_string(namespace, null_ok = TRUE),
+    'init'      = validate_expression(init, init_subst) ))
   
   # Job configuration defaults
   private$j_conf[['timeout']]  <- timeout[setdiff(names(timeout), 'starting')]
@@ -337,7 +342,7 @@ q_initialize <- function (
     if (length(i <- which(states == 'stopped'))) {
       
       i   <- i[[1]]
-      cnd <- workers[[i]]$cnd
+      cnd <- as_error(workers[[i]]$cnd)
       self$stop(cnd)
       cnd_signal(cnd)
       stop(cnd$message)

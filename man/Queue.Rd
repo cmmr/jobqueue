@@ -48,6 +48,7 @@ Creates a pool of background processes for handling \verb{$run()} and
 \if{html}{\out{<div class="r">}}\preformatted{Queue$new(
   globals = NULL,
   packages = NULL,
+  namespace = NULL,
   init = NULL,
   max_cpus = availableCores(),
   workers = ceiling(max_cpus * 1.2),
@@ -70,10 +71,13 @@ list with \code{as.list()}, e.g. named vector, data.frame, or environment.}
 
 \item{\code{packages}}{Character vector of package names to load on workers.}
 
+\item{\code{namespace}}{The name of a package to attach to the worker's
+environment.}
+
 \item{\code{init}}{A call or R expression wrapped in curly braces to evaluate on
 each worker just once, immediately after start-up. Will have access
-to variables defined by \code{globals} and assets from \code{packages}.
-Returned value is ignored.}
+to variables defined by \code{globals} and assets from \code{packages} and
+\code{namespace}. Returned value is ignored.}
 
 \item{\code{max_cpus}}{Total number of CPU cores that can be reserved by all
 running Jobs (\verb{sum(<Job>$cpus)}). Does not enforce limits on actual

@@ -5,6 +5,10 @@ test_that('basic', {
   
   # library(jobqueue); library(testthat)
   
+  expect_error(Queue$new(
+    timeout = c(starting = 1), 
+    init    = { Sys.sleep(10) } ))
+  
   q <- expect_silent(Queue$new(
     workers = 1L, 
     timeout = c(starting = 15, total = 15)) )

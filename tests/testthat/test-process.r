@@ -9,7 +9,7 @@ test_that('process', {
 
 
   # Successful setup and evaluation
-  config  <- list(packages = 'base')
+  config  <- list(packages = 'base', namespace = 'R6')
   request <- list(expr = quote(TRUE), vars = list(ps_exe = ps::ps_exe), cpus = 1L)
   save_rds(tmp, 'config', 'request')
 
