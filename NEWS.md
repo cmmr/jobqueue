@@ -1,3 +1,8 @@
+
+# jobqueue 1.5.1
+
+* Added namespace parameter.
+
 # jobqueue 1.4.1
 
 * Default to waiting for Queue/Worker to load.
