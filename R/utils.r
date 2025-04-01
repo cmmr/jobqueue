@@ -143,6 +143,8 @@ save_rds <- function (tmp, ...) {
     saveRDS(val, tmp_dest)
     file.rename(tmp_dest, dest)
   }
+  
+  invisible()
 }
 
 

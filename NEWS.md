@@ -1,7 +1,13 @@
 
+# jobqueue 1.6.0
+
+* Checks if parent process is still alive.
+
+
 # jobqueue 1.5.1
 
 * Added namespace parameter.
+
 
 # jobqueue 1.4.1
 
