@@ -1,9 +1,12 @@
 
 validate_function <- function (value, bool_ok = FALSE, if_null = NULL, null_ok = TRUE) {
   
-  if (is_primitive(value)) return (function (...) { value(...) })
+  if (is_function(value)) {
+    if (is_primitive(value) || isNamespace(environment(value)))
+      return (function (...) { value(...) })
+    return (value)
+  }
   
-  if (is_function(value))                           return (value)
   if (is_null(value)           && is_true(null_ok)) return (if_null)
   if (is_scalar_logical(value) && is_true(bool_ok)) return (value)
   
