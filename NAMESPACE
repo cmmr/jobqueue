@@ -16,7 +16,7 @@ importFrom("rlang",
            "catch_cnd", "cnd", "cnd_signal", "dots_list", "env_get", "env_has", 
            "env_name", "error_cnd", "is_character", "is_condition", 
            "is_formula", "is_false", "is_function", "is_list", "is_named", 
-           "is_named2", "is_null", "is_na", "is_true", "is_scalar_character", 
+           "is_named2", "is_null", "is_na", "is_primitive", "is_true", "is_scalar_character", 
            "is_scalar_integerish", "is_scalar_logical", "is_string", "new_environment",
            "set_names", "trace_back" )
 importFrom("semaphore", "create_semaphore", "increment_semaphore", "remove_semaphore")
