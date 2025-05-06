@@ -363,7 +363,7 @@ w__poll_job <- function (self, private) {
   if (!inherits(ps,  'ps_handle')) return (NULL)
   
   # Crashed?
-  if (!ps_is_running(ps)) {
+  if (!p__ps_is_alive(ps)) {
     
     output <- error_cnd(
       call    = job$.call,
@@ -411,7 +411,7 @@ w__poll_startup <- function (self, private) {
     ps <- private$.ps
     
     # Crashed?
-    if (!inherits(ps, 'ps_handle') || !ps_is_running(ps)) {
+    if (!inherits(ps, 'ps_handle') || !p__ps_is_alive(ps)) {
       message <- read_logs(p_dir)  # nocov start
       if (is.null(message)) message <- 'worker startup failed'
       self$stop(error_cnd(call = private$caller_env, message = message))  # nocov end

@@ -10,7 +10,7 @@ test_that('worker', {
   expect_silent(w$stop())
   
   w <- expect_silent(Worker$new(wait = FALSE))
-  expect_silent(w$wait('.next', timeout = 60))
+  expect_silent(w$wait('.next', timeout = 15))
 
   expect_silent(w$on('busy', ~{ NULL }))
   expect_silent(w$on('*',    ~{ NULL }))
@@ -27,10 +27,10 @@ test_that('worker', {
   expect_error(w$run('not a Job'), 'not a Job', 'error')
 
   expect_silent(w$run(Job$new({ stop() })))
-  expect_silent(w$wait(timeout = 60))
+  expect_silent(w$wait(timeout = 15))
 
   expect_silent(w$run(Job$new({ NULL })))
-  expect_silent(w$wait(timeout = 60))
+  expect_silent(w$wait(timeout = 15))
   
   j <- Job$new({ Sys.sleep(100) }, signal = TRUE)
   expect_silent(w$run(j))
@@ -40,25 +40,25 @@ test_that('worker', {
   expect_identical(w$state, 'idle')
 
   expect_silent(w$stop('terminated'))
-  expect_error(w$wait('.next', timeout = 60))
+  expect_error(w$wait('.next', timeout = 15))
   expect_error(w$run(Job$new({ 1 })), 'terminated', 'error')
   
   
   skip_on_covr()
 
-  expect_error(Worker$new(init = { stop() }, timeout = 60))
+  expect_error(Worker$new(init = { stop() }, timeout = 15))
   w <- expect_silent(Worker$new(init = { stop() }, wait = FALSE))
-  expect_error(w$wait(timeout = 60))
+  expect_error(w$wait(timeout = 15))
 
   w <- expect_silent(Worker$new(wait = FALSE))
   expect_silent(w$run(Job$new({ q('no') })))
-  expect_silent(w$wait(timeout = 60))
+  expect_silent(w$wait(timeout = 15))
   expect_silent(w$stop())
 
-  expect_error(Worker$new(init = { q('no') }, timeout = 60))
+  expect_error(Worker$new(init = { q('no') }, timeout = 15))
 
   w <- expect_silent(Worker$new(init = { q('no') }, wait = FALSE))
-  expect_error(w$wait(timeout = 60))
+  expect_error(w$wait(timeout = 15))
   
 })
 

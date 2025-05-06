@@ -371,7 +371,7 @@ q_initialize <- function (
       
     }
     
-    later::run_now(timeoutSecs = 0.2)
+    later::run_now(timeoutSecs = 0.6)
   }
   
   

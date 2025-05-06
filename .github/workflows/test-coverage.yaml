@@ -12,7 +12,7 @@ permissions: read-all
 jobs:
   test-coverage:
     
-    timeout-minutes: 20
+    timeout-minutes: 10
     
     runs-on: windows-latest
     env:
