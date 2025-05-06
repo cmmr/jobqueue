@@ -1,90 +1,66 @@
 test_that('process', {
   
-  # library(testthat)
-  
-  tmp <- normalizePath(tempfile('ttp'), winslash = '/', mustWork = FALSE)
-  
-  dir.create(tmp, recursive = TRUE)
-  on.exit(unlink(tmp, recursive = TRUE))
-
-  fp <- function (path) file.path(tmp, path)
-
-
-  # Successful setup and evaluation
-  config  <- list(packages = 'base', namespace = 'R6')
-  request <- list(expr = quote(TRUE), vars = list(ps_exe = ps::ps_exe), cpus = 1L)
-  save_rds(tmp, 'config', 'request')
-
-  res <- expect_silent(p__start(tmp = tmp, testing = TRUE))
-  expect_true(res)
-  expect_true(readRDS(fp('output.rds')))
-
-  ps_info <- readRDS(fp('ps_info.rds'))
-  ps      <- ps::ps_handle()
-  expect_identical(ps_info$pid,  ps::ps_pid(ps))
-  expect_identical(ps_info$time, ps::ps_create_time(ps))
-
-
-  # Error during setup
-  config  <- list(init = quote(stop('test', call. = FALSE)))
-  request <- list(expr = quote(TRUE), vars = list(), cpus = 1L)
-  save_rds(tmp, 'config', 'request')
-
-  res <- expect_silent(p__start(tmp = tmp, testing = TRUE))
-  expect_s3_class(res, 'error')
-  expect_identical(res$message, 'test')
-  expect_identical(res, readRDS(fp('error.rds')))
+  skip_on_cran()
   
   
-  # Package doesn't exist
-  config  <- list(packages = 'Q4Er6o9iAW')
-  request <- list(expr = quote(TRUE), vars = list(), cpus = 1L)
-  save_rds(tmp, 'config', 'request')
+  # library(jobqueue); library(testthat)
   
-  res <- expect_silent(p__start(tmp = tmp, testing = TRUE))
-  expect_s3_class(res, 'error')
-  expect_identical(res$message, 'Could not load package: Q4Er6o9iAW')
-  expect_identical(res, readRDS(fp('error.rds')))
+  mq <- interprocess::queue(max_count = 2, max_nchar = 1024)
+  on.exit(mq$remove(), add = TRUE)
+  
+  w_dir <- dir_create(tempfile())
+  on.exit(dir_delete(w_dir), add = TRUE)
   
   
-  # Package isolation
-  config  <- list(packages = 'ps')
-  request <- list(expr = quote(exists('ps_pid')), vars = list(), cpus = 1L)
-  testing <- function (tmp) { if (exists('ps_pid')) stop('contaminated', call. = FALSE) }
-  save_rds(tmp, 'config', 'request')
   
-  res <- expect_silent(p__start(tmp = tmp, testing = testing))
-  expect_true(res)
-  expect_true(readRDS(fp('output.rds')))
-  expect_null(readRDS(fp('error.rds')))
+  # Code coverage for `p__start()`
+  
+  ppid   <- p__ps_string()
+  mqid   <- mq$name
+  p_dir  <- dir_create(w_dir, 'P')
+  config <- file.path(w_dir, 'config.rds')
+  
+  saveRDS(
+    file   = config, 
+    object = list(
+      globals   = list(p_dir = p_dir),
+      packages  = 'interprocess',
+      namespace = 'jobqueue',
+      init      = quote(dir_sem(p_dir)$post())
+    ))
+  
+  saveRDS(
+    file   = file.path(p_dir, 'request.rds'), 
+    object = list(
+      cpus = 1L,
+      expr = quote(stop(file.remove(ready_file))),
+      vars = list(
+        ready_file = file.path(p_dir, 'ready') )
+    ))
+  
+  expect_error(p__start(ppid, mqid, p_dir, config))
   
   
-  # Abandoned child
-  config  <- list()
-  request <- list(expr = quote(TRUE), vars = list(), cpus = 1L)
-  testing <- function (tmp) { unlink(file.path(tmp, '_ready_')) }
-  save_rds(tmp, 'config', 'request')
+  # Verify correct message to monitor
+  expect_identical(mq$count(), 1L)
+  msg <- mq$receive(timeout_ms = 0)
+  expect_identical(msg, paste(ppid, dir_sem(p_dir), tempdir()))
   
-  res <- expect_silent(p__start(tmp = tmp, testing = testing))
-  expect_s3_class(res, 'error')
-  expect_identical(res$message, 'ready file missing')
-  expect_identical(res, readRDS(fp('error.rds')))
-
-
-  # Error during evaluation
-  config  <- list(globals = list(x = 'r', f = function () NULL))
-  request <- list(expr = quote(stop(x, y)), vars = list(y = 5), cpus = 1L)
-  save_rds(tmp, 'config', 'request')
   
-  config_fp <- file.path(tmp, 'config.rds')
-  alt_fp    <- file.path(tmp, 'alt.rds')
-  invisible(file.rename(config_fp, alt_fp))
-  saveRDS(object = alt_fp, file = config_fp)
   
-  res <- expect_silent(p__start(tmp = tmp, testing = TRUE))
-  expect_s3_class(res, 'error')
-  expect_identical(res$message, 'r5')
-  expect_identical(res, readRDS(fp('output.rds')))
   
+  # Code coverage for `p__monitor()`
+  
+  ppid  <- interprocess::uid()
+  mqid  <- mq$name
+  m_dir <- dir_create(w_dir, 'M')
+  
+  pid   <- interprocess::uid()
+  sem   <- dir_sem(p_dir)$name
+  dir   <- p_dir
+  
+  mq$send(paste(pid, sem, dir))
+  expect_silent(p__monitor(ppid, mqid, m_dir))
+  expect_false(dir.exists(p_dir))
   
 })

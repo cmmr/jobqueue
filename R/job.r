@@ -153,7 +153,10 @@ Job <- R6Class(
     .state    = 'initializing',
     .is_done  = FALSE,
     .output   = NULL,
-    .proxy    = NULL
+    .proxy    = NULL,
+    
+    wref_queue  = NULL,
+    wref_worker = NULL
   ),
   
   active = list(
@@ -197,6 +200,14 @@ Job <- R6Class(
     #' Get or set - Job's raw output.
     #' *Assigning to `<Job>$output` will change the Job's state to `'done'`.*
     output = function (value) j_output(self, private, value),
+    
+    #' @field queue
+    #' The Queue that this Job belongs to.
+    queue = function (value) j_queue(self, private, value),
+    
+    #' @field worker
+    #' The Worker that this Job belongs to.
+    worker = function (value) j_worker(self, private, value),
     
     #' @field result
     #' Result of `expr`. Will block until Job is finished.
@@ -388,6 +399,27 @@ j_cpus <- function (self, private, value) {
   private$.cpus <- validate_positive_integer(value, job = self, if_null = 1L)
 }
 
+j_queue <- function (self, private, value) {
+  if (missing(value)) return (j__wref_key(private$wref_queue))
+  private$wref_queue <- j__new_weakref(value, 'Queue')
+}
+
+j_worker <- function (self, private, value) {
+  if (missing(value)) return (j__wref_key(private$wref_worker))
+  private$wref_worker <- j__new_weakref(value, 'Worker')
+}
+
+
+
+# Enable NULLs and class validation
+j__wref_key <- function (value) {
+  if (is_null(value)) NULL else wref_key(value)
+}
+j__new_weakref <- function (value, cls) {
+  if (!(is_null(value) || inherits(value, cls)))
+    cli_abort('value must be `NULL` or {.cls {cls}}, not {.type {value}}')
+  if (is_null(value)) NULL else new_weakref(value)
+}
 
 
 

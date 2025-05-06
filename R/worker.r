@@ -133,33 +133,28 @@ Worker <- R6Class(
   
   private = list(
     
-    .hooks     = NULL,
-    .state     = 'stopped',
-    .is_done   = FALSE,
-    .loaded    = NULL,
-    .uid       = NULL,
-    .job       = NULL,
-    .ps        = NULL, # ps::ps_handle object
-    .tmp       = NULL, # dir for child communication
-    .cnd       = NULL,
-    ps_tmp     = NULL, # child's tempdir()
-    old_dirs   = NULL,
-    semaphore  = NULL,
-    frame      = NULL,
-    trace      = NULL,
-    config     = NULL,
+    .hooks   = NULL,
+    .state   = 'stopped',
+    .is_done = FALSE,
+    .job     = NULL,
+    .ps      = NULL, # ps::ps_handle object
+    .cnd     = NULL,
+    frame    = NULL,
+    trace    = NULL,
+    w_dir    = NULL,
+    p_dir    = NULL,
+    sem      = NULL, # semaphore for blocking eval loop
+    config   = NULL, # path to config.rds
     
     set_state    = function (state) u__set_state(self, private, state),
     poll_job     = function ()      w__poll_job(self, private),
     poll_startup = function ()      w__poll_startup(self, private),
     job_done     = function (job)   w__job_done(self, private, job),
-    fp           = function (...)   file.path(private$.tmp, paste0(...)),
     
     finalize = function () {
-      if (!is_null(ps <- private$.ps)) ps_kill(ps)
-      old_dirs         <- c(private$old_dirs, private$.tmp, private$ps_tmp)
-      private$old_dirs <- old_dirs[dir.exists(old_dirs)]
-      lapply(private$old_dirs, unlink, recursive = TRUE, expand = FALSE)
+      if (!is_null(ps  <- private$.ps))   ps_kill(ps)
+      if (!is_null(sem <- private$sem))   sem$remove()
+      if (!is_null(dir <- private$p_dir)) dir_delete(dir)
     }
     
   ),
@@ -184,11 +179,11 @@ Worker <- R6Class(
     
     #' @field uid
     #' A short string, e.g. `'W11'`, that uniquely identifies this Worker.
-    uid = function () private$.uid,
+    uid = function () basename(private$w_dir),
     
     #' @field tmp
     #' The Worker's temporary directory.
-    tmp = function () private$.tmp,
+    tmp = function () private$w_dir,
     
     #' @field cnd
     #' The error that caused the Worker to stop.
@@ -203,20 +198,28 @@ w_initialize <- function (self, private, globals, packages, namespace, init, hoo
   
   wait <- validate_logical(wait)
   
-  private$.uid    <- increment_uid('W')
   private$.hooks  <- validate_hooks(hooks, 'WH')
   private$timeout <- validate_positive_number(timeout, if_null = Inf, if_na = Inf)
   private$frame   <- caller_env(2L)
   private$trace   <- trace_back()
   
-  private$config <- attr(globals, '.jqw_config') # worker for a queue
-  
-  if (is.null(private$config)) # standalone worker
-    private$config <- list(
-      globals   = validate_list(globals),
-      packages  = validate_character_vector(packages),
-      namespace = validate_string(namespace, null_ok = TRUE),
-      init      = validate_expression(init, init_subst) )
+  # This worker's working directory.
+  if (inherits(globals, 'Queue')) {
+    private$w_dir  <- dir_create(globals$tmp, 'W')
+    private$config <- file.path(globals$tmp, 'config.rds')
+  }
+  else {
+    private$w_dir  <- dir_create(c(ENV$jq_dir, 'Q0'), 'W')
+    private$config <- file.path(private$w_dir, 'config.rds')
+    
+    saveRDS(
+      file   = private$config, 
+      object = list(
+        'globals'   = validate_list(globals),
+        'packages'  = validate_character_vector(packages),
+        'namespace' = validate_string(namespace, null_ok = TRUE),
+        'init'      = validate_expression(init, init_subst) ))
+  }
   
   self$start(wait = wait)
   
@@ -243,47 +246,39 @@ w_start <- function (self, private, wait, timeout) {
   private$.is_done <- FALSE
   private$set_state('starting')
   
-  private$.tmp <- normalizePath(tempfile('jqw'), winslash = '/', mustWork = FALSE)
-  dir.create(private$.tmp)
+  # Disposable directory for fresh worker process
+  private$p_dir <- dir_create(private$w_dir, 'P')
   
-  saveRDS(private$config, private$fp('config.rds'))
-  cat(file = private$fp('start.r'), 'jobqueue:::p__start()\n')
-  
-  cnd <- catch_cnd(zero <- system2(
-    command = file.path(R.home('bin'), 'R'),
-    args    = shQuote(c(
-      '--vanilla', 
-      '--slave', 
-      '-f', private$fp('start.r'), 
-      '--args', private$.tmp) ),
-    stdout  = private$fp('stdout.txt'),
-    stderr  = private$fp('stderr.txt'), 
-    wait    = FALSE ))
+  # Once per R session, spawn a monitoring process
+  p__spawn_monitor()
   
   
-  if (!is_null(cnd) || !identical(zero, 0L)) {
-    
-    self$stop(error_cnd( # nocov start
-      parent  = cnd,
-      message = c(
-        "can't start Rscript subprocess",
-        read_logs(private$.tmp) ))) # nocov end
-    
-  } else {
-    
-    # Stop the worker if it spends too long in 'starting' state.
-    if (timeout < Inf) {
-      msg <- 'worker startup time exceeded {timeout} second{?s}'
-      msg <- cli_fmt(cli_text(msg))
-      self$on('.next', later(~self$stop(msg, 'timeout'), delay = timeout))
-    }
-    
-    # Keep tabs on the startup progress.
-    later(private$poll_startup)
+  # Start the worker's subprocess.
+  system2(
+    command = file.path(R.home('bin'), 'Rscript'),
+    args    = '--vanilla -',
+    wait    = FALSE,
+    stdout  = file.path(private$p_dir, 'stdout.txt'),
+    stderr  = file.path(private$p_dir, 'stderr.txt'),
+    input   = c(
+      paste0('ppid   <- ', shQuote(ENV$pid)),
+      paste0('mqid   <- ', shQuote(ENV$mqid)),
+      paste0('p_dir  <- ', shQuote(private$p_dir)),
+      paste0('config <- ', shQuote(private$config)),
+      paste0('jobqueue:::p__start(ppid, mqid, p_dir, config)') ))
+  
+  
+  # Stop the worker if it spends too long in 'starting' state.
+  if (timeout < Inf) {
+    msg <- 'worker startup time exceeded {timeout} second{?s}'
+    msg <- cli_fmt(cli_text(msg))
+    self$on('.next', later(~self$stop(msg, 'timeout'), delay = timeout))
   }
   
-  
-  if (is_true(wait)) self$wait(timeout = Inf)
+  # Keep tabs on the startup progress.
+  later(private$poll_startup)
+  if (is_true(wait))
+    self$wait(timeout = Inf)
   
   return (invisible(self))
 }
@@ -300,10 +295,10 @@ w_stop <- function (self, private, reason, cls) {
   }
   
   private$finalize()
-  private$.ps       <- NULL
-  private$.tmp      <- NULL
-  private$ps_tmp    <- NULL
-  private$semaphore <- NULL
+  
+  private$.ps   <- NULL
+  private$p_dir <- NULL
+  private$sem   <- NULL
   
   private$set_state('stopped')
   
@@ -343,10 +338,10 @@ w_run <- function (self, private, job) {
   
   # Data to send to the background process.
   request <- list(expr = job$expr, vars = job$vars, cpus = job$cpus)
-  saveRDS(request, private$fp('request.rds'))
+  saveRDS(request, file.path(private$p_dir, 'request.rds'))
   
   # Unblock the background process.
-  increment_semaphore(private$semaphore)
+  private$sem$post()
   
   private$set_state('busy')
   job$state <- 'running'
@@ -359,14 +354,13 @@ w_run <- function (self, private, job) {
 # Repeatably check if the Rscript is finished with the job.
 w__poll_job <- function (self, private) {
   
-  job <- private$.job
-  ps  <- private$.ps
+  job   <- private$.job
+  ps    <- private$.ps
+  p_dir <- private$p_dir
   
   if (private$.state != 'busy')    return (NULL)
   if (!inherits(job, 'Job'))       return (NULL)
   if (!inherits(ps,  'ps_handle')) return (NULL)
-  
-  output_fp <- private$fp('output.rds')
   
   # Crashed?
   if (!ps_is_running(ps)) {
@@ -376,7 +370,7 @@ w__poll_job <- function (self, private) {
       trace   = job$.trace, 
       message = c(
         'worker subprocess terminated unexpectedly',
-        read_logs(private$.tmp) ))
+        read_logs(p_dir) ))
     
     private$.job <- NULL
     job$output   <- output
@@ -384,10 +378,11 @@ w__poll_job <- function (self, private) {
   }
   
   # Finished?
-  else if (file.exists(output_fp)) {
+  else if (file_exists(p_dir, 'done')) {
+    
     private$.job <- NULL
-    job$output   <- readRDS(output_fp)
-    unlink(output_fp)
+    job$output   <- readRDS(file.path(p_dir, 'output.rds'))
+    dir_cleanup(p_dir)
     private$set_state('idle')
   }
   
@@ -403,34 +398,29 @@ w__poll_startup <- function (self, private) {
   
   if (private$.state != 'starting') return (NULL)
   
-  # Import the PID.
-  if (is_null(private$.ps) && file.exists(private$fp('ps_info.rds'))) {
-      ps_info     <- readRDS(private$fp('ps_info.rds'))
-      private$.ps <- try(silent = TRUE, ps::ps_handle(ps_info$pid, ps_info$time))
-      private$ps_tmp    <- ps_info$tmpd
-      private$semaphore <- ps_info$sem
-  }
+  p_dir <- private$p_dir
+  
+  # Look for 'pid_' file
+  if (is_null(private$.ps))
+    private$.ps <- dir_ps(p_dir)
+  
   
   # Check if alive and for indicator files.
-  if (!is_null(ps <- private$.ps)) {
+  if (inherits(private$.ps, 'ps_handle')) {
+    
+    ps <- private$.ps
     
     # Crashed?
-    fp <- private$fp('error.rds')
-    if (!inherits(ps, 'ps_handle') || !ps_is_running(ps) || file.exists(fp)) {
-      
-      logs <- read_logs(private$.tmp)  # nocov start
-      cnd  <- if (file.exists(fp)) readRDS(fp)
-      
-      if (!is.null(cnd) && !is.null(logs)) { parent <- cnd;  message <- logs }
-      else if (!is.null(cnd))              { parent <- cnd;  message <- NULL }
-      else if (!is.null(logs))             { parent <- NULL; message <- logs }
-      else                                 { parent <- NULL; message <- 'worker startup failed' }
-      
-      self$stop(error_cnd(call = private$caller_env, parent = parent, message = message))  # nocov end
+    if (!inherits(ps, 'ps_handle') || !ps_is_running(ps)) {
+      message <- read_logs(p_dir)  # nocov start
+      if (is.null(message)) message <- 'worker startup failed'
+      self$stop(error_cnd(call = private$caller_env, message = message))  # nocov end
     }
     
     # Ready?
-    else if (file.exists(private$fp('_ready_'))) {
+    else if (file_exists(p_dir, 'ready')) {
+      private$sem <- dir_sem(p_dir)
+      dir_cleanup(p_dir)
       private$set_state('idle')
     }
     
@@ -450,5 +440,3 @@ w__job_done <- function (self, private, job) {
   if (identical(job$uid, private$.job$uid))
     self$restart(wait = FALSE)
 }
-
-

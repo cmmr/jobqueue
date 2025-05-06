@@ -113,11 +113,10 @@ as_error <- function (reason) {
 
 
 
-last_uid <- new_environment()
-
 increment_uid <- function (prefix) {
-  value <- env_get(last_uid, prefix, 1L)
-  assign(prefix, value + 1L, last_uid)
+  hash  <- paste0('prefix_', rlang::hash(prefix))
+  value <- env_get(ENV, hash, 1L)
+  assign(hash, value + 1L, ENV)
   return (paste0(prefix, value))
 }
 
@@ -241,3 +240,56 @@ get_eq <- function (x, el, val) {
   x[unlist(sapply(seq_along(x), function (i) identical(x[[i]][[el]], val)))]
 }
 
+
+
+# Finds e.g. '/path/to/pid_ahtab4l9s3eaRx' and returns 'ahtab4l9s3eaRx'
+dir_prefix <- function (dir, prefix) {
+  
+  file <- list.files(dir, pattern = paste0('^', prefix))
+  if (length(file) == 1)
+    return (substr(file, nchar(prefix) + 1, nchar(file)))
+  
+  return (NULL)
+}
+
+dir_ps <- function (dir) {
+  if (!is.null(ps <- dir_prefix(dir, 'pid_')))
+    ps <- try(silent = TRUE, p__ps_handle(ps))
+  return (ps)
+}
+
+dir_sem <- function (dir) {
+  if (!is.null(sem <- dir_prefix(dir, 'sem_')))
+    sem <- interprocess::semaphore(name = sem, assert = 'exists')
+  return (sem)
+}
+
+dir_create <- function (dir, inc = NULL) {
+  if (!is.null(inc))    dir <- c(dir, increment_uid(inc))
+  if (length(dir) > 1)  dir <- do.call(file.path, as.list(dir))
+  if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
+  normalizePath(dir, winslash = '/')
+}
+
+dir_delete <- function (dir) {
+  if (dir.exists(dir))
+    unlink(dir, recursive = TRUE, force = TRUE, expand = FALSE)
+}
+
+dir_cleanup <- function (dir) {
+  files <- list.files(dir, all.files = TRUE, no.. = TRUE)
+  files <- setdiff(files, c('stdout.txt', 'stderr.txt', 'ready'))
+  files <- file.path(dir, files)
+  if (length(files) > 0)
+    unlink(files, recursive = TRUE, force = TRUE, expand = FALSE)
+}
+
+file_create <- function (dir, file) {
+  if (length(file) > 1) file <- paste(file, collapse = '')
+  file.create(file.path(dir, file))
+}
+
+file_exists <- function (dir, file) {
+  if (length(file) > 1) file <- paste(file, collapse = '')
+  file.exists(file.path(dir, file))
+}

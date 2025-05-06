@@ -221,13 +221,11 @@ Queue <- R6Class(
       fmap(private$.workers, 'stop', reason, cls)
       fmap(private$.jobs,    'stop', reason, cls)
       
-      unlink(private$.tmp, recursive = TRUE, expand = FALSE)
+      try(silent = TRUE, dir_delete(private$q_dir))
       
       return (invisible(NULL))
     },
     
-    .uid       = NULL,
-    .tmp       = NULL,
     .hooks     = list(),
     .jobs      = list(),
     .workers   = list(),
@@ -242,6 +240,7 @@ Queue <- R6Class(
     j_conf     = list(),
     w_conf     = list(),
     max_cpus   = NULL,
+    q_dir      = NULL,
     
     set_state  = function (state) u__set_state(self, private, state),
     dispatch   = function (...)   q__dispatch(self, private)
@@ -262,12 +261,12 @@ Queue <- R6Class(
     state = function () private$.state,
     
     #' @field uid
-    #' Get or set - Unique identifier, e.g. `'Q1'`.
-    uid = function (value) q_uid(private, value),
+    #' A short string, e.g. `'Q1'`, that uniquely identifies this Queue.
+    uid = function () basename(private$q_dir),
     
     #' @field tmp
     #' The Queue's temporary directory.
-    tmp = function () private$.tmp,
+    tmp = function () private$q_dir,
     
     #' @field workers
     #' Get or set - List of [Workers][Worker] used for processing Jobs.
@@ -301,20 +300,18 @@ q_initialize <- function (
   hooks[['worker']] <- c(list('idle' = private$dispatch), hooks[['worker']])
   
   # Queue configuration
-  self$uid          <- increment_uid('Q')
-  private$.tmp      <- normalizePath(tempfile('jqq'), winslash = '/', mustWork = FALSE)
+  private$q_dir     <- dir_create(ENV$jq_dir, 'Q')
   private$.hooks    <- validate_hooks(hooks[['queue']], 'QH')
   private$max_cpus  <- validate_positive_integer(max_cpus, if_null = availableCores())
   private$n_workers <- validate_positive_integer(workers,  if_null = ceiling(private$max_cpus * 1.2))
-  dir.create(private$.tmp)
   
   # Worker configuration
-  config_rds_file             <- file.path(private$.tmp, 'config.rds')
-  private$w_conf[['config']]  <- structure(NA, .jqw_config = config_rds_file)
   private$w_conf[['hooks']]   <- validate_hooks(hooks[['worker']], 'WH')
   private$w_conf[['timeout']] <- timeout[['starting']]
-  saveRDS(file = config_rds_file, list(
-    'globals'   = validate_list(globals, if_null = NULL),
+  saveRDS(
+    file   = file.path(private$q_dir, 'config.rds'), 
+    object = list(
+    'globals'   = validate_list(globals),
     'packages'  = validate_character_vector(packages),
     'namespace' = validate_string(namespace, null_ok = TRUE),
     'init'      = validate_expression(init, init_subst) ))
@@ -365,7 +362,7 @@ q_initialize <- function (
         
         worker <- Worker$new(
           hooks   = private$w_conf[['hooks']],
-          globals = private$w_conf[['config']],
+          globals = self,
           wait    = FALSE,
           timeout = private$w_conf[['timeout']] )
         
@@ -545,11 +542,6 @@ q__dispatch <- function (self, private) {
 
 
 # Active bindings to validate new values.
-
-q_uid <- function (private, value) {
-  if (missing(value)) return (private$.uid)
-  private$.uid <- validate_string(value)
-}
 
 q_jobs <- function (private, value) {
   if (missing(value)) return (private$.jobs)

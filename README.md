@@ -144,7 +144,7 @@ New jobs will replace existing jobs with the same `stop_id`.
 job1 <- q$run({ Sys.sleep(1); 'A' }, stop_id = 123)
 job2 <- q$run({ 'B' },               stop_id = 123)
 job1$result
-#> <interrupt: duplicated stop_id>
+#> <superseded: duplicated stop_id>
 job2$result
 #> [1] "B"
 ```
@@ -166,11 +166,13 @@ job2$result
 ## Variables
 
 ``` r
-q    <- Queue$new(globals = list(G = 8))
+q2   <- Queue$new(globals = list(G = 8))
 expr <- quote(c(x = x , y = y, G = G))
-job  <- q$run(expr, vars = list(x = 10, y = 2))
+job  <- q2$run(expr, vars = list(x = 10, y = 2))
 
 dput(job$result)
 #> c(x = 10, y = 2, G = 8)
+
+q2$stop()
 ```
 
