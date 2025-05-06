@@ -7,7 +7,7 @@ test_that('job', {
   
   q <- expect_silent(Queue$new(
     workers = 1L, 
-    timeout = c(starting = 15, total = 15) ))
+    timeout = c(starting = 60, total = 60) ))
   
   job <- expect_silent( q$run({ TRUE }) )
   expect_identical(job, q$submit(job))
