@@ -25,11 +25,10 @@ p__start <- function (ppid, mqid, p_dir, config) {
     do.call(Sys.setenv, as.list(structure('YES', names = mq$name)))
     
     list(
-      p_dir    = p_dir,
-      parent   = p__ps_handle(ppid),
-      config   = readRDS(config),
-      sem      = sem,
-      is_alive = p__ps_is_alive )
+      p_dir  = p_dir,
+      parent = p__ps_handle(ppid),
+      config = readRDS(config),
+      sem    = sem )
   })
   
   
@@ -83,7 +82,7 @@ p__start <- function (ppid, mqid, p_dir, config) {
         # Wait for semaphore; check if abandoned
         repeat {
           if (!file.exists(ready_file))    stop('ready file deleted', call. = FALSE)
-          if (!is_alive(parent))           stop('parent exited',      call. = FALSE)
+          if (!ps::ps_is_running(parent))  stop('parent exited',      call. = FALSE)
           if (sem$wait(timeout_ms = 2000)) break
         }
         
@@ -169,7 +168,7 @@ p__monitor <- function (ppid, mqid, m_dir) {
     }
     
     for (pid in names(active))
-      if (!p__ps_is_alive(active[[pid]]$ps) || scrub_all)
+      if (!ps_is_running(active[[pid]]$ps) || scrub_all)
         scrub(pid)
   }
   
@@ -177,8 +176,8 @@ p__monitor <- function (ppid, mqid, m_dir) {
   # Do housekeeping tasks every 2 seconds
   repeat {
     update_active()
-    if (!p__ps_is_alive(parent)) break
-    if (ps_wait(parent, 2000))   break
+    if (!ps_is_running(parent)) break
+    if (ps_wait(parent, 2000))  break
   }
   
   
@@ -227,7 +226,7 @@ p__poll_monitor <- function () {
   if (is.null(ENV$m_ps))
       ENV$m_ps <- dir_ps(ENV$m_dir)
   
-  if (!inherits(ENV$m_ps, 'ps_handle') || !p__ps_is_alive(ENV$m_ps))
+  if (!inherits(ENV$m_ps, 'ps_handle') || !ps::ps_is_running(ENV$m_ps))
     stop(c('subprocess monitor is not running', read_logs(ENV$m_dir))) # nocov
   
   later(p__poll_monitor, delay = 2)
@@ -274,6 +273,7 @@ p__ps_string <- function (p = ps::ps_handle()) {
   
   whole_secs <- as.integer(time)
   micro_secs <- as.numeric(time) %% 1 * 1000000
+  micro_secs <- as.integer(round(micro_secs))
   
   map <- c(letters, LETTERS, 0:9)
   
@@ -281,14 +281,6 @@ p__ps_string <- function (p = ps::ps_handle()) {
     floor(process_id / 52 ^ (3:0)) %% 52,
     floor(whole_secs / 62 ^ (5:0)) %% 62,
     floor(micro_secs / 62 ^ (3:0)) %% 62 )])
-}
-
-
-p__ps_is_alive <- function (p = ps::ps_handle()) {
-  
-  stopifnot(inherits(p, 'ps_handle'))
-  alive <- c("idle", "running", "sleeping", "disk_sleep", "uninterruptible", "waking")
-  isTRUE(try(silent = TRUE, ps::ps_status(p) %in% alive))
 }
 
 
