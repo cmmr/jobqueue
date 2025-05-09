@@ -15,7 +15,7 @@ Jobs go in. Results come out.
 
 \item{\code{state}}{The Queue's state: \code{'starting'}, \code{'idle'}, \code{'busy'}, \code{'stopped'}, or \code{'error.'}}
 
-\item{\code{uid}}{Get or set - Unique identifier, e.g. \code{'Q1'}.}
+\item{\code{uid}}{A short string, e.g. \code{'Q1'}, that uniquely identifies this Queue.}
 
 \item{\code{tmp}}{The Queue's temporary directory.}
 

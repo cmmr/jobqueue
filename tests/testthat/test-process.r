@@ -50,17 +50,20 @@ test_that('process', {
   
   
   # Code coverage for `p__monitor()`
+  ps        <- p__ps_handle()
+  real_pid  <- ps::ps_pid(ps)
+  real_time <- ps::ps_create_time(ps)
   
-  ppid  <- interprocess::uid()
+  ppid  <- p__ps_string(ps::ps_handle(real_pid, real_time + 5))
   mqid  <- mq$name
   m_dir <- dir_create(w_dir, 'M')
   
-  pid   <- interprocess::uid()
+  pid   <- p__ps_string(ps::ps_handle(real_pid, real_time + 10))
   sem   <- dir_sem(p_dir)$name
   dir   <- p_dir
   
   mq$send(paste(pid, sem, dir))
-  expect_silent(p__monitor(ppid, mqid, m_dir))
+  expect_warning(p__monitor(ppid, mqid, m_dir))
   expect_false(dir.exists(p_dir))
   
 })

@@ -127,7 +127,6 @@ p__monitor <- function (ppid, mqid, m_dir) {
   
   file_create(m_dir, c('pid_', p__ps_string()))
   
-  
   parent <- p__ps_handle(ppid)
   active <- list()
   
@@ -159,12 +158,12 @@ p__monitor <- function (ppid, mqid, m_dir) {
     
     while (!is.null(msg <- mq$receive(0))) {
       
-      pid <- substr(msg, 1, 14)
+      pid <- substr(msg, 1, 11)
       
       active[[pid]] <<- list(
         ps  = p__ps_handle(pid),
-        sem = substr(msg, 16, 29),
-        dir = substr(msg, 31, nchar(msg)) )
+        sem = substr(msg, 13, 24),
+        dir = substr(msg, 26, nchar(msg)) )
     }
     
     for (pid in names(active))
@@ -176,8 +175,8 @@ p__monitor <- function (ppid, mqid, m_dir) {
   # Do housekeeping tasks every 2 seconds
   repeat {
     update_active()
-    if (!ps_is_running(parent)) break
-    if (ps_wait(parent, 2000))  break
+    if (!ps_is_running(parent)) { warning('parent ', ppid, ' not running');    break }
+    if (ps_wait(parent, 2000))  { warning('ps_wait returned TRUE for ', ppid); break }
   }
   
   
@@ -242,25 +241,27 @@ p__ps_handle <- function (pid = NULL, time = NULL) {
   if (!is.character(pid))
     return (ps::ps_handle(pid, time))
   
+  str <- pid
+  
   map <- structure(0:61, names = c(letters, LETTERS, 0:9))
-  val <- map[strsplit(pid, '', fixed = TRUE)[[1]]]
+  val <- map[strsplit(str, '', fixed = TRUE)[[1]]]
+  pid <- sum(val[01:04] * 52^(3:0))
   
-  process_id <- sum(val[01:04] * 52 ^ (3:0))
-  whole_secs <- sum(val[05:10] * 62 ^ (5:0))
-  micro_secs <- sum(val[11:14] * 62 ^ (3:0))
-  
-  time <- whole_secs + (micro_secs / 1000000)
-  time <- as.POSIXct(time, tz = 'GMT', origin = '1970-01-01')
-  
-  # Allow fuzzy-matching the time by +/- 2 microseconds
   tryCatch(
-    expr  = {
-      p <- ps::ps_handle(pid = process_id)
-      stopifnot(abs(ps::ps_create_time(p) - time) < 2/1000000)
+    expr = {
+      p <- ps::ps_handle(pid = pid)
+      stopifnot(str == p__ps_string(p))
       p
     },
-    error = function (e) {
-      ps::ps_handle(pid = process_id, time = time)
+    error = function(e) {
+      
+      time <- sum(val[05:11] * 62^(6:0)) / 100
+      
+      if (.Platform$OS.type == "unix")
+        time <- time + as.numeric(ps::ps_boot_time())
+      
+      time <- as.POSIXct(time, tz = 'GMT', origin = '1970-01-01')
+      ps::ps_handle(pid = pid, time = time)
     }
   )
 }
@@ -268,19 +269,25 @@ p__ps_handle <- function (pid = NULL, time = NULL) {
 
 p__ps_string <- function (p = ps::ps_handle()) {
   
-  process_id <- ps::ps_pid(p)
-  time       <- ps::ps_create_time(p)
+  pid  <- ps::ps_pid(p)
+  time <- as.numeric(ps::ps_create_time(p))
   
-  whole_secs <- as.integer(time)
-  micro_secs <- as.numeric(time) %% 1 * 1000000
-  micro_secs <- as.integer(round(micro_secs))
+  if (.Platform$OS.type == "unix")
+    time <- time - as.numeric(ps::ps_boot_time())
+  
+  time <- round(time, 2) * 100
   
   map <- c(letters, LETTERS, 0:9)
-  
-  paste(collapse = '', map[1 + c(
-    floor(process_id / 52 ^ (3:0)) %% 52,
-    floor(whole_secs / 62 ^ (5:0)) %% 62,
-    floor(micro_secs / 62 ^ (3:0)) %% 62 )])
+  paste(
+    collapse = '',
+    map[
+      1 +
+        c(
+          floor(pid  / 52^(3:0)) %% 52,
+          floor(time / 62^(6:0)) %% 62
+        )
+    ]
+  )
 }
 
 

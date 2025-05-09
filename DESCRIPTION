@@ -1,8 +1,8 @@
 Package: jobqueue
 Type: Package
 Title: Run Interruptible Code Asynchronously
-Version: 1.6.3
-Date: 2025-05-06
+Version: 1.6.4
+Date: 2025-05-09
 Authors@R: c(
     person(
       "Daniel P.", "Smith",
@@ -32,7 +32,7 @@ Depends:
     R (>= 4.2.0)
 Imports:
     cli,
-    interprocess,
+    interprocess (>= 1.1.0),
     later,
     magrittr,
     parallelly,

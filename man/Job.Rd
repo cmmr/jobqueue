@@ -32,6 +32,10 @@ environment before evaluation.}
 \item{\code{output}}{Get or set - Job's raw output.
 \emph{Assigning to \verb{<Job>$output} will change the Job's state to \code{'done'}.}}
 
+\item{\code{queue}}{The Queue that this Job belongs to.}
+
+\item{\code{worker}}{The Worker that this Job belongs to.}
+
 \item{\code{result}}{Result of \code{expr}. Will block until Job is finished.}
 
 \item{\code{hooks}}{Currently registered callback hooks as a named list of functions.
