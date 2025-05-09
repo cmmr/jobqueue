@@ -9,7 +9,7 @@ also provides a way to check for and retrieve the result."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jobqueue</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,6 +94,14 @@ environment before evaluation.</p></dd>
 <dt><code>output</code></dt>
 <dd><p>Get or set - Job's raw output.
 <em>Assigning to <code>&lt;Job&gt;$output</code> will change the Job's state to <code>'done'</code>.</em></p></dd>
+
+
+<dt><code>queue</code></dt>
+<dd><p>The Queue that this Job belongs to.</p></dd>
+
+
+<dt><code>worker</code></dt>
+<dd><p>The Worker that this Job belongs to.</p></dd>
 
 
 <dt><code>result</code></dt>
