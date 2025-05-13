@@ -44,7 +44,7 @@ test_that('process', {
   # Verify correct message to monitor
   expect_identical(mq$count(), 1L)
   msg <- mq$receive(timeout_ms = 0)
-  expect_identical(msg, paste(ppid, dir_sem(p_dir), tempdir()))
+  expect_identical(msg, paste(ppid, dir_sem(p_dir), dir_create(tempdir())))
   
   
   
