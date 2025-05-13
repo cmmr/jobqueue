@@ -252,20 +252,22 @@ w_start <- function (self, private, wait, timeout) {
   # Once per R session, spawn a monitoring process
   p__spawn_monitor()
   
+  # A script that calls p__start.
+  cmdfile <- file.path(private$p_dir, 'cmds.r')
+  writeLines(con = cmdfile, c(
+    paste0('ppid   <- ', shQuote(ENV$pid)),
+    paste0('mqid   <- ', shQuote(ENV$mqid)),
+    paste0('p_dir  <- ', shQuote(private$p_dir)),
+    paste0('config <- ', shQuote(private$config)),
+    paste0('jobqueue:::p__start(ppid, mqid, p_dir, config)') ))
   
   # Start the worker's subprocess.
   system2(
     command = file.path(R.home('bin'), 'Rscript'),
-    args    = '--vanilla -',
+    args    = c('--vanilla', shQuote(cmdfile)),
     wait    = FALSE,
     stdout  = file.path(private$p_dir, 'stdout.txt'),
-    stderr  = file.path(private$p_dir, 'stderr.txt'),
-    input   = c(
-      paste0('ppid   <- ', shQuote(ENV$pid)),
-      paste0('mqid   <- ', shQuote(ENV$mqid)),
-      paste0('p_dir  <- ', shQuote(private$p_dir)),
-      paste0('config <- ', shQuote(private$config)),
-      paste0('jobqueue:::p__start(ppid, mqid, p_dir, config)') ))
+    stderr  = file.path(private$p_dir, 'stderr.txt') )
   
   
   # Stop the worker if it spends too long in 'starting' state.

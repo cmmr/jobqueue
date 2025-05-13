@@ -278,7 +278,7 @@ dir_delete <- function (dir) {
 
 dir_cleanup <- function (dir) {
   files <- list.files(dir, all.files = TRUE, no.. = TRUE)
-  files <- setdiff(files, c('stdout.txt', 'stderr.txt', 'ready'))
+  files <- setdiff(files, c('cmds.r', 'stdout.txt', 'stderr.txt', 'ready'))
   files <- file.path(dir, files)
   if (length(files) > 0)
     unlink(files, recursive = TRUE, force = TRUE, expand = FALSE)

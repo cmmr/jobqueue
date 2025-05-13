@@ -143,10 +143,10 @@ p__monitor <- function (ppid, mqid, m_dir) {
     
     active[[pid]] <<- NULL
     
-    try(silent = TRUE, ps_kill(c(
+    try(silent = TRUE, ps::ps_kill(c(
       ps,
-      ps_children(ps, recursive = TRUE),
-      ps_find_tree(marker = sem) )))
+      ps::ps_children(ps, recursive = TRUE),
+      ps::ps_find_tree(marker = sem) )))
     
     interprocess::semaphore(sem)$remove()
     try(silent = TRUE, dir_delete(dir))
@@ -167,7 +167,7 @@ p__monitor <- function (ppid, mqid, m_dir) {
     }
     
     for (pid in names(active))
-      if (!ps_is_running(active[[pid]]$ps) || scrub_all)
+      if (!ps::ps_is_running(active[[pid]]$ps) || scrub_all)
         scrub(pid)
   }
   
@@ -175,8 +175,8 @@ p__monitor <- function (ppid, mqid, m_dir) {
   # Do housekeeping tasks every 2 seconds
   repeat {
     update_active()
-    if (!ps_is_running(parent)) { warning('parent ', ppid, ' not running');    break }
-    if (ps_wait(parent, 2000))  { warning('ps_wait returned TRUE for ', ppid); break }
+    if (!ps::ps_is_running(parent)) { warning('parent ', ppid, ' not running');    break }
+    if (ps::ps_wait(parent, 2000))  { warning('ps_wait returned TRUE for ', ppid); break }
   }
   
   
@@ -184,7 +184,7 @@ p__monitor <- function (ppid, mqid, m_dir) {
   update_active(scrub_all = TRUE)
   
   # Last attempt for wayward processes
-  ps_kill(ps_find_tree(marker = mqid))
+  ps::ps_kill(ps::ps_find_tree(marker = mqid))
   
 }
 
@@ -201,17 +201,21 @@ p__spawn_monitor <- function () {
     ENV$mqid  <- mq$name
     ENV$m_dir <- dir_create(ENV$jq_dir, 'M')
     
+    # A script that calls p__monitor.
+    cmdfile <- file.path(ENV$m_dir, 'cmds.r')
+    writeLines(con = cmdfile, c(
+      paste0('ppid  <- ', shQuote(ENV$pid)),
+      paste0('mqid  <- ', shQuote(ENV$mqid)),
+      paste0('m_dir <- ', shQuote(ENV$m_dir)),
+      paste0('jobqueue:::p__monitor(ppid, mqid, m_dir)') ))
+    
+    # Start the monitor's subprocess.
     system2(
       command = file.path(R.home('bin'), 'Rscript'),
-      args    = '--vanilla --default-packages=ps -',
+      args    = c('--vanilla', shQuote(cmdfile)),
       wait    = FALSE,
       stdout  = file.path(ENV$m_dir, 'stdout.txt'),
-      stderr  = file.path(ENV$m_dir, 'stderr.txt'),
-      input   = c(
-        paste0('ppid  <- ', shQuote(ENV$pid)),
-        paste0('mqid  <- ', shQuote(ENV$mqid)),
-        paste0('m_dir <- ', shQuote(ENV$m_dir)),
-        paste0('jobqueue:::p__monitor(ppid, mqid, m_dir)') ))
+      stderr  = file.path(ENV$m_dir, 'stderr.txt') )
     
     later(p__poll_monitor, delay = 5)
   }
