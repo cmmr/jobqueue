@@ -242,7 +242,7 @@ get_eq <- function (x, el, val) {
 
 
 
-# Finds e.g. '/path/to/pid_ahtab4l9s3eaRx' and returns 'ahtab4l9s3eaRx'
+# Finds e.g. '/path/to/pid_afNUaEVguc0l' and returns 'afNUaEVguc0l'
 dir_prefix <- function (dir, prefix) {
   
   file <- list.files(dir, pattern = paste0('^', prefix))

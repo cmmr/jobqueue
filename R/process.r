@@ -20,7 +20,7 @@ p__start <- function (ppid, mqid, p_dir, config) {
     
     # Help the monitor terminate this process tree
     mq <- interprocess::queue(mqid, assert = 'exists')
-    mq$send(paste(pid, sem$name, tempdir()))
+    mq$send(paste(pid, sem$name, dir_create(tempdir())))
     do.call(Sys.setenv, as.list(structure('YES', names = sem$name)))
     do.call(Sys.setenv, as.list(structure('YES', names = mq$name)))
     
@@ -158,11 +158,11 @@ p__monitor <- function (ppid, mqid, m_dir) {
     
     while (!is.null(msg <- mq$receive(0))) {
       
-      pid <- substr(msg, 1, 11)
+      pid <- substr(msg, 1, 12)
       
       active[[pid]] <<- list(
         ps  = p__ps_handle(pid),
-        sem = substr(msg, 13, 24),
+        sem = substr(msg, 14, 24),
         dir = substr(msg, 26, nchar(msg)) )
     }
     
@@ -236,7 +236,31 @@ p__poll_monitor <- function () {
 
 # Functionality also available in ps > 1.9.1
 
-p__ps_handle <- function (pid = NULL, time = NULL) {
+p__ps_string <- function(p = ps::ps_handle()) {
+  
+  pid  <- ps::ps_pid(p)
+  time <- as.numeric(ps::ps_create_time(p))
+  
+  if (.Platform$OS.type == "unix")
+    time <- time - as.numeric(ps::ps_boot_time())
+  
+  time <- round(time, 3) * 1000 # millisecond resolution
+  
+  map <- c(letters, LETTERS, 0:9)
+  paste(
+    collapse = '',
+    map[
+      1 +
+        c(
+          floor(pid  / 62^(3:0)) %% 62,
+          floor(time / 62^(7:0)) %% 62
+        )
+    ]
+  )
+}
+
+
+p__ps_handle <- function(pid = NULL, time = NULL) {
   
   if (!is.character(pid))
     return (ps::ps_handle(pid, time))
@@ -245,7 +269,7 @@ p__ps_handle <- function (pid = NULL, time = NULL) {
   
   map <- structure(0:61, names = c(letters, LETTERS, 0:9))
   val <- map[strsplit(str, '', fixed = TRUE)[[1]]]
-  pid <- sum(val[01:04] * 52^(3:0))
+  pid <- sum(val[01:04] * 62^(3:0))
   
   tryCatch(
     expr = {
@@ -255,7 +279,7 @@ p__ps_handle <- function (pid = NULL, time = NULL) {
     },
     error = function(e) {
       
-      time <- sum(val[05:11] * 62^(6:0)) / 100
+      time <- sum(val[05:12] * 62^(7:0)) / 1000
       
       if (.Platform$OS.type == "unix")
         time <- time + as.numeric(ps::ps_boot_time())
@@ -263,30 +287,6 @@ p__ps_handle <- function (pid = NULL, time = NULL) {
       time <- as.POSIXct(time, tz = 'GMT', origin = '1970-01-01')
       ps::ps_handle(pid = pid, time = time)
     }
-  )
-}
-
-
-p__ps_string <- function (p = ps::ps_handle()) {
-  
-  pid  <- ps::ps_pid(p)
-  time <- as.numeric(ps::ps_create_time(p))
-  
-  if (.Platform$OS.type == "unix")
-    time <- time - as.numeric(ps::ps_boot_time())
-  
-  time <- round(time, 2) * 100
-  
-  map <- c(letters, LETTERS, 0:9)
-  paste(
-    collapse = '',
-    map[
-      1 +
-        c(
-          floor(pid  / 52^(3:0)) %% 52,
-          floor(time / 62^(6:0)) %% 62
-        )
-    ]
   )
 }
 
