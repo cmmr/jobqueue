@@ -32,14 +32,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/jobqueue.html">Get started</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../reference/Job.html">Job</a></li>
-    <li><a class="dropdown-item" href="../reference/Queue.html">Queue</a></li>
-    <li><a class="dropdown-item" href="../reference/Worker.html">Worker</a></li>
-  </ul>
-</li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
@@ -80,12 +73,12 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cmmr.github.io/jobqueue/">jobqueue</a></span><span class="op">)</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="reacting-to-results">Reacting to Results<a class="anchor" aria-label="anchor" href="#reacting-to-results"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">my_job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">my_job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># ===  A 'jobqueue'-style callback  ============</span></span>
 <span><span class="va">my_job</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'done'</span>, <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Result = '</span>, <span class="va">.</span><span class="op">$</span><span class="va">result</span><span class="op">)</span><span class="op">)</span></span>
@@ -100,26 +93,26 @@
 <h2 id="output-vs-result">Output vs Result<a class="anchor" aria-label="anchor" href="#output-vs-result"></a>
 </h2>
 <p>When <code>expr</code> is finished evaluating, the result is assigned
-to <code>&lt;Job&gt;$output</code>.</p>
+to <code>&lt;job&gt;$output</code>.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">output</span></span>
 <span><span class="co">#&gt; [1] 42</span></span></code></pre></div>
-<p>By default, <code>&lt;Job&gt;$result</code> will return the exact
-same value as <code>&lt;Job&gt;$output</code>.</p>
+<p>By default, <code>&lt;job&gt;$result</code> will return the exact
+same value as <code>&lt;job&gt;$output</code>.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1] 42</span></span></code></pre></div>
-<p>However, while <code>&lt;Job&gt;$output</code> is a fixed value,
-<code>&lt;Job&gt;$result</code> is highly configurable. Most notably by
+<p>However, while <code>&lt;job&gt;$output</code> is a fixed value,
+<code>&lt;job&gt;$result</code> is highly configurable. Most notably by
 the <code>reformat</code> and <code>signal</code> parameters.</p>
 </div>
 <div class="section level2">
 <h2 id="reformatting-output">Reformatting Output<a class="anchor" aria-label="anchor" href="#reformatting-output"></a>
 </h2>
 <p>Use <code>reformat = function (job) {...}</code> to define what
-should be returned by <code>&lt;Job&gt;$result</code>.</p>
+should be returned by <code>&lt;job&gt;$result</code>.</p>
 <blockquote>
 <p><strong>Important</strong></p>
 <p>You may access <code>job$output</code> in your <code>reformat</code>
@@ -129,10 +122,9 @@ recusion.</p>
 </blockquote>
 <p><code>reformat</code> can be set in several places:</p>
 <ul>
-<li><code>Queue$new(reformat = http_wrap)</code></li>
-<li><code>Job$new(reformat = http_wrap)</code></li>
-<li><code>&lt;Queue&gt;$run(reformat = http_wrap)</code></li>
-<li><code>&lt;Job&gt;$reformat &lt;- http_wrap</code></li>
+<li><code>jobqueue(reformat = http_wrap)</code></li>
+<li><code>&lt;jobqueue&gt;$run(reformat = http_wrap)</code></li>
+<li><code>&lt;job&gt;$reformat &lt;- http_wrap</code></li>
 </ul>
 <div class="section level3">
 <h3 id="transformation">Transformation<a class="anchor" aria-label="anchor" href="#transformation"></a>
@@ -143,35 +135,36 @@ recusion.</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">'{"status":200,"body":{"result":'</span>, <span class="va">result</span>, <span class="st">'}}'</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, reformat <span class="op">=</span> <span class="va">http_wrap</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, reformat <span class="op">=</span> <span class="va">http_wrap</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">result</span><span class="op">)</span></span>
 <span><span class="co">#&gt; {"status":200,"body":{"result":42}}</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="job-details">Job Details<a class="anchor" aria-label="anchor" href="#job-details"></a>
+<h3 id="job-details">
+<code>job</code> Details<a class="anchor" aria-label="anchor" href="#job-details"></a>
 </h3>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">with_id</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>result <span class="op">=</span> <span class="va">job</span><span class="op">$</span><span class="va">output</span>, id <span class="op">=</span> <span class="va">job</span><span class="op">$</span><span class="va">id</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, reformat <span class="op">=</span> <span class="va">with_id</span>, id <span class="op">=</span> <span class="st">'abc'</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, reformat <span class="op">=</span> <span class="va">with_id</span>, id <span class="op">=</span> <span class="st">'abc'</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dput.html" class="external-link">dput</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">result</span><span class="op">)</span></span>
 <span><span class="co">#&gt; list(result = 42, id = "abc")</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="non-blocking">Non-blocking<a class="anchor" aria-label="anchor" href="#non-blocking"></a>
 </h3>
-<p><code>&lt;Job&gt;$output</code> blocks until the Job is done. If you
-want <code>&lt;Job&gt;$result</code> to not block, you can return a
-placeholder value instead.</p>
+<p><code>&lt;job&gt;$output</code> blocks until the <code>job</code> is
+done. If you want <code>&lt;job&gt;$result</code> to not block, you can
+return a placeholder value instead.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">reformat</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">is_done</span><span class="op">)</span> <span class="op">{</span> <span class="va">job</span><span class="op">$</span><span class="va">output</span>                 <span class="op">}</span></span>
 <span>  <span class="kw">else</span>             <span class="op">{</span> <span class="st">'result not available yet'</span> <span class="op">}</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">42</span> <span class="op">}</span>, reformat <span class="op">=</span> <span class="va">reformat</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">42</span> <span class="op">}</span>, reformat <span class="op">=</span> <span class="va">reformat</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1] "result not available yet"</span></span>
 <span></span>
@@ -182,12 +175,13 @@ placeholder value instead.</p>
 <div class="section level2">
 <h2 id="signaling-errors">Signaling Errors<a class="anchor" aria-label="anchor" href="#signaling-errors"></a>
 </h2>
-<p>By default, errors and interrupts will be caught by jobqueue and
-returned as a condition object from <code>&lt;Job&gt;$result</code>.</p>
+<p>By default, errors and interrupts will be caught by the
+<code>jobqueue</code> and returned as a condition object from
+<code>&lt;job&gt;$result</code>.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">expr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">expr</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">expr</span><span class="op">)</span></span>
 <span><span class="va">x</span>   <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">'condition'</span><span class="op">)</span></span>
@@ -198,7 +192,7 @@ returned as a condition object from <code>&lt;Job&gt;$result</code>.</p>
 <p>If you want those errors to continue propagating, set
 <code>signal = TRUE</code>.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">expr</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="va">expr</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">x</span>   <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; Error:</span></span>
 <span><span class="co">#&gt; ! stop("error XYZ")</span></span>
@@ -210,14 +204,14 @@ returned as a condition object from <code>&lt;Job&gt;$result</code>.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">print_cnd</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">cnd</span><span class="op">)</span> <span class="fu">cli</span><span class="fu">::</span><span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">'Caught {.type {cnd}}.'</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">result</span>, error <span class="op">=</span> <span class="va">print_cnd</span>, interrupt <span class="op">=</span> <span class="va">print_cnd</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Caught an &lt;interrupt&gt; object.</span></span>
 <span></span>
 <span><span class="va">res</span></span>
 <span><span class="co">#&gt; NULL</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">result</span>, error <span class="op">=</span> <span class="va">print_cnd</span>, interrupt <span class="op">=</span> <span class="va">print_cnd</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Caught an &lt;error&gt; object.</span></span>
 <span></span>
@@ -227,13 +221,13 @@ returned as a condition object from <code>&lt;Job&gt;$result</code>.</p>
 stopping a job is part of the “normal” workflow and shouldn’t be lumped
 in with other errors.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="st">'error'</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="st">'error'</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">result</span>, error <span class="op">=</span> <span class="va">print_cnd</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">res</span></span>
 <span><span class="co">#&gt; &lt;interrupt: job stopped by user&gt;</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="st">'error'</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="st">'error'</span><span class="op">)</span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">result</span>, error <span class="op">=</span> <span class="va">print_cnd</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Caught an &lt;error&gt; object.</span></span>
 <span></span>
@@ -243,34 +237,35 @@ in with other errors.</p>
 <div class="section level2">
 <h2 id="promise-handling">Promise Handling<a class="anchor" aria-label="anchor" href="#promise-handling"></a>
 </h2>
-<p>You can pass a Job directly to any function that expects a ‘promise’
-object, such as <code><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">promises::then</a></code> or
+<p>You can pass a <code>job</code> directly to any function that expects
+a <code>promise</code> object, such as <code><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">promises::then</a></code> or
 <code>promises::%...&gt;%</code>. These functions are re-exported by
-jobqueue, so calling <code><a href="https://rstudio.github.io/promises/" class="external-link">library(promises)</a></code> is optional.</p>
+<code>jobqueue</code>, so calling <code><a href="https://rstudio.github.io/promises/" class="external-link">library(promises)</a></code> is
+optional.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span><span class="op">)</span> <span class="op"><a href="https://rstudio.github.io/promises/reference/pipes.html" class="external-link">%...&gt;%</a></span> <span class="va">message</span></span>
+<code class="sourceCode R"><span><span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span><span class="op">)</span> <span class="op"><a href="https://rstudio.github.io/promises/reference/pipes.html" class="external-link">%...&gt;%</a></span> <span class="va">message</span></span>
 <span><span class="co">#&gt; 42</span></span></code></pre></div>
-<p>By default, errors and interrupts are caught by jobqueue and used for
-promise fulfillment.</p>
+<p>By default, errors and interrupts are caught by <code>jobqueue</code>
+and used for promise fulfillment.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">onFulfilled</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">value</span><span class="op">)</span> <span class="fu">cli</span><span class="fu">::</span><span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">'Fulfilled with {.type {value}}.'</span><span class="op">)</span></span>
 <span><span class="va">onRejected</span>  <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">err</span><span class="op">)</span>   <span class="fu">cli</span><span class="fu">::</span><span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">'Rejected with {.type {err}}.'</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">job</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">then</a></span><span class="op">(</span><span class="va">onFulfilled</span>, <span class="va">onRejected</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Fulfilled with an &lt;interrupt&gt; object.</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span><span class="op">)</span></span>
 <span><span class="va">job</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">then</a></span><span class="op">(</span><span class="va">onFulfilled</span>, <span class="va">onRejected</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Fulfilled with an &lt;error&gt; object.</span></span></code></pre></div>
 <p>Setting <code>signal = TRUE</code> will cause errors and interrupts
 be sent to the promise’s rejection handler instead.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">job</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">then</a></span><span class="op">(</span><span class="va">onFulfilled</span>, <span class="va">onRejected</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Rejected with an &lt;interrupt&gt; object.</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">'error XYZ'</span><span class="op">)</span> <span class="op">}</span>, signal <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">job</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">then</a></span><span class="op">(</span><span class="va">onFulfilled</span>, <span class="va">onRejected</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Rejected with an &lt;error&gt; object.</span></span></code></pre></div>
 </div>

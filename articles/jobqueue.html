@@ -32,14 +32,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="active nav-item"><a class="nav-link" href="../articles/jobqueue.html">Get started</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../reference/Job.html">Job</a></li>
-    <li><a class="dropdown-item" href="../reference/Queue.html">Queue</a></li>
-    <li><a class="dropdown-item" href="../reference/Worker.html">Worker</a></li>
-  </ul>
-</li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
@@ -79,29 +72,31 @@
     
     
 <div class="section level2">
-<h2 id="create-a-queue">Create a Queue<a class="anchor" aria-label="anchor" href="#create-a-queue"></a>
+<h2 id="create-a-jobqueue">Create a <code>jobqueue</code><a class="anchor" aria-label="anchor" href="#create-a-jobqueue"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cmmr.github.io/jobqueue/">jobqueue</a></span><span class="op">)</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>When you create a Queue, several Worker processes are created in the
-background. You can then evaluate R code on those background processes
-while your main R process is free to do other work.</p>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>When you create a <code>jobqueue</code>, several <code>worker</code>
+processes are created in the background. You can then evaluate R code on
+those background processes while your main R process is free to do other
+work.</p>
 <blockquote>
 <p><strong>Important</strong></p>
 <p>The background processes are persisent R sessions. Avoid modifying
 their <code>.GlobalEnv</code>, otherwise your R code will produce
-different results based on which Worker evaluates it.</p>
+different results based on which <code>worker</code> evaluates it.</p>
 </blockquote>
 </div>
 <div class="section level2">
-<h2 id="create-a-job">Create a Job<a class="anchor" aria-label="anchor" href="#create-a-job"></a>
+<h2 id="create-a-job">Create a <code>job</code><a class="anchor" aria-label="anchor" href="#create-a-job"></a>
 </h2>
 <p>Main article: <code><a href="../articles/eval.html">vignette('eval')</a></code></p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">'Hello'</span>, <span class="st">'World!'</span><span class="op">)</span> <span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<p>This Job will begin evaluating immediately, assuming no other Jobs
-are ahead of it in the Queue.</p>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">'Hello'</span>, <span class="st">'World!'</span><span class="op">)</span> <span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p>This <code>job</code> will begin evaluating immediately, assuming no
+other <code>job</code>s are ahead of it in the
+<code>jobqueue</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="access-the-result">Access the Result<a class="anchor" aria-label="anchor" href="#access-the-result"></a>
@@ -110,8 +105,8 @@ are ahead of it in the Queue.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1] "Hello World!"</span></span></code></pre></div>
-<p>Running <code>&lt;Job&gt;$result</code> will block until the Job
-finishes and the result is ready.</p>
+<p>Running <code>&lt;job&gt;$result</code> will block until the
+<code>job</code> finishes and the result is ready.</p>
 </div>
 <div class="section level2">
 <h2 id="add-a-callback-hook">Add a Callback Hook<a class="anchor" aria-label="anchor" href="#add-a-callback-hook"></a>
@@ -128,12 +123,12 @@ result to be handled without blocking the main R process.</p>
 </h2>
 <p>Main article: <code><a href="../articles/stops.html">vignette('stops')</a></code></p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span>; <span class="st">'Zzzzz'</span> <span class="op">}</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span>; <span class="st">'Zzzzz'</span> <span class="op">}</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: job stopped by user&gt;</span></span></code></pre></div>
-<p>If the Job’s result is no longer needed and you want to free up
-compute resources, calling <code>&lt;Job&gt;$stop()</code> will
+<p>If the <code>job</code>’s result is no longer needed and you want to
+free up compute resources, calling <code>&lt;job&gt;$stop()</code> will
 terminate the background process. Terminated background process are
 automatically replaced by new ones.</p>
 </div>
@@ -142,7 +137,7 @@ automatically replaced by new ones.</p>
 </h2>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Variables to permanently store on the Worker.</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>globals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>MY_DATA <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>globals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>MY_DATA <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Variables to temporary add to the Worker.</span></span>
 <span><span class="va">vars</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">2</span>, fields <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'mpg'</span>, <span class="st">'cyl'</span>, <span class="st">'disp'</span><span class="op">)</span><span class="op">)</span></span>
@@ -150,7 +145,7 @@ automatically replaced by new ones.</p>
 <span><span class="co"># The expression to evaluate on the Worker.</span></span>
 <span><span class="va">expr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">MY_DATA</span>, <span class="va">n</span><span class="op">)</span><span class="op">[</span>,<span class="va">fields</span><span class="op">]</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span>expr <span class="op">=</span> <span class="va">expr</span>, vars <span class="op">=</span> <span class="va">vars</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span>expr <span class="op">=</span> <span class="va">expr</span>, vars <span class="op">=</span> <span class="va">vars</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt;               mpg cyl disp</span></span>

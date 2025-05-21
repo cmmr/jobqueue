@@ -32,14 +32,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/jobqueue.html">Get started</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../reference/Job.html">Job</a></li>
-    <li><a class="dropdown-item" href="../reference/Queue.html">Queue</a></li>
-    <li><a class="dropdown-item" href="../reference/Worker.html">Worker</a></li>
-  </ul>
-</li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
@@ -83,7 +76,7 @@
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cmmr.github.io/jobqueue/">jobqueue</a></span><span class="op">)</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>workers <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>workers <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
@@ -98,21 +91,21 @@ synchronous programming approach would be:</p>
 discrete steps: <em>computation</em> and <em>result handling</em>. Using
 jobqueue, this looks like:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">2</span> <span class="op">+</span> <span class="fl">2</span> <span class="op">}</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">2</span> <span class="op">+</span> <span class="fl">2</span> <span class="op">}</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'done'</span>, <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Result = '</span>, <span class="va">.</span><span class="op">$</span><span class="va">result</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Result = 20</span></span></code></pre></div>
 <p>The asynchronous format allows parts of your code to run
 independently, in this case on separate R processes. When a part
 finishes, the callback will be executed to allow you to work with the
 result.</p>
-<p>Callbacks are not limited to just the Job finishing. See the “State
-Triggers” section for a list of all events that can trigger a
+<p>Callbacks are not limited to just the <code>job</code> finishing. See
+the “State Triggers” section for a list of all events that can trigger a
 callback.</p>
 <blockquote>
 <p><strong>Important</strong></p>
 <p>Hooks are evaluated on the main process, not the background
 processes. Therefore, ensure that the callback functions execute quickly
-so as to not delay Job handling.</p>
+so as to not delay <code>job</code> handling.</p>
 </blockquote>
 </div>
 <div class="section level2">
@@ -122,33 +115,33 @@ so as to not delay Job handling.</p>
 triggered the callback. Functions accepting zero or multiple arguments
 are also allowed.</p>
 <p>This is a great place for R’s new shorthand function definitions (R
-&gt;= 4.1.0).</p>
-<p>jobqueue also understands the lambda syntax for functions (see
+&gt;= 4.1.0). Lambda syntax can also be used (see
 <code><a href="https://rlang.r-lib.org/reference/as_function.html" class="external-link">rlang::as_function()</a></code>).</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Queue Hooks</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">queue</span><span class="op">)</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Queue is '</span>, <span class="va">queue</span><span class="op">$</span><span class="va">state</span><span class="op">)</span> <span class="op">}</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> \<span class="op">(</span><span class="va">q</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Queue is '</span>, <span class="va">q</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Queue is '</span>, <span class="va">.</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># jobqueue hooks</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">jq</span><span class="op">)</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'jobqueue is '</span>, <span class="va">jq</span><span class="op">$</span><span class="va">state</span><span class="op">)</span> <span class="op">}</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> \<span class="op">(</span><span class="va">jq</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'jobqueue is '</span>, <span class="va">jq</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'jobqueue is '</span>, <span class="va">.</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Worker Hooks</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">worker</span><span class="op">)</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Worker is '</span>, <span class="va">worker</span><span class="op">$</span><span class="va">state</span><span class="op">)</span> <span class="op">}</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> \<span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Worker is '</span>, <span class="va">w</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Worker is '</span>, <span class="va">.</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
+<span><span class="co"># worker hooks</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">worker</span><span class="op">)</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'worker is '</span>, <span class="va">worker</span><span class="op">$</span><span class="va">state</span><span class="op">)</span> <span class="op">}</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> \<span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'worker is '</span>, <span class="va">w</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'worker is '</span>, <span class="va">.</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Job Hooks</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Job is '</span>, <span class="va">job</span><span class="op">$</span><span class="va">state</span><span class="op">)</span> <span class="op">}</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> \<span class="op">(</span><span class="va">j</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Job is '</span>, <span class="va">j</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
-<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'Job is '</span>, <span class="va">.</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># job hooks</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'job is '</span>, <span class="va">job</span><span class="op">$</span><span class="va">state</span><span class="op">)</span> <span class="op">}</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> \<span class="op">(</span><span class="va">j</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'job is '</span>, <span class="va">j</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
+<span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'job is '</span>, <span class="va">.</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="triggers">Triggers<a class="anchor" aria-label="anchor" href="#triggers"></a>
 </h2>
-<p>Queue, Worker, and Job objects update their <code>$state</code> as
-described in the tables below. Each time the state changes, any
-callbacks registered to that state are executed. In addition, you can
-register <code>state = '*'</code> or <code>state='.next'</code> which
-trigger regardless of the present state name.</p>
+<p><code>jobqueue</code>, <code>worker</code>, and <code>job</code>
+objects update their <code>$state</code> as described in the tables
+below. Each time the state changes, any callbacks registered to that
+state are executed. In addition, you can register
+<code>state = '*'</code> or <code>state='.next'</code> which trigger
+regardless of the present state name.</p>
 <div class="section level3">
 <h3 id="special-triggers">Special Triggers<a class="anchor" aria-label="anchor" href="#special-triggers"></a>
 </h3>
@@ -174,7 +167,8 @@ trigger regardless of the present state name.</p>
 </table>
 </div>
 <div class="section level3">
-<h3 id="queue-states">Queue States<a class="anchor" aria-label="anchor" href="#queue-states"></a>
+<h3 id="jobqueue-states">
+<code>jobqueue</code> States<a class="anchor" aria-label="anchor" href="#jobqueue-states"></a>
 </h3>
 <table class="table">
 <colgroup>
@@ -188,25 +182,27 @@ trigger regardless of the present state name.</p>
 <tbody>
 <tr class="odd">
 <td><code>'starting'</code></td>
-<td>After initialization, before Workers are started.</td>
+<td>After initialization, before <code>worker</code>s are started.</td>
 </tr>
 <tr class="even">
 <td><code>'idle'</code></td>
-<td>When all Workers are idle. Also, after initial startup.</td>
+<td>When all <code>workers</code> are idle. Also, after initial
+startup.</td>
 </tr>
 <tr class="odd">
 <td><code>'busy'</code></td>
-<td>At least one worker is busy.</td>
+<td>At least one <code>worker</code> is busy.</td>
 </tr>
 <tr class="even">
 <td><code>'stopped'</code></td>
-<td>After <code>&lt;Queue&gt;$stop()</code> is called.</td>
+<td>After <code>&lt;jobqueue&gt;$stop()</code> is called.</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level3">
-<h3 id="worker-states">Worker States<a class="anchor" aria-label="anchor" href="#worker-states"></a>
+<h3 id="worker-states">
+<code>worker</code> States<a class="anchor" aria-label="anchor" href="#worker-states"></a>
 </h3>
 <table class="table">
 <colgroup>
@@ -224,21 +220,22 @@ trigger regardless of the present state name.</p>
 </tr>
 <tr class="even">
 <td><code>'idle'</code></td>
-<td>Waiting on Jobs to be submitted.</td>
+<td>Waiting on <code>job</code>s to be submitted.</td>
 </tr>
 <tr class="odd">
 <td><code>'busy'</code></td>
-<td>After a Job starts running.</td>
+<td>After a <code>job</code> starts running.</td>
 </tr>
 <tr class="even">
 <td><code>'stopped'</code></td>
-<td>After <code>&lt;Worker&gt;$stop()</code> is called.</td>
+<td>After <code>&lt;worker&gt;$stop()</code> is called.</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level3">
-<h3 id="job-states">Job States<a class="anchor" aria-label="anchor" href="#job-states"></a>
+<h3 id="job-states">
+<code>job</code> States<a class="anchor" aria-label="anchor" href="#job-states"></a>
 </h3>
 <table class="table">
 <colgroup>
@@ -252,11 +249,11 @@ trigger regardless of the present state name.</p>
 <tbody>
 <tr class="odd">
 <td><code>'created'</code></td>
-<td>After <code>Job$new()</code> initialization.</td>
+<td>After <code>job</code> object initialization.</td>
 </tr>
 <tr class="even">
 <td><code>'submitted'</code></td>
-<td>After <code>&lt;Job&gt;$queue</code> is assigned.</td>
+<td>After <code>&lt;job&gt;$queue</code> is assigned.</td>
 </tr>
 <tr class="odd">
 <td><code>'queued'</code></td>
@@ -269,12 +266,12 @@ resolved.</td>
 </tr>
 <tr class="odd">
 <td><code>'running'</code></td>
-<td>After <code>&lt;Job&gt;$worker</code> is set and evaluation
+<td>After <code>&lt;job&gt;$worker</code> is set and evaluation
 begins.</td>
 </tr>
 <tr class="even">
 <td><code>'done'</code></td>
-<td>After <code>&lt;Job&gt;$output</code> is assigned.</td>
+<td>After <code>&lt;job&gt;$output</code> is assigned.</td>
 </tr>
 </tbody>
 </table>
@@ -283,30 +280,33 @@ begins.</td>
 <div class="section level2">
 <h2 id="attaching">Attaching<a class="anchor" aria-label="anchor" href="#attaching"></a>
 </h2>
-<p>Callbacks can be attached to Queue, Worker, or Job objects.</p>
-<p>You can add callbacks either when you create the object with
-<code>$new()</code>, or later with <code>$on()</code>.</p>
+<p>Callbacks can be attached to <code>jobqueue</code>,
+<code>worker</code>, or <code>job</code> objects.</p>
+<p>You can add callbacks either in the constructor, or later with
+<code>$on()</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hook</span> <span class="op">&lt;-</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="va">.</span><span class="op">$</span><span class="va">uid</span>, <span class="st">' is '</span>, <span class="va">.</span><span class="op">$</span><span class="va">state</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>q_idle <span class="op">=</span> <span class="va">hook</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">w</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Worker.html">Worker</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>idle   <span class="op">=</span> <span class="va">hook</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">j</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>done   <span class="op">=</span> <span class="va">hook</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>q_idle <span class="op">=</span> <span class="va">hook</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">w</span>  <span class="op">&lt;-</span> <span class="va"><a href="../reference/worker_class.html">worker_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>idle   <span class="op">=</span> <span class="va">hook</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">j</span>  <span class="op">&lt;-</span> <span class="va"><a href="../reference/job_class.html">job_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>done   <span class="op">=</span> <span class="va">hook</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">q</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'busy'</span>,     <span class="va">hook</span><span class="op">)</span></span>
+<span><span class="va">jq</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'busy'</span>,    <span class="va">hook</span><span class="op">)</span></span>
 <span><span class="va">w</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'busy'</span>,     <span class="va">hook</span><span class="op">)</span></span>
 <span><span class="va">j</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'starting'</span>, <span class="va">hook</span><span class="op">)</span></span></code></pre></div>
-<p>In <code>Queue$new()</code>, <code>hooks</code> can set hooks for the
-Queue, Worker, and Job objects. The rules are:</p>
+<p>In <code><a href="../reference/jobqueue.html">jobqueue()</a></code>, <code>hooks</code> can set hooks for the
+<code>jobqueue</code>, <code>worker</code>, and <code>job</code>. The
+rules are:</p>
 <ul>
 <li>Prefixing with <code>q_</code>, <code>w_</code>, or <code>j_</code>
-attaches the hook to the Queue, Workers, or Jobs, respectively.</li>
-<li>Non-prefixed hooks are attached to Jobs.</li>
-<li>Alternatively, a list of lists can be assigned to hooks, of the
-format:</li>
+attaches the hook to the <code>jobqueue</code>, <code>worker</code>, or
+<code>job</code>, respectively.</li>
+<li>Non-prefixed hooks are attached to <code>jobs</code>.</li>
+<li>Alternatively, a list of lists can be assigned to
+<code>hooks</code>, of the format:</li>
 </ul>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span></span>
 <span>  <span class="st">'hooks'</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="st">'queue'</span>  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>idle <span class="op">=</span> <span class="va">hook</span><span class="op">)</span>, </span>
 <span>    <span class="st">'worker'</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>idle <span class="op">=</span> <span class="va">hook</span><span class="op">)</span>, </span>
@@ -315,53 +315,54 @@ format:</li>
 <div class="section level2">
 <h2 id="removing">Removing<a class="anchor" aria-label="anchor" href="#removing"></a>
 </h2>
-<p>Callbacks attached with <code>$new()</code> cannot be removed.</p>
+<p>Callbacks attached in the constructor cannot be removed.</p>
 <p>When you attach a callback with <code>$on()</code>, the return value
 is a function, which, when called, will remove that callback from the
 object.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/job_class.html">job_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  <span class="st">'expr'</span>  <span class="op">=</span> <span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, </span>
 <span>  <span class="st">'hooks'</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>done <span class="op">=</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'ABC'</span><span class="op">)</span><span class="op">)</span> <span class="op">)</span></span>
 <span></span>
 <span><span class="va">off</span> <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'done'</span>, <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">'XYZ'</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">off</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">q</span><span class="op">$</span><span class="fu">submit</span><span class="op">(</span><span class="va">job</span><span class="op">)</span></span>
+<span><span class="va">jq</span><span class="op">$</span><span class="fu">submit</span><span class="op">(</span><span class="va">job</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ABC</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="default-job-hooks">Default Job Hooks<a class="anchor" aria-label="anchor" href="#default-job-hooks"></a>
+<h2 id="default-job-hooks">Default <code>job</code> Hooks<a class="anchor" aria-label="anchor" href="#default-job-hooks"></a>
 </h2>
-<p>When you create a Queue (with <code>Queue$new()</code>), you can
-define a set of callbacks to automatically apply to any Jobs that are
-created with the <code>&lt;Queue&gt;$run()</code> command.</p>
+<p>When you create a <code>jobqueue</code>, you can define a set of
+callbacks to automatically apply to all <code>job</code>s created with
+the <code>&lt;jobqueue&gt;$run()</code> command.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">0</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">n</span>  <span class="op">&lt;-</span> <span class="fl">0</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'Hi'</span> <span class="op">}</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'Hi'</span> <span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">n</span></span>
 <span><span class="co">#&gt; [1] 5</span></span></code></pre></div>
-<p>How does <code>Queue$new()</code> know to apply the
-<code>hooks</code> to Jobs instead of Queues or Workers? Unless
-otherwise indicated, <code>Queue$new()</code> <code>hooks</code> are
-assumed to be for Jobs. You can also explicitly specify that
-<code>hooks</code> are for Jobs by using the formats described in the
-“Attaching Callbacks” section above.</p>
+<p>How does <code><a href="../reference/jobqueue.html">jobqueue()</a></code> know to apply the <code>hooks</code>
+to <code>job</code> objects instead of the <code>jobqueue</code> or
+<code>worker</code> objects? Unless otherwise indicated,
+<code><a href="../reference/jobqueue.html">jobqueue()</a></code> <code>hooks</code> are assumed to be for
+<code>job</code>s. You can also explicitly specify that
+<code>hooks</code> are for <code>job</code>s by using the formats
+described in the “Attaching Callbacks” section above.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>j_created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>j_created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># or</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>job <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>If you set <code>hooks</code> in <code>&lt;Queue&gt;$run()</code>,
-those hooks will REPLACE the Job hooks from
-<code>Queue$new()</code>.</p>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>job <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>If you set <code>hooks</code> in <code>&lt;jobqueue&gt;$run()</code>,
+those hooks will REPLACE the <code>job</code> hooks from
+<code><a href="../reference/jobqueue.html">jobqueue()</a></code>.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">0</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">n</span>  <span class="op">&lt;-</span> <span class="fl">0</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="op">~</span><span class="op">{</span> <span class="va">n</span> <span class="op">&lt;&lt;-</span> <span class="va">n</span> <span class="op">+</span> <span class="fl">1</span> <span class="op">}</span> <span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">)</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'Hi'</span> <span class="op">}</span>, hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>done <span class="op">=</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="va">.</span><span class="op">$</span><span class="va">result</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">)</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'Hi'</span> <span class="op">}</span>, hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>done <span class="op">=</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="va">.</span><span class="op">$</span><span class="va">result</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Hi</span></span>
 <span><span class="co">#&gt; Hi</span></span>
 <span><span class="co">#&gt; Hi</span></span>
@@ -372,15 +373,16 @@ those hooks will REPLACE the Job hooks from
 <div class="section level2">
 <h2 id="use-case-priority-setting">Use Case: Priority Setting<a class="anchor" aria-label="anchor" href="#use-case-priority-setting"></a>
 </h2>
-<p>Below, we’ll set up a callback function that triggers when each Job
-enters the <code>'queued'</code> state. It will modify the Job, adding a
-custom <code>&lt;Job&gt;$priority</code> field to the Job object. Then
-it will modify the Queue’s internal list of jobs
-(<code>&lt;Queue&gt;$jobs</code>), sorting them according to each Job’s
-<code>&lt;Job&gt;$priority</code>. Last, it will attach additional
-callbacks to the Job to output timing information upon exit from the
-<code>'queued</code>’ state and upon entry into the <code>'done'</code>
-state.</p>
+<p>Below, we’ll set up a callback function that triggers when each
+<code>job</code> enters the <code>'queued'</code> state. It will modify
+the <code>job</code>, adding a custom <code>&lt;job&gt;$priority</code>
+field to the <code>job</code> object. Then it will modify the
+<code>jobqueue</code>‘s internal list of jobs
+(<code>&lt;jobqueue&gt;$jobs</code>), sorting them according to each
+<code>job</code>’s <code>&lt;job&gt;$priority</code>. Last, it will
+attach additional callbacks to the <code>job</code> to output timing
+information upon exit from the <code>'queued</code>’ state and upon
+entry into the <code>'done'</code> state.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://glue.tidyverse.org/" class="external-link">glue</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cmmr.github.io/jobqueue/">jobqueue</a></span><span class="op">)</span></span>
@@ -388,81 +390,81 @@ state.</p>
 <span><span class="co"># Our callback/hook function.</span></span>
 <span><span class="va">prioritize</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
 <span></span>
-<span>  <span class="va">queue</span>      <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">queue</span></span>
-<span>  <span class="va">queue_jobs</span> <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span></span>
+<span>  <span class="va">queue</span>      <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span></span>
+<span>  <span class="va">queue_jobs</span> <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span></span>
 <span></span>
 <span>  <span class="co"># Apply a random priority to this job.</span></span>
 <span>  <span class="va">job</span><span class="op">$</span><span class="va">priority</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span> <span class="op">*</span> <span class="fl">10</span><span class="op">)</span> <span class="op">-</span> <span class="fl">5</span></span>
 <span>  </span>
-<span>  <span class="co"># Sort all this Queue's jobs by priority (including this job).</span></span>
-<span>  <span class="va">priorities</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
-<span>  <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
+<span>  <span class="co"># Sort all this jobqueue's jobs by priority (including this job).</span></span>
+<span>  <span class="va">priorities</span>        <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
+<span>  <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
 <span>  </span>
 <span>  <span class="co"># Add hooks to this job to report queued/total times.</span></span>
 <span>  <span class="va">t1</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="va">tdiff</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span> <span class="op">-</span> <span class="va">t1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span>  </span>
 <span>  <span class="va">job</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'.next'</span>, <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span></span>
-<span>    <span class="st">'Job {.$uid} (priority {.$priority}) was {.$state} after {tdiff()}'</span> <span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="st">'job {.$uid} (priority {.$priority}) was {.$state} after {tdiff()}'</span> <span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span>    </span>
 <span>  <span class="va">job</span><span class="op">$</span><span class="fu">on</span><span class="op">(</span><span class="st">'done'</span>, <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span></span>
-<span>    <span class="st">'Job {.$uid} (priority {.$priority}) finished in {tdiff()}'</span> <span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="st">'job {.$uid} (priority {.$priority}) finished in {tdiff()}'</span> <span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="co"># A single worker best illustrates processing order.</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span></span>
 <span>  <span class="st">'workers'</span> <span class="op">=</span> <span class="fl">1</span>, </span>
 <span>  <span class="st">'hooks'</span>   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span> <span class="op">)</span></span>
 <span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue_data</a></span><span class="op">(</span><span class="va">job</span>, <span class="st">'Created Job {uid} with priority {priority}'</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue_data</a></span><span class="op">(</span><span class="va">job</span>, <span class="st">'Created job {uid} with priority {priority}'</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; Job J11 (priority -3) was dispatched after 0.1 secs</span></span>
-<span><span class="co">#&gt; Created Job J11 with priority -3</span></span>
-<span><span class="co">#&gt; Created Job J12 with priority -2</span></span>
-<span><span class="co">#&gt; Created Job J13 with priority 1</span></span>
-<span><span class="co">#&gt; Created Job J14 with priority 0</span></span>
-<span><span class="co">#&gt; Created Job J15 with priority -1</span></span>
-<span><span class="co">#&gt; Job J11 (priority -3) finished in 0.7 secs</span></span>
-<span><span class="co">#&gt; Job J12 (priority -2) was dispatched after 0.6 secs</span></span>
-<span><span class="co">#&gt; Job J12 (priority -2) finished in 1.1 secs</span></span>
-<span><span class="co">#&gt; Job J15 (priority -1) was dispatched after 0.7 secs</span></span>
-<span><span class="co">#&gt; Job J15 (priority -1) finished in 1.3 secs</span></span>
-<span><span class="co">#&gt; Job J14 (priority 0) was dispatched after 1.4 secs</span></span>
-<span><span class="co">#&gt; Job J14 (priority 0) finished in 2 secs</span></span>
-<span><span class="co">#&gt; Job J13 (priority 1) was dispatched after 2.1 secs</span></span>
-<span><span class="co">#&gt; Job J13 (priority 1) finished in 2.6 secs</span></span></code></pre></div>
+<span><span class="co">#&gt; job J11 (priority -3) was dispatched after 0.1 secs</span></span>
+<span><span class="co">#&gt; Created job J11 with priority -3</span></span>
+<span><span class="co">#&gt; Created job J12 with priority -2</span></span>
+<span><span class="co">#&gt; Created job J13 with priority 1</span></span>
+<span><span class="co">#&gt; Created job J14 with priority 0</span></span>
+<span><span class="co">#&gt; Created job J15 with priority -1</span></span>
+<span><span class="co">#&gt; job J11 (priority -3) finished in 0.7 secs</span></span>
+<span><span class="co">#&gt; job J12 (priority -2) was dispatched after 0.6 secs</span></span>
+<span><span class="co">#&gt; job J12 (priority -2) finished in 1.1 secs</span></span>
+<span><span class="co">#&gt; job J15 (priority -1) was dispatched after 0.7 secs</span></span>
+<span><span class="co">#&gt; job J15 (priority -1) finished in 1.3 secs</span></span>
+<span><span class="co">#&gt; job J14 (priority 0) was dispatched after 1.4 secs</span></span>
+<span><span class="co">#&gt; job J14 (priority 0) finished in 2 secs</span></span>
+<span><span class="co">#&gt; job J13 (priority 1) was dispatched after 2.1 secs</span></span>
+<span><span class="co">#&gt; job J13 (priority 1) finished in 2.6 secs</span></span></code></pre></div>
 <p>In an actual application, you could set
-<code>&lt;Job&gt;$priority</code> based on
-<code>&lt;Job&gt;$vars</code>.</p>
+<code>&lt;job&gt;$priority</code> based on
+<code>&lt;job&gt;$vars</code>.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prioritize</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  </span>
 <span>  <span class="co"># Give priority to lower number of replications</span></span>
 <span>  <span class="va">job</span><span class="op">$</span><span class="va">priority</span> <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">vars</span><span class="op">$</span><span class="va">replications</span></span>
 <span>  </span>
-<span>  <span class="va">queue_jobs</span>     <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span></span>
-<span>  <span class="va">priorities</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
-<span>  <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
+<span>  <span class="va">queue_jobs</span>        <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span></span>
+<span>  <span class="va">priorities</span>        <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
+<span>  <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co">#                                        vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>replications <span class="op">=</span> <span class="va">reps</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Or, define the custom <code>&lt;Job&gt;$priority</code> field in
-<code>&lt;Queue&gt;$run()</code>.</p>
+<span><span class="co">#                                         vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>replications <span class="op">=</span> <span class="va">reps</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Or, define the custom <code>&lt;job&gt;$priority</code> field in
+<code>&lt;jobqueue&gt;$run()</code>.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prioritize</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">queue_jobs</span>     <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span></span>
-<span>  <span class="va">priorities</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
-<span>  <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
+<span>  <span class="va">queue_jobs</span>        <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span></span>
+<span>  <span class="va">priorities</span>        <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
+<span>  <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co">#                                        vvvvvvvvvvvvvvv</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, priority <span class="op">=</span> <span class="va">reps</span><span class="op">)</span></span></code></pre></div>
-<p>Or, set <code>&lt;Job&gt;$priority</code> in a hook that triggers
+<span><span class="co">#                                         vvvvvvvvvvvvvvv</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, priority <span class="op">=</span> <span class="va">reps</span><span class="op">)</span></span></code></pre></div>
+<p>Or, set <code>&lt;job&gt;$priority</code> in a hook that triggers
 before <code>prioritize()</code> is triggered.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">set_priority</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
@@ -470,38 +472,39 @@ before <code>prioritize()</code> is triggered.</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">prioritize</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">queue_jobs</span>     <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span></span>
-<span>  <span class="va">priorities</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
-<span>  <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
+<span>  <span class="va">queue_jobs</span>        <span class="op">&lt;-</span> <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span></span>
+<span>  <span class="va">priorities</span>        <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">queue_jobs</span>, <span class="va">`[[`</span>, <span class="st">'priority'</span><span class="op">)</span></span>
+<span>  <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="va">queue_jobs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">priorities</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="co">#                           vvvvvvvvvvvvvvvvvvvvvv</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="va">set_priority</span>, queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>replications <span class="op">=</span> <span class="va">reps</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="va">set_priority</span>, queued <span class="op">=</span> <span class="va">prioritize</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">reps</span> <span class="kw">in</span> <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span> <span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">3.14</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>replications <span class="op">=</span> <span class="va">reps</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="use-case-rate-limiting">Use Case: Rate Limiting<a class="anchor" aria-label="anchor" href="#use-case-rate-limiting"></a>
 </h2>
 <p>Say you’re hosting a web service, where users are allowed to submit
-one Job every 30 seconds. Jobs can take more than 30 seconds, so the
-solution is more complex than setting <code>stop_id = user_id</code>.
-And what if you want to stop the new Job instead of the old one?</p>
+one <code>job</code> every 30 seconds. <code>job</code>s can take more
+than 30 seconds, so the solution is more complex than setting
+<code>stop_id = user_id</code>. And what if you want to stop the new
+<code>job</code> instead of the old one?</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rate_limit</span> <span class="op">&lt;-</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="op">{</span></span>
 <span></span>
 <span>  <span class="va">job</span><span class="op">$</span><span class="va">t_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">j</span> <span class="kw">in</span> <span class="va">job</span><span class="op">$</span><span class="va">queue</span><span class="op">$</span><span class="va">jobs</span><span class="op">)</span></span>
+<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">j</span> <span class="kw">in</span> <span class="va">job</span><span class="op">$</span><span class="va">jobqueue</span><span class="op">$</span><span class="va">jobs</span><span class="op">)</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="va">j</span><span class="op">$</span><span class="va">user_id</span> <span class="op">==</span> <span class="va">job</span><span class="op">$</span><span class="va">user_id</span><span class="op">)</span></span>
 <span>      <span class="kw">if</span> <span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">t_start</span> <span class="op">-</span> <span class="va">j</span><span class="op">$</span><span class="va">t_start</span> <span class="op">&lt;</span> <span class="fl">30</span><span class="op">)</span></span>
 <span>        <span class="va">job</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="st">'Rate Limit Exceeded'</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>submitted <span class="op">=</span> <span class="va">rate_limit</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>submitted <span class="op">=</span> <span class="va">rate_limit</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">j_A1</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
-<span><span class="va">j_B1</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, user_id <span class="op">=</span> <span class="st">'B'</span><span class="op">)</span></span>
-<span><span class="va">j_B2</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, user_id <span class="op">=</span> <span class="st">'B'</span><span class="op">)</span></span>
+<span><span class="va">j_A1</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
+<span><span class="va">j_B1</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, user_id <span class="op">=</span> <span class="st">'B'</span><span class="op">)</span></span>
+<span><span class="va">j_B2</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fl">42</span> <span class="op">}</span>, user_id <span class="op">=</span> <span class="st">'B'</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">j_B1</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1] 42</span></span>
@@ -509,12 +512,12 @@ And what if you want to stop the new Job instead of the old one?</p>
 <span><span class="va">j_B2</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: Rate Limit Exceeded&gt;</span></span></code></pre></div>
 <p>Note that the above code won’t completely solve the rate limiting
-task. If a user’s Job only takes five seconds to complete, then they
-could submit a Job every six seconds and the Queue would be none the
-wiser.</p>
-<p>To give the Queue awareness of previously completed Jobs, you’ll need
-to persistently store per-user Job start times - like in the below
-solution.</p>
+task. If a user’s <code>job</code> only takes five seconds to complete,
+then they could submit a <code>job</code> every six seconds and the
+<code>jobqueue</code> would be none the wiser.</p>
+<p>To give the <code>jobqueue</code> awareness of previously completed
+<code>job</code>s, you’ll need to persistently store per-user
+<code>job</code> start times - like in the below solution.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">t_user</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -525,14 +528,15 @@ solution.</p>
 <span>  <span class="kw">else</span>                     <span class="op">{</span> <span class="va">t_user</span><span class="op">[[</span><span class="va">job</span><span class="op">$</span><span class="va">user_id</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;&lt;-</span> <span class="va">t_start</span> <span class="op">}</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="va">rate_limit</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>hooks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="va">rate_limit</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>In the first example, we attached a hook to <code>'submitted'</code>
-because that’s when <code>&lt;Job&gt;$queue</code> becomes available in
-callbacks. In the latter example, we attached a hook to
+because that’s when <code>&lt;job&gt;$jobqueue</code> becomes available
+in callbacks. In the latter example, we attached a hook to
 <code>'created'</code> instead because we didn’t need
-<code>&lt;Job&gt;$queue</code> for that solution. Check the trigger
+<code>&lt;job&gt;$jobqueue</code> for that solution. Check the trigger
 order listed in the “Callback Triggers” section above, and attach
-callbacks as early as possible to expedite Job handling.</p>
+callbacks as early as possible to expedite <code>job</code>
+handling.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

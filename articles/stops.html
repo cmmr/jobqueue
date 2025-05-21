@@ -32,14 +32,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/jobqueue.html">Get started</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../reference/Job.html">Job</a></li>
-    <li><a class="dropdown-item" href="../reference/Queue.html">Queue</a></li>
-    <li><a class="dropdown-item" href="../reference/Worker.html">Worker</a></li>
-  </ul>
-</li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
@@ -81,22 +74,26 @@
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>You can save compute resources by stopping the execution of Jobs that
-are no longer needed. If that Job is currently running on a Worker, then
-the associated background process is terminated. Terminated background
-process are automatically replaced by new ones.</p>
+<p>You can save compute resources by stopping the execution of
+<code>job</code>s that are no longer needed. If that <code>job</code> is
+currently running, then the associated background process is terminated.
+Terminated background process are automatically replaced by new
+ones.</p>
 <p>There are several ways to stop a Job:</p>
 <ul>
 <li>
-<code>&lt;Job&gt;$stop()</code>: return an interrupt condition.</li>
+<code>&lt;job&gt;$stop()</code>: return an interrupt condition.</li>
 <li>
-<code>&lt;Job&gt;$output&lt;-</code>: return a custom result.</li>
+<code>&lt;job&gt;$output&lt;-</code>: return a custom result.</li>
 <li>
-<code>&lt;Job&gt;$stop_id</code>: replace redundant Jobs.</li>
+<code>&lt;job&gt;$stop_id</code>: replace redundant
+<code>job</code>s.</li>
 <li>
-<code>&lt;Job&gt;$copy_id</code>: combine redundant Jobs.</li>
+<code>&lt;job&gt;$copy_id</code>: combine redundant
+<code>job</code>s.</li>
 <li>
-<code>&lt;Job&gt;$timeout</code>: cap a Job’s compute time.</li>
+<code>&lt;job&gt;$timeout</code>: cap a <code>job</code>’s compute
+time.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -104,37 +101,38 @@ process are automatically replaced by new ones.</p>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cmmr.github.io/jobqueue/">jobqueue</a></span><span class="op">)</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>workers <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>workers <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="immediate-stop">Immediate Stop<a class="anchor" aria-label="anchor" href="#immediate-stop"></a>
 </h2>
-<p>As soon as a Job is created, it can be stopped by either calling
-<code>&lt;Job&gt;$stop()</code> or by assigning to
-<code>&lt;Job&gt;$output</code>. These methods work up until the Job
-state is <code>'done'</code>. Once the Job state is <code>'done'</code>,
-<code>&lt;Job&gt;$output</code> is immutable and calling
-<code>&lt;Job&gt;$stop()</code> will have no effect (since it’s already
-stopped). Calling <code>&lt;Job&gt;$stop()</code> and assigning to
-<code>&lt;Job&gt;$output</code> both have the side effect of setting the
-Job state to <code>'done'</code>.</p>
+<p>As soon as a <code>job</code> is created, it can be stopped by either
+calling <code>&lt;job&gt;$stop()</code> or by assigning to
+<code>&lt;job&gt;$output</code>. These methods work up until the
+<code>job</code> state is <code>'done'</code>. Once the <code>job</code>
+state is <code>'done'</code>, <code>&lt;job&gt;$output</code> is
+immutable and calling <code>&lt;job&gt;$stop()</code> will have no
+effect (since it’s already stopped). Calling
+<code>&lt;job&gt;$stop()</code> and assigning to
+<code>&lt;job&gt;$output</code> both have the side effect of setting the
+<code>job</code> state to <code>'done'</code>.</p>
 <div class="section level3">
-<h3 id="interrupting-with-jobstop">Interrupting with <code>&lt;Job&gt;$stop()</code><a class="anchor" aria-label="anchor" href="#interrupting-with-jobstop"></a>
+<h3 id="interrupting-with-jobstop">Interrupting with <code>&lt;job&gt;$stop()</code><a class="anchor" aria-label="anchor" href="#interrupting-with-jobstop"></a>
 </h3>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">10</span> <span class="op">}</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/job_class.html">job_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">10</span> <span class="op">}</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: job stopped by user&gt;</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">10</span> <span class="op">}</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/job_class.html">job_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">10</span> <span class="op">}</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="st">'my reason'</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: my reason&gt;</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">result</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "interrupt" "condition"</span></span></code></pre></div>
-<p>You can call <code>&lt;Job&gt;$stop()</code> from within callback
+<p>You can call <code>&lt;job&gt;$stop()</code> from within callback
 hooks.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hooks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -144,18 +142,18 @@ hooks.</p>
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">200</span><span class="op">)</span>, hooks <span class="op">=</span> <span class="va">hooks</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">200</span><span class="op">)</span>, hooks <span class="op">=</span> <span class="va">hooks</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: Job is too large.&gt;</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="assigning-to-joboutput">Assigning to <code>&lt;Job&gt;$output</code><a class="anchor" aria-label="anchor" href="#assigning-to-joboutput"></a>
+<h3 id="assigning-to-joboutput">Assigning to <code>&lt;job&gt;$output</code><a class="anchor" aria-label="anchor" href="#assigning-to-joboutput"></a>
 </h3>
-<p><code>&lt;Job&gt;$output</code> can only be assigned to once. If the
-Job is not yet done when <code>&lt;Job&gt;$output</code> is assigned,
-then any ongoing processing will be halted.</p>
+<p><code>&lt;job&gt;$output</code> can only be assigned to once. If the
+<code>job</code> is not yet done when <code>&lt;job&gt;$output</code> is
+assigned, then any ongoing processing will be halted.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">10</span> <span class="op">}</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/job_class.html">job_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="fl">10</span> <span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">state</span></span>
 <span><span class="co">#&gt; [1] "created"</span></span>
@@ -167,26 +165,26 @@ then any ongoing processing will be halted.</p>
 <span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1] "Custom result"</span></span></code></pre></div>
-<p>If you’ve set <code>&lt;Job&gt;$reformat</code>, it will determine
-<code>&lt;Job&gt;$result</code> as usual. See
+<p>If you’ve set <code>&lt;job&gt;$reformat</code>, it will determine
+<code>&lt;job&gt;$result</code> as usual. See
 <code><a href="../articles/results.html">vignette('results')</a></code>.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="replacing-and-combining">Replacing and Combining<a class="anchor" aria-label="anchor" href="#replacing-and-combining"></a>
 </h2>
-<p>Sometimes repeat jobs may be sent to the Queue, for instance, a user
-clicking a ‘submit’ button repeatedly. <code>stop_id</code> and
-<code>copy_id</code> can prevent such requests from overloading the
-server.</p>
+<p>Sometimes repeat <code>job</code>s may be sent to the
+<code>jobqueue</code>, for instance, a user clicking a ‘submit’ button
+repeatedly. <code>stop_id</code> and <code>copy_id</code> can prevent
+such requests from overloading the server.</p>
 <div class="section level3">
 <h3 id="stop-id">Stop ID<a class="anchor" aria-label="anchor" href="#stop-id"></a>
 </h3>
-<p>New jobs will replace existing jobs with the same
+<p>New jobs will replace existing <code>job</code>s with the same
 <code>stop_id</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job1</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="st">'A'</span> <span class="op">}</span>, stop_id <span class="op">=</span> <span class="fl">123</span><span class="op">)</span></span>
-<span><span class="va">job2</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'B'</span> <span class="op">}</span>,               stop_id <span class="op">=</span> <span class="fl">123</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job1</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="st">'A'</span> <span class="op">}</span>, stop_id <span class="op">=</span> <span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">job2</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'B'</span> <span class="op">}</span>,               stop_id <span class="op">=</span> <span class="fl">123</span><span class="op">)</span></span>
 <span><span class="va">job1</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: duplicated stop_id&gt;</span></span>
 <span><span class="va">job2</span><span class="op">$</span><span class="va">result</span></span>
@@ -195,32 +193,32 @@ server.</p>
 <div class="section level3">
 <h3 id="copy-id">Copy ID<a class="anchor" aria-label="anchor" href="#copy-id"></a>
 </h3>
-<p>New jobs will mirror the output of existing jobs with the same
-<code>copy_id</code>.</p>
+<p>New <code>job</code>s will mirror the output of existing
+<code>job</code>s with the same <code>copy_id</code>.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job1</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="st">'A'</span> <span class="op">}</span>, copy_id <span class="op">=</span> <span class="fl">456</span><span class="op">)</span></span>
-<span><span class="va">job2</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'B'</span> <span class="op">}</span>,               copy_id <span class="op">=</span> <span class="fl">456</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job1</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="st">'A'</span> <span class="op">}</span>, copy_id <span class="op">=</span> <span class="fl">456</span><span class="op">)</span></span>
+<span><span class="va">job2</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="st">'B'</span> <span class="op">}</span>,               copy_id <span class="op">=</span> <span class="fl">456</span><span class="op">)</span></span>
 <span><span class="va">job1</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1] "A"</span></span>
 <span><span class="va">job2</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; [1] "A"</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="in-queuenew">In <code>Queue$new()</code><a class="anchor" aria-label="anchor" href="#in-queuenew"></a>
+<h3 id="in-jobqueue">In <code>jobqueue()</code><a class="anchor" aria-label="anchor" href="#in-jobqueue"></a>
 </h3>
 <p>If you set <code>stop_id</code> and/or <code>copy_id</code> in
-<code>Queue$new()</code>, then they must be functions (or lambda
-notation functions) that accept a Job object as input and returns a
+<code><a href="../reference/jobqueue.html">jobqueue()</a></code>, then they must be functions (or lambda notation
+functions) that accept a <code>job</code> object as input and returns a
 value <code>id</code>. If <code>id</code> is <code>NULL</code>, then no
 comparisons will be done. Otherwise, <code>id</code> can be any data
 type and will be compared to other <code>id</code>s with
 <code><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical()</a></code>.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Queue.html">Queue</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>stop_id <span class="op">=</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">vars</span><span class="op">$</span><span class="va">f</span>, <span class="va">job</span><span class="op">$</span><span class="va">user_id</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">jq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jobqueue.html">jobqueue</a></span><span class="op">(</span>stop_id <span class="op">=</span> <span class="kw">function</span> <span class="op">(</span><span class="va">job</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">job</span><span class="op">$</span><span class="va">vars</span><span class="op">$</span><span class="va">f</span>, <span class="va">job</span><span class="op">$</span><span class="va">user_id</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">job1</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu">f</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">sum</span>,  x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span>, user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
-<span><span class="va">job2</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu">f</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">sum</span>,  x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">)</span>,  user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
-<span><span class="va">job3</span> <span class="op">&lt;-</span> <span class="va">q</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu">f</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">mean</span>, x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span>, user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
+<span><span class="va">job1</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu">f</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">sum</span>,  x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span>, user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
+<span><span class="va">job2</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu">f</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">sum</span>,  x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">)</span>,  user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
+<span><span class="va">job3</span> <span class="op">&lt;-</span> <span class="va">jq</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">{</span> <span class="fu">f</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">}</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>f <span class="op">=</span> <span class="va">mean</span>, x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span>, user_id <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">job1</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: duplicated stop_id&gt;</span></span>
@@ -234,12 +232,12 @@ type and will be compared to other <code>id</code>s with
 <h2 id="timeouts">Timeouts<a class="anchor" aria-label="anchor" href="#timeouts"></a>
 </h2>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="st">'Zzzzz'</span> <span class="op">}</span>, timeout <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span>
-<span><span class="va">q</span><span class="op">$</span><span class="fu">submit</span><span class="op">(</span><span class="va">job</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/job_class.html">job_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>; <span class="st">'Zzzzz'</span> <span class="op">}</span>, timeout <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span>
+<span><span class="va">jq</span><span class="op">$</span><span class="fu">submit</span><span class="op">(</span><span class="va">job</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: total runtime exceeded 0.2 seconds&gt;</span></span>
 <span></span>
-<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Job.html">Job</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fl">10</span> <span class="op">}</span>, timeout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">job</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/job_class.html">job_class</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">{</span> <span class="fl">10</span> <span class="op">}</span>, timeout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>created <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">job</span><span class="op">$</span><span class="va">result</span></span>
 <span><span class="co">#&gt; &lt;interrupt: exceeded 0.2 seconds while in "created" state&gt;</span></span></code></pre></div>
 <p>Limits (in seconds) can be set on:</p>
