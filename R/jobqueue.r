@@ -92,7 +92,7 @@
 #' print(jq)
 #' 
 #' job <- jq$run({ paste("N is", N) })
-#' job$result()
+#' job$result
 #' 
 #' jq$stop()
 

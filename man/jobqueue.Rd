@@ -110,7 +110,7 @@ jq <- jobqueue(globals = list(N = 42), workers = 2)
 print(jq)
 
 job <- jq$run({ paste("N is", N) })
-job$result()
+job$result
 
 jq$stop()
 \dontshow{\}) # examplesIf}
