@@ -7,32 +7,35 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-## Create a Queue
+## Create a `jobqueue`
 
 ```r
 library(jobqueue)
-q <- Queue$new()
+jq <- jobqueue()
 ```
 
-When you create a Queue, several Worker processes are created in the background. You can then evaluate R code on those background processes while your main R process is free to do other work.
+When you create a `jobqueue`, several `worker` processes are created in the
+background. You can then evaluate R code on those background processes while
+your main R process is free to do other work.
 
 > **Important**
 > 
 > The background processes are persisent R sessions. Avoid modifying their 
 > `.GlobalEnv`, otherwise your R code will produce different results based 
-> on which Worker evaluates it.
+> on which `worker` evaluates it.
 
 
 
-## Create a Job
+## Create a `job`
 
 Main article: `vignette('eval')`
 
 ```r
-job <- q$run({ paste('Hello', 'World!') })
+job <- jq$run({ paste('Hello', 'World!') })
 ```
 
-This Job will begin evaluating immediately, assuming no other Jobs are ahead of it in the Queue.
+This `job` will begin evaluating immediately, assuming no other `job`s are ahead
+of it in the `jobqueue`.
 
 
 
@@ -45,7 +48,7 @@ job$result
 #> [1] "Hello World!"
 ```
 
-Running `<Job>$result` will block until the Job finishes and the result is ready.
+Running `<job>$result` will block until the `job` finishes and the result is ready.
 
 
 
@@ -68,14 +71,14 @@ handled without blocking the main R process.
 Main article: `vignette('stops')`
 
 ```r
-job <- q$run({ Sys.sleep(10); 'Zzzzz' })
+job <- jq$run({ Sys.sleep(10); 'Zzzzz' })
 job$stop()
 job$result
 #> <interrupt: job stopped by user>
 ```
 
-If the Job's result is no longer needed and you want to free up compute 
-resources, calling `<Job>$stop()` will terminate the background process.
+If the `job`'s result is no longer needed and you want to free up compute 
+resources, calling `<job>$stop()` will terminate the background process.
 Terminated background process are automatically replaced by new ones.
 
 
@@ -84,7 +87,7 @@ Terminated background process are automatically replaced by new ones.
 
 ```r
 # Variables to permanently store on the Worker.
-q <- Queue$new(globals = list(MY_DATA = mtcars))
+jq <- jobqueue(globals = list(MY_DATA = mtcars))
 
 # Variables to temporary add to the Worker.
 vars <- list(n = 2, fields = c('mpg', 'cyl', 'disp'))
@@ -92,7 +95,7 @@ vars <- list(n = 2, fields = c('mpg', 'cyl', 'disp'))
 # The expression to evaluate on the Worker.
 expr <- quote(head(MY_DATA, n)[,fields])
 
-job <- q$run(expr = expr, vars = vars)
+job <- jq$run(expr = expr, vars = vars)
 
 job$result
 #>               mpg cyl disp

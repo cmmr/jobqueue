@@ -1,74 +1,78 @@
 
-#' A Background Process
-#'
-#' @name Worker
+#' Background Processes
 #'
 #' @description
 #' 
-#' Where [Job] expressions are evaluated.
+#' Where job expressions are evaluated.
 #' 
 #' 
-#' @param globals  A named list of variables that all `<Job>$expr`s will have 
+#' @param globals  A named list of variables that all `<job>$expr`s will have 
 #'        access to. Alternatively, an object that can be coerced to a named 
 #'        list with `as.list()`, e.g. named vector, data.frame, or environment.
 #' 
-#' @param packages  Character vector of package names to load on workers.
+#' @param packages  Character vector of package names to load on 
+#'        [`workers`][worker_class].
 #' 
-#' @param namespace  The name of a package to attach to the worker's 
-#'        environment.
+#' @param namespace  The name of a package to attach to the 
+#'        [`worker's`][worker_class] environment.
 #' 
 #' @param init  A call or R expression wrapped in curly braces to evaluate on 
-#'        each worker just once, immediately after start-up. Will have access 
-#'        to variables defined by `globals` and assets from `packages` and 
-#'        `namespace`. Returned value is ignored.
+#'        each [`worker`][worker_class] just once, immediately after start-up. 
+#'        Will have access to variables defined by `globals` and assets from 
+#'        `packages` and `namespace`. Returned value is ignored.
 #'        
-#' @param hooks  A named list of functions to run when the Worker state 
-#'        changes, of the form `hooks = list(idle = function (worker) {...})`.
-#'        Names of worker hooks are typically `starting`, `idle`, `busy`, 
-#'        `stopped`, or `'*'` (duplicates okay). See `vignette('hooks')`.
+#' @param hooks  A named list of functions to run when the 
+#'        [`worker`][worker_class] state changes, of the form 
+#'        `hooks = list(idle = function (worker) {...})`. Names of 
+#'        [`worker`][worker_class] hooks are typically `starting`, `idle`, 
+#'        `busy`, `stopped`, or `'*'` (duplicates okay). 
+#'        See `vignette('hooks')`.
 #'        
-#' @param wait  If `TRUE`, blocks until the Worker is 'idle'. If `FALSE`, the 
-#'        Worker object is returned in the 'starting' state.
+#' @param wait  If `TRUE`, blocks until the [`worker`][worker_class] is 'idle'. 
+#'        If `FALSE`, the [`worker`][worker_class] object is returned in the 
+#'        'starting' state.
 #'        
-#' @param timeout  How long to wait for the worker to finish starting (in seconds).
-#'        If `NA`, defaults to the `Worker$new()` argument.
+#' @param timeout  How long to wait for the [`worker`][worker_class] to finish 
+#'        starting (in seconds). If `NA`, defaults to the `worker_class$new()` 
+#'        argument.
 #'        
-#' @param job  A [Job] object, as created by `Job$new()`.
+#' @param job  A [`job`][job_class] object, as created by `job_class$new()`.
 #'        
 #' @param state
-#' The name of a Worker state. Typically one of:
+#' The name of a [`worker`][worker_class] state. Typically one of:
 #' 
 #' * `'*'` -        Every time the state changes.
 #' * `'.next'` -    Only one time, the next time the state changes.
 #' * `'starting'` - Waiting for the background process to load.
-#' * `'idle'` -     Waiting for Jobs to be `$run()`.
-#' * `'busy'` -     While a Job is running.
-#' * `'stopped'` -  After `<Worker>$stop()` is called.
+#' * `'idle'` -     Waiting for [`jobs`][job_class] to be `$run()`.
+#' * `'busy'` -     While a [`job`][job_class] is running.
+#' * `'stopped'` -  After `<worker>$stop()` is called.
 #' 
 #'        
-#' @param func  A function that accepts a Worker object as input. You can call 
-#'        `<Worker>$stop()` and other `<Worker>$` methods.
+#' @param func  A function that accepts a [`worker`][worker_class] object as 
+#'        input. You can call `<worker>$stop()` and other `<worker>$` methods.
 #'        
-#' @param reason  Passed to `<Job>$stop()` for any Jobs currently managed by 
-#'        this Worker.
+#' @param reason  Passed to `<job>$stop()` for any [`jobs`][job_class] 
+#'        currently managed by this [`worker`][worker_class].
 #'        
-#' @param cls  Passed to `<Job>$stop()` for any Jobs currently managed by this 
-#'        Worker.
-#'
+#' @param cls  Passed to `<job>$stop()` for any [`jobs`][job_class] currently 
+#'        managed by this [`worker`][worker_class].
+#' 
+#' @keywords internal
 #' @export
 #' 
 
 
-Worker <- R6Class(
-  classname    = "Worker",
+worker_class <- R6Class(
+  classname    = "worker",
   cloneable    = FALSE,
   lock_objects = FALSE,
   
   public = list(
     
     #' @description
-    #' Creates a background R process for running [Job]s.
-    #' @return A Worker object.
+    #' Creates a background R process for running [`jobs`][job_class].
+    #' @return A [`worker`][worker_class] object.
     initialize = function (
         globals   = NULL,
         packages  = NULL,
@@ -83,50 +87,55 @@ Worker <- R6Class(
     
     
     #' @description
-    #' Print method for a `Worker`.
+    #' Print method for a [`worker`][worker_class].
     #' @param ... Arguments are not used currently.
-    #' @return The Worker, invisibly.
+    #' @return The [`worker`][worker_class], invisibly.
     print = function (...) 
       w_print(self),
     
     #' @description
-    #' Restarts a stopped Worker.
-    #' @return The Worker, invisibly.
+    #' Restarts a stopped [`worker`][worker_class].
+    #' @return The [`worker`][worker_class], invisibly.
     start = function (wait = TRUE, timeout = NA) 
       w_start(self, private, wait, timeout),
     
     #' @description
-    #' Stops a Worker by terminating the background process and calling 
-    #' `<Job>$stop(reason)` on any Jobs currently assigned to this Worker.
-    #' @return The Worker, invisibly.
+    #' Stops a [`worker`][worker_class] by terminating the background process 
+    #' and calling `<job>$stop(reason)` on any [`jobs`][job_class] currently 
+    #' assigned to this [`worker`][worker_class].
+    #' @return The [`worker`][worker_class], invisibly.
     stop = function (reason = 'worker stopped by user', cls = NULL)
       w_stop(self, private, reason, cls),
     
     #' @description
-    #' Restarts a Worker by calling `<Worker>$stop(reason)` and 
-    #' `<Worker>$start()` in succession.
-    #' @return The Worker, invisibly.
+    #' Restarts a [`worker`][worker_class] by calling `<worker>$stop(reason)` 
+    #' and `<worker>$start()` in succession.
+    #' @return The [`worker`][worker_class], invisibly.
     restart = function (wait = TRUE, timeout = NA, reason = 'restarting worker', cls = NULL) 
       w_restart(self, private, wait, timeout, reason, cls),
     
     #' @description
-    #' Attach a callback function to execute when the Worker enters `state`.
-    #' @return A function that when called removes this callback from the Worker.
+    #' Attach a callback function to execute when the [`worker`][worker_class] 
+    #' enters `state`.
+    #' @return A function that when called removes this callback from the 
+    #' [`worker`][worker_class].
     on = function (state, func) 
       u_on(self, private, 'WH', state, func),
     
     #' @description
-    #' Blocks until the Worker enters the given state.
-    #' @param timeout Stop the Worker if it takes longer than this number of seconds.
-    #' @param signal Raise an error if encountered (will also be recorded in `<Worker>$cnd`).
-    #' @return This Worker, invisibly.
+    #' Blocks until the [`worker`][worker_class] enters the given state.
+    #' @param timeout Stop the [`worker`][worker_class] if it takes longer than 
+    #'        this number of seconds.
+    #' @param signal Raise an error if encountered (will also be recorded in 
+    #'        `<worker>$cnd`).
+    #' @return This [`worker`][worker_class], invisibly.
     wait = function (state = 'idle', timeout = Inf, signal = TRUE) 
       u_wait(self, private, state, timeout, signal),
     
     #' @description
-    #' Assigns a Job to this Worker for evaluation on the background 
-    #' process.
-    #' @return This Worker, invisibly.
+    #' Assigns a [`job`][job_class] to this [`worker`][worker_class] for 
+    #' evaluation on the background process.
+    #' @return This [`worker`][worker_class], invisibly.
     run = function (job) 
       w_run(self, private, job)
   ),
@@ -166,7 +175,7 @@ Worker <- R6Class(
     hooks = function () private$.hooks,
     
     #' @field job
-    #' The currently running Job.
+    #' The currently running [`job`][job_class].
     job = function () private$.job,
     
     #' @field ps
@@ -174,19 +183,21 @@ Worker <- R6Class(
     ps = function () private$.ps,
     
     #' @field state
-    #' The Worker's state: `'starting'`, `'idle'`, `'busy'`, or `'stopped'`.
+    #' The [`worker's`][worker_class] state: `'starting'`, `'idle'`, `'busy'`, 
+    #' or `'stopped'`.
     state = function () private$.state,
     
     #' @field uid
-    #' A short string, e.g. `'W11'`, that uniquely identifies this Worker.
+    #' A short string, e.g. `'W11'`, that uniquely identifies this 
+    #' [`worker`][worker_class].
     uid = function () basename(private$w_dir),
     
     #' @field tmp
-    #' The Worker's temporary directory.
+    #' The [`worker's`][worker_class] temporary directory.
     tmp = function () private$w_dir,
     
     #' @field cnd
-    #' The error that caused the Worker to stop.
+    #' The error that caused the [`worker`][worker_class] to stop.
     cnd = function () private$.cnd
   )
 )
@@ -204,7 +215,7 @@ w_initialize <- function (self, private, globals, packages, namespace, init, hoo
   private$trace   <- trace_back()
   
   # This worker's working directory.
-  if (inherits(globals, 'Queue')) {
+  if (inherits(globals, 'jobqueue')) {
     private$w_dir  <- dir_create(globals$tmp, 'W')
     private$config <- file.path(globals$tmp, 'config.rds')
   }
@@ -237,7 +248,7 @@ w_print <- function (self) {
 w_start <- function (self, private, wait, timeout) {
   
   if (private$.state != 'stopped')
-    cli_abort('Worker is not stopped')
+    cli_abort('worker is not stopped')
   
   wait    <- validate_logical(wait)
   timeout <- validate_positive_number(timeout, if_na = private$timeout)
@@ -324,13 +335,13 @@ w_restart <- function (self, private, wait, timeout, reason, cls) {
 
 w_run <- function (self, private, job) {
   
-  if (!inherits(job, 'Job')) cli_abort('not a Job: {.type {job}}')
-  if (!is_null(job$proxy))   cli_abort('cannot run proxied Jobs')
+  if (!inherits(job, 'job')) cli_abort('not a job: {.type {job}}')
+  if (!is_null(job$proxy))   cli_abort('cannot run proxied jobs')
   
   self$wait('idle')
   
   job$state <- 'starting'
-  if (job$state != 'starting') cli_abort('Job refused startup')
+  if (job$state != 'starting') cli_abort('job refused startup')
   job$worker   <- self
   private$.job <- job
   job$on('done', private$job_done)
@@ -361,7 +372,7 @@ w__poll_job <- function (self, private) {
   p_dir <- private$p_dir
   
   if (private$.state != 'busy')    return (NULL)
-  if (!inherits(job, 'Job'))       return (NULL)
+  if (!inherits(job, 'job'))       return (NULL)
   if (!inherits(ps,  'ps_handle')) return (NULL)
   
   # Crashed?

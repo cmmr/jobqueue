@@ -1,18 +1,16 @@
 
-#' How to Evaluate an R Expression
-#' 
-#' @name Job
+#' Evaluate an R Expression
 #'
 #' @description
 #' 
-#' The Job object encapsulates an expression and its evaluation parameters. It 
-#' also provides a way to check for and retrieve the result.
+#' The [`job`][job_class] object encapsulates an expression and its evaluation 
+#' parameters. It also provides a way to check for and retrieve the result.
 #' 
 #' 
 #' @param expr  A call or R expression wrapped in curly braces to evaluate on a 
-#'        worker. Will have access to any variables defined by `vars`, as well 
-#'        as the Worker's `globals`, `packages`, and `init` configuration.
-#'        See `vignette('eval')`.
+#'        [`worker`][worker_class]. Will have access to any variables defined 
+#'        by `vars`, as well as the [`worker's`][worker_class] `globals`, 
+#'        `packages`, and `init` configuration. See `vignette('eval')`.
 #' 
 #' @param vars  A named list of variables to make available to `expr` during 
 #'        evaluation. Alternatively, an object that can be coerced to a named 
@@ -20,82 +18,90 @@
 #'        Or a `function (job)` that returns such an object.
 #' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
-#'        seconds allowed for each state the job passes through, or 'total' to
-#'        apply a single timeout from 'submitted' to 'done'. Or a 
+#'        seconds allowed for each state the [`job`][job_class] passes through, 
+#'        or 'total' to apply a single timeout from 'submitted' to 'done'. Or a 
 #'        `function (job)` that returns the same. Example:
 #'        `timeout = c(total = 2.5, running = 1)`. See `vignette('stops')`.
 #'        
-#' @param hooks  A named list of functions to run when the Job state changes, 
-#'        of the form `hooks = list(created = function (worker) {...})`. Or a 
-#'        `function (job)` that returns the same. Names of worker hooks are 
-#'        typically `'created'`, `'submitted'`, `'queued'`, `'dispatched'`, 
-#'        `'starting'`, `'running'`, `'done'`, or `'*'` (duplicates okay). 
-#'        See `vignette('hooks')`.
+#' @param hooks  A named list of functions to run when the [`job`][job_class] 
+#'        state changes, of the form 
+#'        `hooks = list(created = function (worker) {...})`. Or a 
+#'        `function (job)` that returns the same. Names of 
+#'        [`worker`][worker_class] hooks are typically `'created'`, 
+#'        `'submitted'`, `'queued'`, `'dispatched'`, `'starting'`, `'running'`, 
+#'        `'done'`, or `'*'` (duplicates okay). See `vignette('hooks')`.
 #'        
 #' @param reformat  Set `reformat = function (job)` to define what 
-#'        `<Job>$result` should return. The default, `reformat = NULL` passes 
-#'        `<Job>$output` to `<Job>$result` unchanged. 
+#'        `<job>$result` should return. The default, `reformat = NULL` passes 
+#'        `<job>$output` to `<job>$result` unchanged. 
 #'        See `vignette('results')`.
 #'        
-#' @param signal  Should calling `<Job>$result` signal on condition objects?
-#'        When `FALSE`, `<Job>$result` will return the object without 
+#' @param signal  Should calling `<job>$result` signal on condition objects?
+#'        When `FALSE`, `<job>$result` will return the object without 
 #'        taking additional action. Setting to `TRUE` or a character vector of 
 #'        condition classes, e.g. `c('interrupt', 'error', 'warning')`, will
 #'        cause the equivalent of `stop(<condition>)` to be called when those
 #'        conditions are produced. Alternatively, a `function (job)` that 
 #'        returns `TRUE` or `FALSE`. See `vignette('results')`.
 #'        
-#' @param cpus  How many CPU cores to reserve for this Job.  Or a 
+#' @param cpus  How many CPU cores to reserve for this [`job`][job_class]. Or a 
 #'        `function (job)` that returns the same. Used to limit the number of 
-#'        Jobs running simultaneously to respect `<Queue>$max_cpus`. Does not 
-#'        prevent a Job from using more CPUs than reserved.
+#'        [`jobs`][job_class] running simultaneously to respect 
+#'        `<jobqueue>$max_cpus`. Does not prevent a [`job`][job_class] from 
+#'        using more CPUs than reserved.
 #'        
 #' @param state
-#' The name of a Job state. Typically one of:
+#' The name of a [`job`][job_class] state. Typically one of:
 #'        
 #' * `'*'` -          Every time the state changes.
 #' * `'.next'` -      Only one time, the next time the state changes.
-#' * `'created'` -    After `Job$new()` initialization.
-#' * `'submitted'` -  After `<Job>$queue` is assigned.
+#' * `'created'` -    After `job_class$new()` initialization.
+#' * `'submitted'` -  After `<job>$jobqueue` is assigned.
 #' * `'queued'` -     After `stop_id` and `copy_id` are resolved.
-#' * `'dispatched'` - After `<Job>$worker` is assigned.
+#' * `'dispatched'` - After `<job>$worker` is assigned.
 #' * `'starting'` -   Before evaluation begins.
 #' * `'running'` -    After evaluation begins.
-#' * `'done'` -       After `<Job>$output` is assigned.
+#' * `'done'` -       After `<job>$output` is assigned.
 #' 
 #' Custom states can also be specified.
 #' 
-#' @param func  A function that accepts a Job object as input. You can call 
-#'        `<Job>$stop()` or edit `<Job>$` values and the changes will be 
-#'        persisted (since Jobs are reference class objects). You can also 
-#'        edit/stop other queued jobs by modifying the Jobs in 
-#'        `<Job>$queue$jobs`. Return value is ignored.
+#' @param func  A function that accepts a [`job`][job_class] object as input. 
+#'        You can call `<job>$stop()` or edit `<job>$` values and the changes 
+#'        will be persisted (since [`jobs`][job_class] are reference class 
+#'        objects). You can also edit/stop other queued [`jobs`][job_class] by 
+#'        modifying the [`jobs`][job_class] in `<job>$jobqueue$jobs`. Return 
+#'        value is ignored.
 #'        
 #' @param reason  A message to include in the 'interrupt' condition object that 
-#'        will be returned as the Job's result. Or a condition object.
+#'        will be returned as the [`job's`][job_class] result. Or a condition 
+#'        object.
 #'        
 #' @param cls  Character vector of additional classes to prepend to 
 #'        `c('interrupt', 'condition')`.
 #'        
-#' @param ...  Arbitrary named values to add to the returned Job object.
-#'
+#' @param ...  Arbitrary named values to add to the returned [`job`][job_class] 
+#'        object.
+#' 
+#' @keywords internal
 #' @export
 #' 
 
-Job <- R6Class(
-  classname    = "Job",
+job_class <- R6Class(
+  classname    = "job",
   cloneable    = FALSE,
   lock_objects = FALSE,
   
   public = list(
     
     #' @description
-    #' Creates a Job object defining how to run an expression on a background worker process.
+    #' Creates a [`job`][job_class] object defining how to run an expression on 
+    #' a background [`worker`][worker_class] process.
     #' 
-    #' *Typically you won't need to call `Job$new()`. Instead, create a [Queue] and use 
-    #' `<Queue>$run()` to generate Job objects.*
+    #' *Typically you won't need to call `job_class$new()`. Instead, create a 
+    #' [`jobqueue`][jobqueue_class] and use `<jobqueue>$run()` to generate 
+    #' [`job`][job_class] objects.*
     #' 
-    #' @return A Job object.
+    #' @return A [`job`][job_class] object.
     initialize = function (
         expr, 
         vars     = NULL, 
@@ -113,28 +119,32 @@ Job <- R6Class(
     },
     
     #' @description
-    #' Print method for a Job.
+    #' Print method for a [`job`][job_class].
     #' @param ... Arguments are not used currently.
-    #' @return This Job, invisibly.
+    #' @return This [`job`][job_class], invisibly.
     print = function (...) 
       j_print(self),
     
     #' @description
-    #' Attach a callback function to execute when the Job enters `state`.
-    #' @return A function that when called removes this callback from the Job.
+    #' Attach a callback function to execute when the [`job`][job_class] enters 
+    #' `state`.
+    #' @return A function that when called removes this callback from the 
+    #'         [`job`][job_class].
     on = function (state, func) 
       u_on(self, private, 'JH', state, func),
     
     #' @description
-    #' Blocks until the Job enters the given state.
-    #' @param timeout Stop the Job if it takes longer than this number of seconds, or `NULL`.
-    #' @return This Job, invisibly.
+    #' Blocks until the [`job`][job_class] enters the given state.
+    #' @param timeout Stop the [`job`][job_class] if it takes longer than this 
+    #'        number of seconds, or `NULL`.
+    #' @return This [`job`][job_class], invisibly.
     wait = function (state = 'done', timeout = NULL) 
       u_wait(self, private, state, timeout, signal = FALSE),
     
     #' @description
-    #' Stop this Job. If the Job is running, its Worker will be restarted.
-    #' @return This Job, invisibly.
+    #' Stop this [`job`][job_class]. If the [`job`][job_class] is running, its 
+    #' [`worker`][worker_class] will be restarted.
+    #' @return This [`job`][job_class], invisibly.
     stop = function (reason = 'job stopped by user', cls = NULL) 
       j_stop(self, private, reason, cls)
   ),
@@ -162,7 +172,7 @@ Job <- R6Class(
   active = list(
     
     #' @field expr
-    #' R expression that will be run by this Job.
+    #' R expression that will be run by this [`job`][job_class].
     expr = function () private$.expr,
     
     #' @field vars
@@ -171,7 +181,7 @@ Job <- R6Class(
     vars = function (value) j_vars(self, private, value),
     
     #' @field reformat
-    #' Get or set - `function (job)` for defining `<Job>$result`.
+    #' Get or set - `function (job)` for defining `<job>$result`.
     reformat = function (value) j_reformat(private, value),
     
     #' @field signal
@@ -183,47 +193,51 @@ Job <- R6Class(
     cpus = function (value) j_cpus(self, private, value),
     
     #' @field timeout
-    #' Get or set - Time limits to apply to this Job.
+    #' Get or set - Time limits to apply to this [`job`][job_class].
     timeout = function (value) j_timeout(self, private, value),
     
     #' @field proxy
-    #' Get or set - Job to proxy in place of running `expr`.
+    #' Get or set - [`job`][job_class] to proxy in place of running `expr`.
     proxy = function (value) j_proxy(self, private, value),
     
     #' @field state
-    #' Get or set - The Job's state: `'created'`, `'submitted'`, `'queued'`, 
-    #' `'dispatched'`, `'starting'`, `'running'`, or `'done'`.
-    #' *Assigning to `<Job>$state` will trigger callback hooks.*
+    #' Get or set - The [`job's`][job_class] state: `'created'`, `'submitted'`, 
+    #' `'queued'`, `'dispatched'`, `'starting'`, `'running'`, or `'done'`.
+    #' *Assigning to `<job>$state` will trigger callback hooks.*
     state = function (value) j_state(self, private, value),
     
     #' @field output
-    #' Get or set - Job's raw output.
-    #' *Assigning to `<Job>$output` will change the Job's state to `'done'`.*
+    #' Get or set - [`job's`][job_class] raw output.
+    #' *Assigning to `<job>$output` will change the [`job's`][job_class] state 
+    #' to `'done'`.*
     output = function (value) j_output(self, private, value),
     
-    #' @field queue
-    #' The Queue that this Job belongs to.
-    queue = function (value) j_queue(self, private, value),
+    #' @field jobqueue
+    #' The [`jobqueue`][jobqueue_class] that this [`job`][job_class] belongs 
+    #' to.
+    jobqueue = function (value) j_queue(self, private, value),
     
     #' @field worker
-    #' The Worker that this Job belongs to.
+    #' The [`worker`][worker_class] that this [`job`][job_class] belongs to.
     worker = function (value) j_worker(self, private, value),
     
     #' @field result
-    #' Result of `expr`. Will block until Job is finished.
+    #' Result of `expr`. Will block until [`job`][job_class] is finished.
     result = function () j_result(self, private),
     
     #' @field hooks
     #' Currently registered callback hooks as a named list of functions.
-    #' Set new hooks with `<Job>$on()`.
+    #' Set new hooks with `<job>$on()`.
     hooks = function () private$.hooks,
     
     #' @field is_done
-    #' `TRUE` or `FALSE` depending on if the Job's result is ready.
+    #' `TRUE` or `FALSE` depending on if the [`job's`][job_class] result is 
+    #' ready.
     is_done = function () private$.is_done,
     
     #' @field uid
-    #' A short string, e.g. `'J16'`, that uniquely identifies this Job.
+    #' A short string, e.g. `'J16'`, that uniquely identifies this 
+    #' [`job`][job_class].
     uid = function () private$.uid
   )
 )
@@ -275,7 +289,7 @@ j_output <- function (self, private, value) {
     return (private$.output)
   }
   
-  # Only accept the first assignment to Job$output
+  # Only accept the first assignment to `job_class$output`
   if (!private$.is_done) {
     private$.proxy   <- NULL
     private$.is_done <- TRUE
@@ -286,7 +300,7 @@ j_output <- function (self, private, value) {
 }
 
 
-# Reformat and/or signal `<Job>$output`.
+# Reformat and/or signal `<job>$output`.
 j_result <- function (self, private) {
   
   reformat <- private$.reformat # NULL/function (job)
@@ -308,17 +322,17 @@ j_result <- function (self, private) {
 }
 
 
-# Mirror another Job's output.
+# Mirror another job's output.
 j_proxy <- function (self, private, value) {
   
   if (missing(value)) return (private$.proxy)
   
   proxy <- value
-  if (!is_null(proxy) && !inherits(proxy, 'Job'))
-    cli_abort('proxy must be a Job or NULL, not {.type {proxy}}.')
+  if (!is_null(proxy) && !inherits(proxy, 'job'))
+    cli_abort('proxy must be a `job` or NULL, not {.type {proxy}}.')
   
   if (identical(private$.uid, proxy$uid))
-    cli_abort('A Job cannot be its own proxy.')
+    cli_abort('A `job` cannot be its own proxy.')
   
   if (private$.is_done) return (NULL)
   
@@ -337,7 +351,7 @@ j_state <- function (self, private, value) {
   
   if (!is_null(private$.proxy)) {
     if (missing(value)) return (paste(private$.proxy$state, 'by proxy'))
-    cli_abort("Can't change state for proxied job.")
+    cli_abort("Can't change state for proxied `job`.")
   }
   
   if (missing(value)) return (private$.state)
@@ -347,9 +361,9 @@ j_state <- function (self, private, value) {
   
   if (new_state == curr_state) return (NULL)
   if (curr_state == 'done')
-    cli_abort("Job$state can't be changed from 'done' to '{new_state}'.")
+    cli_abort("`<job>$state` can't be changed from 'done' to '{new_state}'.")
   if (new_state == 'done' && !private$.is_done)
-    cli_abort("Job$state can't be set to 'done' until Job$output is set.")
+    cli_abort("`<job>$state` can't be set to 'done' until `<job>$output` is set.")
   
   u__set_state(self, private, state = new_state)
   if (private$.state == 'done') return (NULL)
@@ -401,12 +415,12 @@ j_cpus <- function (self, private, value) {
 
 j_queue <- function (self, private, value) {
   if (missing(value)) return (j__wref_key(private$wref_queue))
-  private$wref_queue <- j__new_weakref(value, 'Queue')
+  private$wref_queue <- j__new_weakref(value, 'queue')
 }
 
 j_worker <- function (self, private, value) {
   if (missing(value)) return (j__wref_key(private$wref_worker))
-  private$wref_worker <- j__new_weakref(value, 'Worker')
+  private$wref_worker <- j__new_weakref(value, 'worker')
 }
 
 
@@ -424,12 +438,12 @@ j__new_weakref <- function (value, cls) {
 
 
 
-#' Converts a Job to a Promise
+#' Converts a [`job`][job_class] to a [`promise`][promises::promise]
 #' 
 #' @noRd
 #' @keywords internal
 #' @export
-as.promise.Job <- function (x) {
+as.promise.job <- function (x) {
   
   job <- x
   p   <- attr(job, '.jobqueue_promise', exact = TRUE)

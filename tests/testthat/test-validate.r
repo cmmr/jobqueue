@@ -31,5 +31,26 @@ test_that('validate', {
   expect_error(validate_character_vector(list('not a character vector')))
   expect_error(validate_string(list('not a string')))
   
+  
+  #--------------------------------------------------------
+  # utils.r - is_cran_check()
+  #--------------------------------------------------------
+  orig_not_cran <- Sys.getenv('NOT_CRAN', '')
+  orig_pkg_name <- Sys.getenv('_R_CHECK_PACKAGE_NAME_', '')
+  
+  Sys.setenv(NOT_CRAN = 'true')
+  expect_false(is_cran_check())
+  
+  Sys.setenv(NOT_CRAN = 'false')
+  Sys.setenv(`_R_CHECK_PACKAGE_NAME_` = '')
+  expect_false(is_cran_check())
+  
+  Sys.setenv(NOT_CRAN = 'false')
+  Sys.setenv(`_R_CHECK_PACKAGE_NAME_` = 'jobqueue')
+  expect_true(is_cran_check())
+  
+  Sys.setenv(NOT_CRAN = orig_not_cran)
+  Sys.setenv(`_R_CHECK_PACKAGE_NAME_` = orig_pkg_name)
+  
 })
 

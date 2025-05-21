@@ -5,7 +5,7 @@ test_that('job', {
 
   # library(jobqueue); library(testthat)
   
-  q <- expect_silent(Queue$new(
+  q <- expect_silent(jobqueue(
     workers = 1L, 
     timeout = c(starting = 15, total = 15) ))
   
@@ -52,7 +52,7 @@ test_that('job', {
   expect_true(      startsWith(job$uid, 'J')      )
 
   job1 <- expect_silent( q$run({ Sys.sleep(100) }, hooks = list('submitted' = class)) )
-  job2 <- expect_silent( Job$new({4}) )
+  job2 <- expect_silent( job_class$new({4}) )
   
   expect_error(     job2$proxy  <- job2        )
   expect_silent(    job2$proxy  <- job1        )
@@ -62,7 +62,7 @@ test_that('job', {
   expect_silent(    job2$proxy  <- job1        )
   
   j <- expect_silent( q$run({ Sys.sleep(100) }) )
-  expect_s3_class( j$stop(), 'Job'       )
+  expect_s3_class( j$stop(), 'job'       )
   expect_s3_class( j$result, 'interrupt' )
   
   expect_silent( q$stop() )

@@ -19,7 +19,7 @@ p__start <- function (ppid, mqid, p_dir, config) {
     file_create(p_dir, c('sem_', sem$name))
     
     # Help the monitor terminate this process tree
-    mq <- interprocess::queue(mqid, assert = 'exists')
+    mq <- interprocess::msg_queue(mqid, assert = 'exists')
     mq$send(paste(pid, sem$name, dir_create(tempdir())))
     do.call(Sys.setenv, as.list(structure('YES', names = sem$name)))
     do.call(Sys.setenv, as.list(structure('YES', names = mq$name)))
@@ -130,7 +130,7 @@ p__monitor <- function (ppid, mqid, m_dir) {
   parent <- p__ps_handle(ppid)
   active <- list()
   
-  mq <- interprocess::queue(mqid, 'exists')
+  mq <- interprocess::msg_queue(mqid, 'exists')
   on.exit(mq$remove(), add = TRUE)
   
   
@@ -193,7 +193,7 @@ p__spawn_monitor <- function () {
   
   if (is.null(ENV$mqid)) {
     
-    mq <- interprocess::queue(
+    mq <- interprocess::msg_queue(
       assert    = 'create',
       max_count = 100L,
       max_nchar = 1024L )

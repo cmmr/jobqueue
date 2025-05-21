@@ -9,43 +9,47 @@ vignette: >
 
 ## Introduction
 
-You can save compute resources by stopping the execution of Jobs that are no longer needed. If that Job is currently running on a Worker, then the associated background process is terminated. Terminated background process are automatically replaced by new ones.
+You can save compute resources by stopping the execution of `job`s that are no
+longer needed. If that `job` is currently running, then the associated
+background process is terminated. Terminated background process are
+automatically replaced by new ones.
 
 There are several ways to stop a Job:
 
-* `<Job>$stop()`: return an interrupt condition.
-* `<Job>$output<-`: return a custom result.
-* `<Job>$stop_id`: replace redundant Jobs.
-* `<Job>$copy_id`: combine redundant Jobs.
-* `<Job>$timeout`: cap a Job's compute time.
+* `<job>$stop()`: return an interrupt condition.
+* `<job>$output<-`: return a custom result.
+* `<job>$stop_id`: replace redundant `job`s.
+* `<job>$copy_id`: combine redundant `job`s.
+* `<job>$timeout`: cap a `job`'s compute time.
 
 
 ## Setup
 
 ```r
 library(jobqueue)
-q <- Queue$new(workers = 1)
+jq <- jobqueue(workers = 1)
 ```
 
 
 ## Immediate Stop
 
-As soon as a Job is created, it can be stopped by either calling `<Job>$stop()` or 
-by assigning to `<Job>$output`. These methods work up until the Job state is `'done'`. 
-Once the Job state is `'done'`, `<Job>$output` is immutable and calling `<Job>$stop()` 
-will have no effect (since it's already stopped). Calling `<Job>$stop()` and assigning 
-to `<Job>$output` both have the side effect of setting the Job state to `'done'`.
+As soon as a `job` is created, it can be stopped by either calling
+`<job>$stop()` or by assigning to `<job>$output`. These methods work up until
+the `job` state is `'done'`. Once the `job` state is `'done'`, `<job>$output` is
+immutable and calling `<job>$stop()` will have no effect (since it's already
+stopped). Calling `<job>$stop()` and assigning to `<job>$output` both have the
+side effect of setting the `job` state to `'done'`.
 
 
-### Interrupting with `<Job>$stop()`
+### Interrupting with `<job>$stop()`
 
 ```r
-job <- Job$new({ Sys.sleep(5); 10 })
+job <- job_class$new({ Sys.sleep(5); 10 })
 job$stop()
 job$result
 #> <interrupt: job stopped by user>
 
-job <- Job$new({ Sys.sleep(5); 10 })
+job <- job_class$new({ Sys.sleep(5); 10 })
 job$stop('my reason')
 job$result
 #> <interrupt: my reason>
@@ -54,7 +58,7 @@ class(job$result)
 #> [1] "interrupt" "condition"
 ```
 
-You can call `<Job>$stop()` from within callback hooks.
+You can call `<job>$stop()` from within callback hooks.
 
 ```r
 hooks <- list(
@@ -64,19 +68,19 @@ hooks <- list(
   }
 )
 
-job <- q$run({ sum(x) }, vars = list(x = 1:200), hooks = hooks)
+job <- jq$run({ sum(x) }, vars = list(x = 1:200), hooks = hooks)
 job$result
 #> <interrupt: Job is too large.>
 ```
 
 
-### Assigning to `<Job>$output`
+### Assigning to `<job>$output`
 
-`<Job>$output` can only be assigned to once. If the Job is not yet done when 
-`<Job>$output` is assigned, then any ongoing processing will be halted.
+`<job>$output` can only be assigned to once. If the `job` is not yet done when 
+`<job>$output` is assigned, then any ongoing processing will be halted.
 
 ```r
-job <- Job$new({ Sys.sleep(5); 10 })
+job <- job_class$new({ Sys.sleep(5); 10 })
 
 job$state
 #> [1] "created"
@@ -90,24 +94,24 @@ job$result
 #> [1] "Custom result"
 ```
 
-If you've set `<Job>$reformat`, it will determine `<Job>$result` as usual.
+If you've set `<job>$reformat`, it will determine `<job>$result` as usual.
 See `vignette('results')`.
 
 
 ## Replacing and Combining
 
-Sometimes repeat jobs may be sent to the Queue, for instance, a user clicking a 
-'submit' button repeatedly. `stop_id` and `copy_id` can prevent such requests from 
-overloading the server.
+Sometimes repeat `job`s may be sent to the `jobqueue`, for instance, a user
+clicking a 'submit' button repeatedly. `stop_id` and `copy_id` can prevent such
+requests from overloading the server.
 
 
 ### Stop ID
 
-New jobs will replace existing jobs with the same `stop_id`.
+New jobs will replace existing `job`s with the same `stop_id`.
 
 ```r
-job1 <- q$run({ Sys.sleep(5); 'A' }, stop_id = 123)
-job2 <- q$run({ 'B' },               stop_id = 123)
+job1 <- jq$run({ Sys.sleep(5); 'A' }, stop_id = 123)
+job2 <- jq$run({ 'B' },               stop_id = 123)
 job1$result
 #> <interrupt: duplicated stop_id>
 job2$result
@@ -116,30 +120,31 @@ job2$result
 
 ### Copy ID
 
-New jobs will mirror the output of existing jobs with the same `copy_id`.
+New `job`s will mirror the output of existing `job`s with the same `copy_id`.
 
 ```r
-job1 <- q$run({ Sys.sleep(5); 'A' }, copy_id = 456)
-job2 <- q$run({ 'B' },               copy_id = 456)
+job1 <- jq$run({ Sys.sleep(5); 'A' }, copy_id = 456)
+job2 <- jq$run({ 'B' },               copy_id = 456)
 job1$result
 #> [1] "A"
 job2$result
 #> [1] "A"
 ```
 
-### In `Queue$new()`
+### In `jobqueue()`
 
-If you set `stop_id` and/or `copy_id` in `Queue$new()`, then they must be functions 
-(or lambda notation functions) that accept a Job object as input and returns a value 
-`id`. If `id` is `NULL`, then no comparisons will be done. Otherwise, `id` can be any
-data type and will be compared to other `id`s with `identical()`.
+If you set `stop_id` and/or `copy_id` in `jobqueue()`, then they must be
+functions (or lambda notation functions) that accept a `job` object as input and
+returns a value `id`. If `id` is `NULL`, then no comparisons will be done.
+Otherwise, `id` can be any data type and will be compared to other `id`s with
+`identical()`.
 
 ```r
-q <- Queue$new(stop_id = function (job) list(job$vars$f, job$user_id))
+jq <- jobqueue(stop_id = function (job) list(job$vars$f, job$user_id))
 
-job1 <- q$run({ f(x) }, vars = list(f = sum,  x = 1:10), user_id = 'A')
-job2 <- q$run({ f(x) }, vars = list(f = sum,  x = 1:2),  user_id = 'A')
-job3 <- q$run({ f(x) }, vars = list(f = mean, x = 1:10), user_id = 'A')
+job1 <- jq$run({ f(x) }, vars = list(f = sum,  x = 1:10), user_id = 'A')
+job2 <- jq$run({ f(x) }, vars = list(f = sum,  x = 1:2),  user_id = 'A')
+job3 <- jq$run({ f(x) }, vars = list(f = mean, x = 1:10), user_id = 'A')
 
 job1$result
 #> <interrupt: duplicated stop_id>
@@ -154,12 +159,12 @@ job3$result
 ## Timeouts
 
 ```r
-job <- Job$new({ Sys.sleep(5); 'Zzzzz' }, timeout = 0.2)
-q$submit(job)
+job <- job_class$new({ Sys.sleep(5); 'Zzzzz' }, timeout = 0.2)
+jq$submit(job)
 job$result
 #> <interrupt: total runtime exceeded 0.2 seconds>
 
-job <- Job$new({ 10 }, timeout = list(created = 0.2))
+job <- job_class$new({ 10 }, timeout = list(created = 0.2))
 job$result
 #> <interrupt: exceeded 0.2 seconds while in "created" state>
 ```

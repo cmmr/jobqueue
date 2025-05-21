@@ -34,7 +34,7 @@ pak::pak("cmmr/jobqueue")
 ``` r
 library(jobqueue)
 
-q <- Queue$new()
+q <- jobqueue()
 
 job <- q$run({ paste('Hello', 'world!') })
 job$result
@@ -166,7 +166,7 @@ job2$result
 ## Variables
 
 ``` r
-q2   <- Queue$new(globals = list(G = 8))
+q2   <- jobqueue(globals = list(G = 8))
 expr <- quote(c(x = x , y = y, G = G))
 job  <- q2$run(expr, vars = list(x = 10, y = 2))
 

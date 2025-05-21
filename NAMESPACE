@@ -22,9 +22,10 @@ importFrom("rlang",
 importFrom("interprocess", "mutex", "semaphore")
 importFrom("utils", "capture.output")
 
-export(`Job`)
-export(`Queue`)
-export(`Worker`)
+export(`jobqueue`)
+export(`job_class`)
+export(`jobqueue_class`)
+export(`worker_class`)
 
 export(`availableCores`)
 
@@ -43,4 +44,4 @@ export(`promise_map`)
 export(`promise_reduce`)
 export(`then`)
 
-S3method(as.promise, Job)
+S3method(as.promise, job)

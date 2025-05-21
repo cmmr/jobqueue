@@ -5,11 +5,11 @@ test_that('basic', {
   
   # library(jobqueue); library(testthat)
   
-  expect_error(Queue$new(
+  expect_error(jobqueue(
     timeout = c(starting = 1), 
     init    = { Sys.sleep(10) } ))
   
-  q <- expect_silent(Queue$new(
+  q <- expect_silent(jobqueue(
     workers = 1L, 
     timeout = c(starting = 15, total = 15)) )
   
@@ -49,12 +49,12 @@ test_that('basic', {
   
   skip_on_covr()
   
-  expect_error(Queue$new(
+  expect_error(jobqueue(
     init    = { stop() }, 
     workers = 1L, 
     timeout = c(starting = 15, total = 15) ))
   
-  expect_error(Queue$new(
+  expect_error(jobqueue(
     init    = { q('no') }, 
     workers = 1L, 
     timeout = c(starting = 15, total = 15) ))
@@ -69,7 +69,7 @@ test_that('config', {
 
   e <- new.env(parent = emptyenv())
 
-  q <- expect_silent(Queue$new(
+  q <- expect_silent(jobqueue(
     workers  = 1L,
     timeout  = c(starting = 15, total = 15),
     globals  = list(x = 42),
@@ -88,7 +88,7 @@ test_that('config', {
   expect_equal(job$result, 42 + 37)
   
   
-  job <- expect_silent(q$submit(Job$new(
+  job <- expect_silent(q$submit(job_class$new(
     expr  = { 1 + 1 }, 
     hooks = list(
       created   = ~{ .$.trace  <- .$.call   <-   NULL  },
@@ -97,7 +97,7 @@ test_that('config', {
   expect_equal(job$result, 1 + 1)
   
   
-  job <- expect_silent(q$submit(Job$new(
+  job <- expect_silent(q$submit(job_class$new(
     expr  = { 1 + 1 }, 
     hooks = list(
       submitted = ~{ .$state <- 'held' }
@@ -123,7 +123,7 @@ test_that('workers', {
   
   skip_on_cran()
 
-  q <- expect_silent(Queue$new(
+  q <- expect_silent(jobqueue(
     workers  = 2L, 
     max_cpus = 3L, 
     timeout  = c(starting = 15, total = 15) ))
@@ -145,7 +145,7 @@ test_that('max_cpus', {
   
   skip_on_cran()
 
-  q <- expect_silent(Queue$new(
+  q <- expect_silent(jobqueue(
     workers  = 3L, 
     max_cpus = 2L, 
     timeout  = c(starting = 15, total = 15) ))
@@ -168,7 +168,7 @@ test_that('interrupt', {
   
   skip_on_cran()
 
-  q <- expect_silent(Queue$new(
+  q <- expect_silent(jobqueue(
     workers = 1L, 
     timeout = c(starting = 15, total = 15) ))
 

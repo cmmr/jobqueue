@@ -5,7 +5,7 @@ test_that('process', {
   
   # library(jobqueue); library(testthat)
   
-  mq <- interprocess::queue(max_count = 2, max_nchar = 1024)
+  mq <- interprocess::msg_queue(max_count = 2, max_nchar = 1024)
   on.exit(mq$remove(), add = TRUE)
   
   w_dir <- dir_create(tempfile())

@@ -9,13 +9,13 @@ vignette: >
 
 ```r
 library(jobqueue)
-q <- Queue$new()
+jq <- jobqueue()
 ```
 
 ## Reacting to Results
 
 ```r
-my_job <- q$run({ 42 })
+my_job <- jq$run({ 42 })
 
 # ===  A 'jobqueue'-style callback  ============
 my_job$on('done', ~message('Result = ', .$result))
@@ -32,29 +32,31 @@ my_job %...>% message('Result = ', .)
 
 ## Output vs Result
 
-When `expr` is finished evaluating, the result is assigned to `<Job>$output`.
+When `expr` is finished evaluating, the result is assigned to `<job>$output`.
 
 ```r
-job <- q$run({ 42 })
+job <- jq$run({ 42 })
 
 job$output
 #> [1] 42
 ```
 
-By default, `<Job>$result` will return the exact same value as `<Job>$output`.
+By default, `<job>$result` will return the exact same value as `<job>$output`.
 
 ```r
 job$result
 #> [1] 42
 ```
 
-However, while `<Job>$output` is a fixed value, `<Job>$result` is highly configurable. Most notably by the `reformat` and `signal` parameters.
+However, while `<job>$output` is a fixed value, `<job>$result` is highly
+configurable. Most notably by the `reformat` and `signal` parameters.
 
 
 
 ## Reformatting Output
 
-Use `reformat = function (job) {...}` to define what should be returned by `<Job>$result`.
+Use `reformat = function (job) {...}` to define what should be returned by
+`<job>$result`.
 
 > **Important**
 > 
@@ -64,10 +66,9 @@ Use `reformat = function (job) {...}` to define what should be returned by `<Job
 
 `reformat` can be set in several places:
 
-* `Queue$new(reformat = http_wrap)`
-* `Job$new(reformat = http_wrap)`
-* `<Queue>$run(reformat = http_wrap)`
-* `<Job>$reformat <- http_wrap`
+* `jobqueue(reformat = http_wrap)`
+* `<jobqueue>$run(reformat = http_wrap)`
+* `<job>$reformat <- http_wrap`
 
 
 ### Transformation
@@ -78,19 +79,19 @@ http_wrap <- function (job) {
   paste0('{"status":200,"body":{"result":', result, '}}')
 }
 
-job <- q$run({ 42 }, reformat = http_wrap)
+job <- jq$run({ 42 }, reformat = http_wrap)
 cat(job$result)
 #> {"status":200,"body":{"result":42}}
 ```
 
-### Job Details
+### `job` Details
 
 ```r
 with_id <- function (job) {
   list(result = job$output, id = job$id)
 }
 
-job <- q$run({ 42 }, reformat = with_id, id = 'abc')
+job <- jq$run({ 42 }, reformat = with_id, id = 'abc')
 dput(job$result)
 #> list(result = 42, id = "abc")
 ```
@@ -98,7 +99,8 @@ dput(job$result)
 
 ### Non-blocking
 
-`<Job>$output` blocks until the Job is done. If you want `<Job>$result` to not block, you can return a placeholder value instead.
+`<job>$output` blocks until the `job` is done. If you want `<job>$result` to not
+block, you can return a placeholder value instead.
 
 ```r
 reformat <- function (job) {
@@ -106,7 +108,7 @@ reformat <- function (job) {
   else             { 'result not available yet' }
 }
 
-job <- q$run({ Sys.sleep(5); 42 }, reformat = reformat)
+job <- jq$run({ Sys.sleep(5); 42 }, reformat = reformat)
 job$result
 #> [1] "result not available yet"
 
@@ -118,12 +120,13 @@ job$state
 
 ## Signaling Errors
 
-By default, errors and interrupts will be caught by jobqueue and returned as a condition object from `<Job>$result`.
+By default, errors and interrupts will be caught by the `jobqueue` and returned
+as a condition object from `<job>$result`.
 
 ```r
 expr <- quote(stop('error XYZ'))
 
-job <- q$run(expr)
+job <- jq$run(expr)
 x   <- job$result
 
 inherits(x, 'condition')
@@ -136,7 +139,7 @@ x
 If you want those errors to continue propagating, set `signal = TRUE`.
 
 ```r
-job <- q$run(expr, signal = TRUE)
+job <- jq$run(expr, signal = TRUE)
 x   <- job$result
 #> Error:
 #> ! stop("error XYZ")
@@ -150,14 +153,14 @@ These signals can be caught as usual by `try()` and `tryCatch()`.
 ```r
 print_cnd <- function (cnd) cli::cli_text('Caught {.type {cnd}}.')
 
-job <- q$run({ Sys.sleep(5) }, signal = TRUE)$stop()
+job <- jq$run({ Sys.sleep(5) }, signal = TRUE)$stop()
 res <- tryCatch(job$result, error = print_cnd, interrupt = print_cnd)
 #> Caught an <interrupt> object.
 
 res
 #> NULL
 
-job <- q$run({ stop('error XYZ') }, signal = TRUE)
+job <- jq$run({ stop('error XYZ') }, signal = TRUE)
 res <- tryCatch(job$result, error = print_cnd, interrupt = print_cnd)
 #> Caught an <error> object.
 
@@ -170,13 +173,13 @@ job is part of the "normal" workflow and shouldn't be lumped in with other
 errors.
 
 ```r
-job <- q$run({ Sys.sleep(5) }, signal = 'error')$stop()
+job <- jq$run({ Sys.sleep(5) }, signal = 'error')$stop()
 res <- tryCatch(job$result, error = print_cnd)
 
 res
 #> <interrupt: job stopped by user>
 
-job <- q$run({ stop('error XYZ') }, signal = 'error')
+job <- jq$run({ stop('error XYZ') }, signal = 'error')
 res <- tryCatch(job$result, error = print_cnd)
 #> Caught an <error> object.
 
@@ -188,27 +191,27 @@ res
 
 ## Promise Handling
 
-You can pass a Job directly to any function that expects a 'promise' object, 
+You can pass a `job` directly to any function that expects a `promise` object, 
 such as `promises::then` or `promises::%...>%`. These functions are re-exported 
-by jobqueue, so calling `library(promises)` is optional.
+by `jobqueue`, so calling `library(promises)` is optional.
 
 ```r
-q$run({ 42 }) %...>% message
+jq$run({ 42 }) %...>% message
 #> 42
 ```
 
-By default, errors and interrupts are caught by jobqueue and used for promise
+By default, errors and interrupts are caught by `jobqueue` and used for promise
 fulfillment.
 
 ```r
 onFulfilled <- function (value) cli::cli_text('Fulfilled with {.type {value}}.')
 onRejected  <- function (err)   cli::cli_text('Rejected with {.type {err}}.')
 
-job <- q$run({ Sys.sleep(5) })$stop()
+job <- jq$run({ Sys.sleep(5) })$stop()
 job %>% then(onFulfilled, onRejected)
 #> Fulfilled with an <interrupt> object.
 
-job <- q$run({ stop('error XYZ') })
+job <- jq$run({ stop('error XYZ') })
 job %>% then(onFulfilled, onRejected)
 #> Fulfilled with an <error> object.
 ```
@@ -217,11 +220,11 @@ Setting `signal = TRUE` will cause errors and interrupts be sent to the
 promise's rejection handler instead.
 
 ```r
-job <- q$run({ Sys.sleep(5) }, signal = TRUE)$stop()
+job <- jq$run({ Sys.sleep(5) }, signal = TRUE)$stop()
 job %>% then(onFulfilled, onRejected)
 #> Rejected with an <interrupt> object.
 
-job <- q$run({ stop('error XYZ') }, signal = TRUE)
+job <- jq$run({ stop('error XYZ') }, signal = TRUE)
 job %>% then(onFulfilled, onRejected)
 #> Rejected with an <error> object.
 ```

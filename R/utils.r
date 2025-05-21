@@ -87,7 +87,7 @@ u__set_state <- function (self, private, state) {
 
 run_job_function <- function (value, job) {
   if (is_formula(value)) value <- as_function(value)
-  if (inherits(job, 'Job'))
+  if (inherits(job, 'job'))
     if (is_function(value)) value <- value(job)
   return (value)
 }
@@ -118,32 +118,6 @@ increment_uid <- function (prefix) {
   value <- env_get(ENV, hash, 1L)
   assign(hash, value + 1L, ENV)
   return (paste0(prefix, value))
-}
-
-
-# Two-step save.
-save_rds <- function (tmp, ...) {
-  
-  dots <- list(...)
-  for (i in seq_along(dots)) {
-    
-    # save_rds(tmp, output = output)
-    key <- names(dots)[[i]] %||% ''
-    val <- dots[[i]]
-    
-    # save_rds(tmp, 'output')
-    if (nchar(key) == 0) {
-      key <- dots[[i]]
-      val <- get(key, pos = parent.frame())
-    }
-    tmp_dest <- file.path(tmp, paste0('_', key, '.rds'))
-    dest     <- file.path(tmp, paste0(     key, '.rds'))
-    
-    saveRDS(val, tmp_dest)
-    file.rename(tmp_dest, dest)
-  }
-  
-  invisible()
 }
 
 
@@ -290,6 +264,13 @@ file_create <- function (dir, file) {
 }
 
 file_exists <- function (dir, file) {
-  if (length(file) > 1) file <- paste(file, collapse = '')
   file.exists(file.path(dir, file))
+}
+
+is_cran_check <- function() {
+  if (identical(Sys.getenv("NOT_CRAN"), "true")) {
+    FALSE
+  } else {
+    Sys.getenv("_R_CHECK_PACKAGE_NAME_", "") != ""
+  }
 }

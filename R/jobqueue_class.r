@@ -1,31 +1,30 @@
 
-#' Assigns Jobs to a Set of Workers
-#'
-#' @name Queue
+#' Assign Jobs to Workers (Class)
 #'
 #' @description
 #' 
 #' Jobs go in. Results come out.
 #' 
 #' 
-#' @param globals  A named list of variables that all `<Job>$expr`s will have 
+#' @param globals  A named list of variables that all `<job>$expr`s will have 
 #'        access to. Alternatively, an object that can be coerced to a named 
 #'        list with `as.list()`, e.g. named vector, data.frame, or environment.
 #' 
-#' @param packages  Character vector of package names to load on workers.
+#' @param packages  Character vector of package names to load on 
+#'        [`workers`][worker_class].
 #' 
-#' @param namespace  The name of a package to attach to the worker's 
-#'        environment.
+#' @param namespace  The name of a package to attach to the 
+#'        [`worker's`][worker_class] environment.
 #' 
 #' @param init  A call or R expression wrapped in curly braces to evaluate on 
-#'        each worker just once, immediately after start-up. Will have access 
-#'        to variables defined by `globals` and assets from `packages` and 
-#'        `namespace`. Returned value is ignored.
+#'        each [`worker`][worker_class] just once, immediately after start-up. 
+#'        Will have access to variables defined by `globals` and assets from 
+#'        `packages` and `namespace`. Returned value is ignored.
 #'
 #' @param expr  A call or R expression wrapped in curly braces to evaluate on a 
-#'        worker. Will have access to any variables defined by `vars`, as well 
-#'        as the Worker's `globals`, `packages`, and `init` configuration.
-#'        See `vignette('eval')`.
+#'        [`worker`][worker_class]. Will have access to any variables defined 
+#'        by `vars`, as well as the [`jobqueue's`][jobqueue_class] `globals`, 
+#'        `packages`, and `init` configuration. See `vignette('eval')`.
 #' 
 #' @param vars  A named list of variables to make available to `expr` during 
 #'        evaluation. Alternatively, an object that can be coerced to a named 
@@ -33,86 +32,95 @@
 #'        Or a `function (job)` that returns such an object.
 #' 
 #' @param timeout  A named numeric vector indicating the maximum number of 
-#'        seconds allowed for each state the job passes through, or 'total' to
-#'        apply a single timeout from 'submitted' to 'done'. Can also limit the 
-#'        'starting' state for Workers. A `function (job)` can be used in place 
-#'        of a number. Example: `timeout = c(total = 2.5, running = 1)`. 
+#'        seconds allowed for each state the [`job`][job_class] passes through, 
+#'        or 'total' to apply a single timeout from 'submitted' to 'done'. Can 
+#'        also limit the 'starting' state for [`workers`][worker_class]. A 
+#'        `function (job)` can be used in place of a number.
+#'        Example: `timeout = c(total = 2.5, running = 1)`. 
 #'        See `vignette('stops')`.
 #'        
-#' @param hooks  A named list of functions to run when the Job state changes, 
-#'        of the form `hooks = list(created = function (worker) {...})`. Or a 
-#'        `function (job)` that returns the same. Names of worker hooks are 
-#'        typically `'created'`, `'submitted'`, `'queued'`, `'dispatched'`, 
-#'        `'starting'`, `'running'`, `'done'`, or `'*'` (duplicates okay). 
-#'        See `vignette('hooks')`.
+#' @param hooks  A named list of functions to run when the [`job`][job_class] 
+#'        state changes, of the form 
+#'        `hooks = list(created = function (worker) {...})`. Or a 
+#'        `function (job)` that returns the same. Names of 
+#'        [`worker`][worker_class] hooks are typically `'created'`, 
+#'        `'submitted'`, `'queued'`, `'dispatched'`, `'starting'`, `'running'`, 
+#'        `'done'`, or `'*'` (duplicates okay). See `vignette('hooks')`.
 #'        
 #' @param reformat  Set `reformat = function (job)` to define what 
-#'        `<Job>$result` should return. The default, `reformat = NULL` passes 
-#'        `<Job>$output` to `<Job>$result` unchanged.
+#'        `<job>$result` should return. The default, `reformat = NULL` passes 
+#'        `<job>$output` to `<job>$result` unchanged.
 #'        See `vignette('results')`.
 #'        
-#' @param signal  Should calling `<Job>$result` signal on condition objects?
-#'        When `FALSE`, `<Job>$result` will return the object without 
+#' @param signal  Should calling `<job>$result` signal on condition objects?
+#'        When `FALSE`, `<job>$result` will return the object without 
 #'        taking additional action. Setting to `TRUE` or a character vector of 
 #'        condition classes, e.g. `c('interrupt', 'error', 'warning')`, will
 #'        cause the equivalent of `stop(<condition>)` to be called when those
 #'        conditions are produced. Alternatively, a `function (job)` that 
 #'        returns `TRUE` or `FALSE`. See `vignette('results')`.
 #'        
-#' @param cpus  How many CPU cores to reserve for this Job.  Or a 
+#' @param cpus  How many CPU cores to reserve for this [`job`][job_class]. Or a 
 #'        `function (job)` that returns the same. Used to limit the number of 
-#'        Jobs running simultaneously to respect `<Queue>$max_cpus`. Does not 
-#'        prevent a Job from using more CPUs than reserved.
+#'        [`jobs`][job_class] running simultaneously to respect 
+#'        `<jobqueue>$max_cpus`. Does not prevent a [`job`][job_class] from 
+#'        using more CPUs than reserved.
 #' 
 #' @param max_cpus  Total number of CPU cores that can be reserved by all 
-#'        running Jobs (`sum(<Job>$cpus)`). Does not enforce limits on actual 
-#'        CPU utilization.
+#'        running [`jobs`][job_class] (`sum(<job>$cpus)`). Does not enforce 
+#'        limits on actual CPU utilization.
 #'        
-#' @param workers  How many background [Worker] processes to start. Set to more 
-#'        than `max_cpus` to enable standby Workers to quickly swap out with 
-#'        Workers that need to restart.
+#' @param workers  How many background [`worker`][worker_class] processes to 
+#'        start. Set to more than `max_cpus` to enable standby 
+#'        [`workers`][worker_class] to quickly swap out with 
+#'        [`workers`][worker_class] that need to restart.
 #'        
-#' @param job  A [Job] object, as created by `Job$new()`.
+#' @param job  A [`job`][job_class] object, as created by `job_class$new()`.
 #'        
-#' @param stop_id  If an existing [Job] in the Queue has the same `stop_id`,  
-#'        that Job will be stopped and return an 'interrupt' condition object 
-#'        as its result. `stop_id` can also be a `function (job)` that returns 
-#'        the `stop_id` to assign to a given Job. A `stop_id` of `NULL` 
-#'        disables this feature. See `vignette('stops')`.
+#' @param stop_id  If an existing [`job`][job_class] in the 
+#'        [`jobqueue`][jobqueue_class] has the same `stop_id`, that 
+#'        [`job`][job_class] will be stopped and return an 'interrupt' 
+#'        condition object as its result. `stop_id` can also be a 
+#'        `function (job)` that returns the `stop_id` to assign to a given 
+#'        [`job`][job_class]. A `stop_id` of `NULL` disables this feature. 
+#'        See `vignette('stops')`.
 #'                 
-#' @param copy_id  If an existing [Job] in the Queue has the same `copy_id`, 
-#'        the newly submitted Job will become a "proxy" for that earlier Job, 
-#'        returning whatever result the earlier Job returns. `copy_id` can also 
-#'        be a `function (job)` that returns the `copy_id` to assign to a given 
-#'        Job. A `copy_id` of `NULL` disables this feature. 
+#' @param copy_id  If an existing [`job`][job_class] in the 
+#'        [`jobqueue`][jobqueue_class] has the same `copy_id`, the newly 
+#'        submitted [`job`][job_class] will become a "proxy" for that earlier 
+#'        [`job`][job_class], returning whatever result the earlier 
+#'        [`job`][job_class] returns. `copy_id` can also be a `function (job)` 
+#'        that returns the `copy_id` to assign to a given [`job`][job_class]. 
+#'        A `copy_id` of `NULL` disables this feature. 
 #'        See `vignette('stops')`.
 #'        
-#' @param reason  Passed to `<Job>$stop()` for any Jobs currently managed by 
-#'         this Queue.
+#' @param reason  Passed to `<job>$stop()` for any [`jobs`][job_class] 
+#'        currently managed by this [`jobqueue`][jobqueue_class].
 #'        
-#' @param cls  Passed to `<Job>$stop()` for any Jobs currently managed by 
-#'         this Queue.
+#' @param cls  Passed to `<job>$stop()` for any [`jobs`][job_class] currently 
+#'        managed by this [`jobqueue`][jobqueue_class].
 #'        
 #' @param state
-#' The name of a Queue state. Typically one of:
+#' The name of a [`jobqueue`][jobqueue_class] state. Typically one of:
 #' 
 #' * `'*'` -        Every time the state changes.
 #' * `'.next'` -    Only one time, the next time the state changes.
-#' * `'starting'` - Workers are starting.
-#' * `'idle'` -     All workers are ready/idle.
-#' * `'busy'` -     At least one worker is busy.
+#' * `'starting'` - [`workers`][worker_class] are starting.
+#' * `'idle'` -     All [`workers`][worker_class] are ready/idle.
+#' * `'busy'` -     At least one [`worker`][worker_class] is busy.
 #' * `'stopped'` -  Shutdown is complete.
 #'        
-#' @param func  A function that accepts a Queue object as input. Return value 
-#'        is ignored.
+#' @param func  A function that accepts a [`jobqueue`][jobqueue_class] object 
+#'        as input. Return value is ignored.
 #'        
-#' @param ...  Arbitrary named values to add to the returned Job object.
-#'
-#' @export
+#' @param ...  Arbitrary named values to add to the returned [`job`][job_class] 
+#'        object.
 #' 
+#' @keywords internal
+#' @export
 
-Queue <- R6Class(
-  classname    = "Queue",
+jobqueue_class <- R6Class(
+  classname    = "jobqueue",
   cloneable    = FALSE,
   lock_objects = FALSE,
 
@@ -121,16 +129,18 @@ Queue <- R6Class(
     
     #' @description
     #' Creates a pool of background processes for handling `$run()` and 
-    #' `$submit()` calls. These workers are initialized according to the 
-    #' `globals`, `packages`, and `init` arguments.
+    #' `$submit()` calls. These [`workers`][worker_class] are initialized 
+    #' according to the `globals`, `packages`, and `init` arguments.
     #'
     #' @param timeout,hooks,reformat,signal,cpus,stop_id,copy_id
-    #'        Defaults for this Queue's `$run()` method. Here only, `stop_id` 
-    #'        and `copy_id` must be either a `function (job)` or `NULL`. 
-    #'        `hooks` can set queue, worker, and/or job hooks - see the 
-    #'        "Attaching" section in `vignette('hooks')`.
+    #'        Defaults for this [`jobqueue's`][jobqueue_class] `$run()` method. 
+    #'        Here only, `stop_id` and `copy_id` must be either a 
+    #'        `function (job)` or `NULL`. `hooks` can set 
+    #'        [`jobqueue`][jobqueue_class], [`worker`][worker_class], and/or 
+    #'        [`job`][job_class] hooks - see the "Attaching" section in 
+    #'        `vignette('hooks')`.
     #'
-    #' @return A `Queue` object.
+    #' @return A [`jobqueue`][jobqueue_class] object.
     initialize = function (
         globals   = NULL,
         packages  = NULL,
@@ -155,16 +165,17 @@ Queue <- R6Class(
     
     
     #' @description
-    #' Print method for a `Queue`.
+    #' Print method for a [`jobqueue`][jobqueue_class].
     #' @param ... Arguments are not used currently.
     print = function (...) q_print(self, private),
     
     
     #' @description
-    #' Creates a Job object and submits it to the queue for running. 
-    #' Any `NA` arguments will be replaced with their value from `Queue$new()`.
+    #' Creates a [`job`][job_class] object and submits it to the 
+    #' [`jobqueue`][jobqueue_class] for running. Any `NA` arguments will be 
+    #' replaced with their value from `jobqueue_class$new()`.
     #'
-    #' @return The new [Job] object.
+    #' @return The new [`job`][job_class] object.
     run = function (
         expr, 
         vars     = list(), 
@@ -186,29 +197,34 @@ Queue <- R6Class(
     
     
     #' @description
-    #' Adds a Job to the Queue for running on a background process.
-    #' @return This Queue, invisibly.
+    #' Adds a [`job`][job_class] to the [`jobqueue`][jobqueue_class] for 
+    #' running on a background process.
+    #' @return This [`jobqueue`][jobqueue_class], invisibly.
     submit = function (job)
       q_submit(self, private, job),
     
     #' @description
-    #' Blocks until the Queue enters the given state.
-    #' @param timeout Stop the Queue if it takes longer than this number of seconds, or `NULL`.
-    #' @param signal Raise an error if encountered (will also be recorded in `<Queue>$cnd`).
-    #' @return This Queue, invisibly.
+    #' Blocks until the [`jobqueue`][jobqueue_class] enters the given state.
+    #' @param timeout Stop the [`jobqueue`][jobqueue_class] if it takes longer 
+    #'        than this number of seconds, or `NULL`.
+    #' @param signal Raise an error if encountered (will also be recorded in 
+    #'        `<jobqueue>$cnd`).
+    #' @return This [`jobqueue`][jobqueue_class], invisibly.
     wait = function (state = 'idle', timeout = NULL, signal = TRUE) 
       u_wait(self, private, state, timeout, signal),
     
     #' @description
-    #' Attach a callback function to execute when the Queue enters `state`.
-    #' @return A function that when called removes this callback from the Queue.
+    #' Attach a callback function to execute when the 
+    #' [`jobqueue`][jobqueue_class] enters `state`.
+    #' @return A function that when called removes this callback from the 
+    #'         [`jobqueue`][jobqueue_class].
     on = function (state, func) 
       u_on(self, private, 'QH', state, func),
     
     #' @description
-    #' Stop all jobs and workers.
-    #' @return This Queue, invisibly.
-    stop = function (reason = 'job queue shut down by user', cls = NULL) {
+    #' Stop all [`jobs`][job_class] and [`workers`][worker_class].
+    #' @return This [`jobqueue`][jobqueue_class], invisibly.
+    stop = function (reason = 'jobqueue shut down by user', cls = NULL) {
       q_stop(self, private, reason, cls)
     }
   ),
@@ -216,7 +232,7 @@ Queue <- R6Class(
 
   private = list(
     
-    finalize = function (reason = 'queue was garbage collected', cls = NULL) {
+    finalize = function (reason = 'jobqueue was garbage collected', cls = NULL) {
       
       fmap(private$.workers, 'stop', reason, cls)
       fmap(private$.jobs,    'stop', reason, cls)
@@ -253,27 +269,31 @@ Queue <- R6Class(
     hooks = function () private$.hooks,
     
     #' @field jobs
-    #' Get or set - List of [Jobs][Job] currently managed by this Queue.
+    #' Get or set - List of [jobs][job_class] currently managed by this 
+    #' [`jobqueue`][jobqueue_class].
     jobs = function (value) q_jobs(private, value),
     
     #' @field state
-    #' The Queue's state: `'starting'`, `'idle'`, `'busy'`, `'stopped'`, or `'error.'`
+    #' The [`jobqueue's`][jobqueue_class] state: `'starting'`, `'idle'`, 
+    #' `'busy'`, `'stopped'`, or `'error.'`
     state = function () private$.state,
     
     #' @field uid
-    #' A short string, e.g. `'Q1'`, that uniquely identifies this Queue.
+    #' A short string, e.g. `'Q1'`, that uniquely identifies this 
+    #' [`jobqueue`][jobqueue_class].
     uid = function () basename(private$q_dir),
     
     #' @field tmp
-    #' The Queue's temporary directory.
+    #' The [`jobqueue`][jobqueue_class]'s temporary directory.
     tmp = function () private$q_dir,
     
     #' @field workers
-    #' Get or set - List of [Workers][Worker] used for processing Jobs.
+    #' Get or set - List of [`workers`][worker_class] used for processing 
+    #' [`jobs`][job_class].
     workers = function (value) q_workers(private, value),
     
     #' @field cnd
-    #' The error that caused the Queue to stop.
+    #' The error that caused the [`jobqueue`][jobqueue_class] to stop.
     cnd = function () private$.cnd
   )
 )
@@ -360,7 +380,7 @@ q_initialize <- function (
       
       for (i in integer(n)) {
         
-        worker <- Worker$new(
+        worker <- worker_class$new(
           hooks   = private$w_conf[['hooks']],
           globals = self,
           wait    = FALSE,
@@ -425,13 +445,13 @@ q_run <- function (
   expr_subst <- substitute(expr, env = parent.frame())
   expr       <- validate_expression(expr, expr_subst, null_ok = FALSE)
   
-  # Replace NA values with defaults from Queue$new() call.
+  # Replace NA values with defaults from jobqueue_class$new() call.
   j_conf <- private$j_conf
   
   if (is_formula(stop_id)) stop_id <- as_function(stop_id)
   if (is_formula(copy_id)) copy_id <- as_function(copy_id)
   
-  job <- Job$new(
+  job <- job_class$new(
     expr     = expr, 
     vars     = vars,
     queue    = self,
@@ -454,8 +474,8 @@ q_run <- function (
 
 q_submit <- function (self, private, job) {
   
-  if (!inherits(job, 'Job'))
-    cli_abort('`job` must be a Job object, not {.type {job}}.')
+  if (!inherits(job, 'job'))
+    cli_abort('`job` must be a job object, not {.type {job}}.')
   
   if (job$is_done) return (invisible(job))
   
@@ -515,7 +535,7 @@ q__dispatch <- function (self, private) {
   # Purge jobs that are done.
   self$jobs <- get_eq(self$jobs, 'is_done', FALSE)
   
-  # Only start jobs if this Queue is ready.
+  # Only start jobs if this jobqueue is ready.
   if (!private$is_ready) return (invisible(NULL))
   
   # See how many remaining CPUs are available.
@@ -531,7 +551,7 @@ q__dispatch <- function (self, private) {
     try(idle_workers[[i]]$run(queued_jobs[[i]]))
   }
   
-  # Update <Queue>$state and trigger callback hooks.
+  # Update `<jobqueue>$state` and trigger callback hooks.
   busy_workers <- get_eq(self$workers, 'state', 'busy')
   queue_state  <- ifelse(length(busy_workers) > 0, 'busy', 'idle')
   private$set_state(state = queue_state)
@@ -545,10 +565,11 @@ q__dispatch <- function (self, private) {
 
 q_jobs <- function (private, value) {
   if (missing(value)) return (private$.jobs)
-  private$.jobs <- validate_list(value, of_type = 'Job', named = FALSE)
+  private$.jobs <- validate_list(value, of_type = 'job', named = FALSE)
 }
 
 q_workers <- function (private, value) {
   if (missing(value)) return (private$.workers)
-  private$.workers <- validate_list(value, of_type = 'Worker', named = FALSE)
+  private$.workers <- validate_list(value, of_type = 'worker', named = FALSE)
 }
+

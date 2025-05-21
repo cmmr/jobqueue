@@ -11,9 +11,10 @@ vignette: >
 
 ## Introduction
 
-The "main" process environment (where you are calling `<Queue>$run()`) is isolated from the 
-Worker environments. Therefore, your expression (`expr`) AND all the data needed for evaluating 
-`expr` must be explicitly passed to the Worker.
+When you call `<jobqueue>$run(expr)`, the calling environment is not visible to 
+`expr`. Therefore, all variables needed by `expr` must be explicitly provided 
+to `$run(vars = list())` or previously set in the `jobqueue(globals = list())` 
+constructor.
 
 
 ## Expressions
@@ -24,42 +25,42 @@ The `expr` parameter can be given in two ways.
   * `expr = quote({ 42 })`
 
 The second form is helpful if your expression needs to be passed around your own
-code before being handed off to `<Queue>$run()`. Other call-generating functions 
+code before being handed off to `<jobqueue>$run()`. Other call-generating functions 
 can be used instead of `quote()`, such as `call()` or `bquote()`.
 
 ```r
 library(jobqueue)
-q <- Queue$new()
+jq <- jobqueue()
 
-q$run({ 42 })$result
+jq$run({ 42 })$result
 #> [1] 42
 
 expr <- quote({ 42 })
-q$run(expr)$result
+jq$run(expr)$result
 #> [1] 42
 ```
 
 
 ## Variables
 
-Global variables can be set when the Queue is created.
+Global variables can be set when the `jobqueue` is created.
 
 ```r
 globals <- list(MY_DATA = mtcars)
-q       <- Queue$new(globals = globals)
+jq      <- jobqueue(globals = globals)
 
 expr <- quote(colnames(MY_DATA))
-q$run(expr)$result[1:6]
+jq$run(expr)$result[1:6]
 #> [1] "mpg"  "cyl"  "disp" "hp"   "drat" "wt"
 ```
 
-Additional variables for a Job can be defined with `vars`.
+Additional variables for a `job` can be defined with `$run(vars = list())`.
 
 ```r
 expr <- quote(MY_DATA[rows,cols])
 vars <- list(rows = 20:22, cols = c('mpg', 'hp', 'wt'))
 
-q$run(expr = expr, vars = vars)$result
+jq$run(expr = expr, vars = vars)$result
 #>                   mpg  hp    wt
 #> Toyota Corolla   33.9  65 1.835
 #> Toyota Corona    21.5  97 2.465
@@ -67,21 +68,80 @@ q$run(expr = expr, vars = vars)$result
 ```
 
 
+## Functions
 
-## Best Practices
+The remote environment inherits from R's `baseenv()`, so you can call base 
+functions as usual.
 
-1. Minimize data transfer to/from Workers (it's slow).
-2. Use UPPERCASE names for global variables.
+```r
+jq$run({ rep(2, 5) })$result
+#> [1] 2 2 2 2 2
+```
+
+To use a function from a package, call it with `::` notation.
+
+```r
+jq$run({ jsonlite::toJSON(list(x = 42)) })$result
+#> {"x":[42]}
+```
+
+To use a custom function, pass it like a variable.
+
+```r
+f <- function (x) x * 2
+jq$run({ f(x) }, vars = list(f=f, x=5))$result
+#> [1] 10
+```
+
+But remember, like `expr`, functions do not have access to the local 
+environment.
+
+```r
+x <- 5
+f <- function () x * 2
+f()
+#> [1] 10
+
+jq$run({ f() }, vars = list(f=f))$result
+#> <simpleError in f(): object 'x' not found>
+```
+
+Functions from packages are the exception - they retain access to their
+namespace when passed as a variable.
+
+```r
+x <- list(x = 42)
+f <- jsonlite::toJSON
+jq$run({ f(x) }, vars = list(f=f, x=x))$result
+#> {"x":[42]}
+```
+
+If you're using a lot of functions from a package, you can set
+`jobqueue(packages = '<packageName>')`, then call that package's functions 
+without the `::` notation.
+
+If you're a package developer, you can set 
+`jobqueue(namespace = '<yourPackageName>')` to give the remote environment 
+access to all functions and variables (both exported and non-exported) defined 
+in your package's namespace. Note however that your package must be installed 
+for changes to take effect in the remote environment. I.e. 
+`devtools::load_all()` won't cut it; an `R CMD INSTALL` is needed 
+(via `devtools::install()`, `pak::install_local()`, etc).
+
+
+
+
+## Example
 
 ```r
 library(jobqueue)
 
-q <- Queue$new(
+jq <- jobqueue(
   globals  = list(A = 1),
   init     = { B <- 12 },
   packages = 'jsonlite' )
 
-job <- q$run(
+job <- jq$run(
   'vars' = list(x = 37), 
   'expr' = { toJSON(c(A, B, x)) } )
 
@@ -89,7 +149,6 @@ job$result
 #> [1,12,37]
 ```
 
-Here we assigned two global variables on the Workers: `A` and `B`. We also 
-attached the 'jsonlite' R package to the Workers' search paths. When `expr` is 
-evaluated, it uses `A`, `B`, and `toJSON` from the Worker's environment, and 
-`x` from `vars`.
+Here we defined two global variables: `A` and `B`. We also attached the 
+'jsonlite' R package to the search path. When `expr` is evaluated, it uses 
+`toJSON`, `A`, and `B` from the remote environment, and `x` from `vars`.
