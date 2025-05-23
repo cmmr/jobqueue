@@ -2,12 +2,11 @@
 % Please edit documentation in R/job_class.r
 \name{job_class}
 \alias{job_class}
-\title{Evaluate an R Expression}
+\title{Define an R Expression (R6 Class)}
 \description{
 The \code{\link[=job_class]{job}} object encapsulates an expression and its evaluation
 parameters. It also provides a way to check for and retrieve the result.
 }
-\keyword{internal}
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{

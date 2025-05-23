@@ -1,5 +1,5 @@
 
-#' Assign Jobs to Workers (Class)
+#' Assigns Jobs to Workers (R6 Class)
 #'
 #' @description
 #' 
@@ -116,7 +116,6 @@
 #' @param ...  Arbitrary named values to add to the returned [`job`][job_class] 
 #'        object.
 #' 
-#' @keywords internal
 #' @export
 
 jobqueue_class <- R6Class(

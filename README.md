@@ -34,9 +34,9 @@ pak::pak("cmmr/jobqueue")
 ``` r
 library(jobqueue)
 
-q <- jobqueue()
+jq <- jobqueue()
 
-job <- q$run({ paste('Hello', 'world!') })
+job <- jq$run({ paste('Hello', 'world!') })
 job$result
 #> [1] "Hello world!"
 ```
@@ -44,10 +44,12 @@ job$result
 
 ## Asynchronous Callbacks
 
-Main article: `vignette('hooks')`
+Main articles: 
+[`vignette('results')`](https://cmmr.github.io/jobqueue/articles/results.html) and 
+[`vignette('hooks')`](https://cmmr.github.io/jobqueue/articles/hooks.html)
 
 ``` r
-j <- q$run(
+job <- jq$run(
   expr  = { 42 }, 
   hooks = list(
     'created' = ~{ message("We're uid '", .$uid, "'.") },
@@ -60,7 +62,7 @@ j <- q$run(
 #>   - running
 #>   - done
 
-j$on('done', function (job) message('result = ', job$result))
+job$on('done', ~{ message('result = ', .$result) })
 #> result = 42
 ```
 
@@ -68,7 +70,7 @@ j$on('done', function (job) message('result = ', job$result))
 ### Converting to Promises
 
 ``` r
-job      <- q$run({ 3.14 })
+job      <- jq$run({ 3.14 })
 callback <- function (result) message('resolved with: ', result)
 
 job %...>% callback
@@ -89,7 +91,7 @@ See also https://rstudio.github.io/promises/
 ```r
 function(input, output, session) {
   output$plot <- renderPlot({
-    q$run({ read.table(url) }, list(url = input$url)) %...>%
+    jq$run({ read.table(url) }, list(url = input$url)) %...>%
       head(input$n) %...>%
       plot()
   })
@@ -107,13 +109,13 @@ Terminated background process are automatically replaced by new ones.
 Stopped jobs will return a condition object of class 'interrupt' as
 their result.
 
-Main article: `vignette('stops')`
+Main article: [`vignette('stops')`](https://cmmr.github.io/jobqueue/articles/stops.html)
 
 
 #### Manually
 
 ``` r
-job <- q$run({ Sys.sleep(2); 'Zzzzz' })
+job <- jq$run({ Sys.sleep(2); 'Zzzzz' })
 job$stop()
 job$result
 #> <interrupt: job stopped by user>
@@ -125,7 +127,7 @@ will be returned in the condition object.
 #### Runtime Limits
 
 ``` r
-job <- q$run({ Sys.sleep(2); 'Zzzzz' }, timeout = 0.2)
+job <- jq$run({ Sys.sleep(2); 'Zzzzz' }, timeout = 0.2)
 job$result
 #> <interrupt: total runtime exceeded 0.2 seconds>
 ```
@@ -141,8 +143,8 @@ Limits (in seconds) can be set on:
 New jobs will replace existing jobs with the same `stop_id`.
 
 ``` r
-job1 <- q$run({ Sys.sleep(1); 'A' }, stop_id = 123)
-job2 <- q$run({ 'B' },               stop_id = 123)
+job1 <- jq$run({ Sys.sleep(1); 'A' }, stop_id = 123)
+job2 <- jq$run({ 'B' },               stop_id = 123)
 job1$result
 #> <superseded: duplicated stop_id>
 job2$result
@@ -154,8 +156,8 @@ job2$result
 New jobs will mirror the output of existing jobs with the same `copy_id`.
 
 ``` r
-job1 <- q$run({ Sys.sleep(1); 'A' }, copy_id = 456)
-job2 <- q$run({ 'B' },               copy_id = 456)
+job1 <- jq$run({ Sys.sleep(1); 'A' }, copy_id = 456)
+job2 <- jq$run({ 'B' },               copy_id = 456)
 job1$result
 #> [1] "A"
 job2$result
@@ -165,14 +167,16 @@ job2$result
 
 ## Variables
 
+Main article: [`vignette('eval')`](https://cmmr.github.io/jobqueue/articles/eval.html)
+
 ``` r
-q2   <- jobqueue(globals = list(G = 8))
+jq2  <- jobqueue(globals = list(G = 8))
 expr <- quote(c(x = x , y = y, G = G))
-job  <- q2$run(expr, vars = list(x = 10, y = 2))
+job  <- jq2$run(expr, vars = list(x = 10, y = 2))
 
 dput(job$result)
 #> c(x = 10, y = 2, G = 8)
 
-q2$stop()
+jq2$stop()
 ```
 

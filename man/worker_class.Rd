@@ -2,11 +2,10 @@
 % Please edit documentation in R/worker_class.r
 \name{worker_class}
 \alias{worker_class}
-\title{Background Processes}
+\title{A Background Process (R6 Class)}
 \description{
 Where job expressions are evaluated.
 }
-\keyword{internal}
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{

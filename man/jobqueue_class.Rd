@@ -2,11 +2,10 @@
 % Please edit documentation in R/jobqueue_class.r
 \name{jobqueue_class}
 \alias{jobqueue_class}
-\title{Assign Jobs to Workers (Class)}
+\title{Assigns Jobs to Workers (R6 Class)}
 \description{
 Jobs go in. Results come out.
 }
-\keyword{internal}
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{

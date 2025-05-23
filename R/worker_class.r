@@ -1,5 +1,5 @@
 
-#' Background Processes
+#' A Background Process (R6 Class)
 #'
 #' @description
 #' 
@@ -58,7 +58,6 @@
 #' @param cls  Passed to `<job>$stop()` for any [`jobs`][job_class] currently 
 #'        managed by this [`worker`][worker_class].
 #' 
-#' @keywords internal
 #' @export
 #' 
 

@@ -7,14 +7,13 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```r
-library(jobqueue)
-jq <- jobqueue()
-```
 
 ## Reacting to Results
 
 ```r
+library(jobqueue)
+jq <- jobqueue()
+
 my_job <- jq$run({ 42 })
 
 # ===  A 'jobqueue'-style callback  ============
