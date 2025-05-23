@@ -1,3 +1,7 @@
+# jobqueue 1.7.0
+
+* Separated `jobqueue()` constructor from underlying R6 classes.
+
 
 # jobqueue 1.6.0
 
