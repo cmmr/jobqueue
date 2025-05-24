@@ -1,7 +1,7 @@
 Package: jobqueue
 Type: Package
 Title: Run Interruptible Code Asynchronously
-Version: 1.7.0
+Version: 1.7.0.9000
 Date: 2025-05-23
 Authors@R: c(
     person(
@@ -46,3 +46,4 @@ Suggests:
     knitr,
     rmarkdown,
     testthat
+Remotes:cmmr/interprocess
