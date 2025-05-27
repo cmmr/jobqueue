@@ -1,5 +1,5 @@
 pandoc: 3.1.11
-pkgdown: 2.1.2
+pkgdown: 2.1.3
 pkgdown_sha: ~
 articles:
   eval: eval.html
@@ -7,7 +7,7 @@ articles:
   jobqueue: jobqueue.html
   results: results.html
   stops: stops.html
-last_built: 2025-05-24T00:06Z
+last_built: 2025-05-27T18:57Z
 urls:
   reference: https://cmmr.github.io/jobqueue/reference
   article: https://cmmr.github.io/jobqueue/articles
