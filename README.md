@@ -1,5 +1,5 @@
 
-# jobqueue
+# jobqueue <img src="man/figures/logo.png" align="right" width="120" alt="jobqueue logo" />
 
 <!-- badges: start -->
 [![cran](https://www.r-pkg.org/badges/version/jobqueue)](https://CRAN.R-project.org/package=jobqueue)
